@@ -197,4 +197,17 @@ th, td {
 thead th {
     background-color: #f2f2f2;
 }
+
+a {
+    text-decoration: none;
+    color: sienna;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+a:visited {
+    color: sienna;
+}
 """
