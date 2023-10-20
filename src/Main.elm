@@ -154,15 +154,17 @@ sizeInputView model =
             Rel.size model.rel
     in
     Html.div []
-        [ Html.label [] [ Html.text "Relation size " ]
-        , Html.input
-            [ A.type_ "range"
-            , A.min "1"
-            , A.max "10"
-            , E.onInput <| SetRelSize << Maybe.withDefault 3 << String.toInt
-            , A.value <| String.fromInt relSize
+        [ Html.label []
+            [ Html.text "Relation size"
+            , Html.input
+                [ A.type_ "range"
+                , A.min "1"
+                , A.max "10"
+                , E.onInput <| SetRelSize << Maybe.withDefault 3 << String.toInt
+                , A.value <| String.fromInt relSize
+                ]
+                []
             ]
-            []
         , Html.text <| " " ++ String.fromInt relSize
         ]
 
