@@ -1,12 +1,15 @@
 module Rel exposing
     ( Config
     , Rel
+    , complement
+    , compose
+    , converse
     , empty
     , isAntisymmetric
     , isReflexive
     , isSymmetric
     , isTransitive
-    , power2
+    , reflexiveClosure
     , resize
     , size
     , toggle
@@ -36,12 +39,17 @@ type alias Config msg =
     }
 
 
+size : Rel -> Int
+size (Rel rows) =
+    Array.length rows
+
+
 empty : Int -> Rel
 empty n =
     Rel <| Array.repeat n <| Array.repeat n False
 
 
-{-| Preserve already toggled cells of the original
+{-| Change the size, while preserving as much as possible from the original.
 -}
 resize : Int -> Rel -> Rel
 resize n (Rel rows) =
@@ -55,8 +63,10 @@ resize n (Rel rows) =
             )
 
 
-transpose : Rel -> Rel
-transpose (Rel rows) =
+{-| The relation that occurs when the order of the elements is switched in the relation.
+-}
+converse : Rel -> Rel
+converse (Rel rows) =
     let
         n =
             Array.length rows
@@ -69,13 +79,20 @@ transpose (Rel rows) =
             )
 
 
-{-| Compose Rel with itself
+{-| Complement consists of all the pairs that are not in the input relation
 -}
-power2 : Rel -> Rel
-power2 ((Rel rows) as rel) =
+complement : Rel -> Rel
+complement (Rel rows) =
+    Rel <| Array.map (Array.map not) rows
+
+
+{-| Compose 2 Rels with each other. Assumes both have the same size.
+-}
+compose : Rel -> Rel -> Rel
+compose (Rel rows) rel2 =
     let
         (Rel cols) =
-            transpose rel
+            converse rel2
 
         n =
             Array.length rows
@@ -87,6 +104,8 @@ power2 ((Rel rows) as rel) =
                     (\j ->
                         Maybe.map2
                             (\rowi colj ->
+                                -- composition of relations corresponds to matrix multiplication in boolean semiring
+                                --  (+ corresponds to OR, * corresponds to AND)
                                 List.map2 (&&) (Array.toList rowi) (Array.toList colj)
                                     |> listOr
                             )
@@ -97,6 +116,8 @@ power2 ((Rel rows) as rel) =
             )
 
 
+{-| Is the first relation subset of the 2nd?
+-}
 isSubsetOf : Rel -> Rel -> Bool
 isSubsetOf (Rel relA) (Rel relB) =
     listAnd <|
@@ -104,17 +125,13 @@ isSubsetOf (Rel relA) (Rel relB) =
             (\rowA rowB ->
                 listAnd <|
                     List.map2
+                        -- Implication: whenever A is true, B must be as well
                         (\cellA cellB -> not cellA || cellB)
                         (Array.toList rowA)
                         (Array.toList rowB)
             )
             (Array.toList relA)
             (Array.toList relB)
-
-
-size : Rel -> Int
-size (Rel rows) =
-    Array.length rows
 
 
 toggle : Int -> Int -> Rel -> Rel
@@ -144,7 +161,7 @@ isReflexive (Rel rows) =
 
 isSymmetric : Rel -> Bool
 isSymmetric rel =
-    rel == transpose rel
+    rel == converse rel
 
 
 isAntisymmetric : Rel -> Bool
@@ -172,29 +189,29 @@ isAntisymmetric (Rel rows) =
 
 isTransitive : Rel -> Bool
 isTransitive rel =
-    isSubsetOf (power2 rel) rel
+    isSubsetOf (compose rel rel) rel
 
 
-unsafeGet : Int -> Int -> Array (Array Bool) -> Bool
-unsafeGet i j rows =
-    Array.get i rows
-        |> Maybe.andThen (Array.get j)
-        |> Maybe.withDefault False
+
+-- CLOSURES
 
 
-listAnd : List Bool -> Bool
-listAnd =
-    List.foldl (&&) True
+reflexiveClosure : Rel -> Rel
+reflexiveClosure (Rel rows) =
+    Rel <|
+        Array.indexedMap
+            (\i row ->
+                Array.indexedMap
+                    (\j cell ->
+                        if i == j then
+                            True
 
-
-listOr : List Bool -> Bool
-listOr =
-    List.foldl (||) False
-
-
-arrayAnd : Array Bool -> Bool
-arrayAnd =
-    Array.foldl (&&) True
+                        else
+                            cell
+                    )
+                    row
+            )
+            rows
 
 
 
@@ -241,3 +258,29 @@ view config (Rel rows) =
 headerCell : Int -> Html msg
 headerCell i =
     Html.th [] [ Html.text (String.fromInt i) ]
+
+
+
+-- Internal helpers
+
+
+unsafeGet : Int -> Int -> Array (Array Bool) -> Bool
+unsafeGet i j rows =
+    Array.get i rows
+        |> Maybe.andThen (Array.get j)
+        |> Maybe.withDefault False
+
+
+listAnd : List Bool -> Bool
+listAnd =
+    List.foldl (&&) True
+
+
+listOr : List Bool -> Bool
+listOr =
+    List.foldl (||) False
+
+
+arrayAnd : Array Bool -> Bool
+arrayAnd =
+    Array.foldl (&&) True

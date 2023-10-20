@@ -26,19 +26,21 @@
     - [ ] Poset
         - [ ] show hasse diagram
     - [ ] Total order
+        - [ ] highlight incomparable elements if not
     - [ ] Lattice
     - [ ] ...
 
 - [ ] For each of the above shows the total number of structures of this kind (with links to OEIS, see [counting transitive relations](https://en.wikipedia.org/wiki/Transitive_relation#Counting_transitive_relations))
 
 - [ ] Provides operations like
-   - [ ] reflexive closure
+   - [x] reflexive closure
+   - [ ] symmetric closure
    - [ ] transitive closure
    - [ ] equivalence closure
    - [ ] transitive reduction
-   - [ ] reflexive closure
-   - [ ] composition (with itself)
-   - [ ] converse
-   - [ ] complement
+   - [x] composition (with itself)
+   - [x] converse
+   - [x] complement
    - [ ] calculate concept lattice (Binary relations have been described through their induced concept lattices)
 
+- [ ] Support for undo / redo history of modifications

@@ -34,6 +34,9 @@ init =
 type Msg
     = SetRelSize Int
     | ToggleRel Int Int
+    | DoReflexiveClosure
+    | DoComplement
+    | DoConverse
     | NoOp
 
 
@@ -50,6 +53,15 @@ update msg model =
         ToggleRel i j ->
             { model | rel = Rel.toggle i j model.rel }
 
+        DoReflexiveClosure ->
+            { model | rel = Rel.reflexiveClosure model.rel }
+
+        DoComplement ->
+            { model | rel = Rel.complement model.rel }
+
+        DoConverse ->
+            { model | rel = Rel.converse model.rel }
+
         NoOp ->
             model
 
@@ -63,18 +75,23 @@ view : Model -> Html Msg
 view model =
     Html.div []
         [ Html.node "style" [] [ Html.text style ]
-        , viewSizeInput model
+        , sizeInputView model
         , Rel.view relConfig model.rel
-        , viewRelProperties model.rel
+        , elementaryPropertiesView model.rel
+        , Html.hr [] []
+        , operationsView
         ]
 
 
-viewRelProperties : Rel -> Html Msg
-viewRelProperties rel =
+elementaryPropertiesView : Rel -> Html Msg
+elementaryPropertiesView rel =
     Html.div []
         [ Html.div []
             -- TODO add wikipedia link https://en.wikipedia.org/wiki/Reflexive_relation
-            [ Html.text <| "Is reflexive: " ++ yesNo (Rel.isReflexive rel) ]
+            [ Html.text <| "Is reflexive: " ++ yesNo (Rel.isReflexive rel)
+            , Html.text " "
+            , Html.button [ E.onClick DoReflexiveClosure ] [ Html.text "Reflexive Closure" ]
+            ]
         , Html.div []
             -- TODO add wikipedia link https://en.wikipedia.org/wiki/Symmetric_relation
             [ Html.text <| "Is symmetric: " ++ yesNo (Rel.isSymmetric rel) ]
@@ -96,8 +113,8 @@ yesNo b =
         "No"
 
 
-viewSizeInput : Model -> Html Msg
-viewSizeInput model =
+sizeInputView : Model -> Html Msg
+sizeInputView model =
     let
         relSize =
             Rel.size model.rel
@@ -113,6 +130,15 @@ viewSizeInput model =
             ]
             []
         , Html.text <| " " ++ String.fromInt relSize
+        ]
+
+
+operationsView : Html Msg
+operationsView =
+    Html.div []
+        [ Html.h4 [] [ Html.text "Operations" ]
+        , Html.div [] [ Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ] ]
+        , Html.div [] [ Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ] ]
         ]
 
 
