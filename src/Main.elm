@@ -81,6 +81,9 @@ viewRelProperties rel =
         , Html.div []
             -- TODO add wikipedia link https://en.wikipedia.org/wiki/Antisymmetric_relation
             [ Html.text <| "Is antisymmetric: " ++ yesNo (Rel.isAntisymmetric rel) ]
+        , Html.div []
+            -- TODO add wikipedia link https://en.wikipedia.org/wiki/Transitive_relation
+            [ Html.text <| "Is transitive: " ++ yesNo (Rel.isTransitive rel) ]
         ]
 
 

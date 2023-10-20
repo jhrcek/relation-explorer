@@ -5,6 +5,8 @@ module Rel exposing
     , isAntisymmetric
     , isReflexive
     , isSymmetric
+    , isTransitive
+    , power2
     , resize
     , size
     , toggle
@@ -67,6 +69,49 @@ transpose (Rel rows) =
             )
 
 
+{-| Compose Rel with itself
+-}
+power2 : Rel -> Rel
+power2 ((Rel rows) as rel) =
+    let
+        (Rel cols) =
+            transpose rel
+
+        n =
+            Array.length rows
+    in
+    Rel <|
+        Array.initialize n
+            (\i ->
+                Array.initialize n
+                    (\j ->
+                        Maybe.map2
+                            (\rowi colj ->
+                                List.map2 (&&) (Array.toList rowi) (Array.toList colj)
+                                    |> listOr
+                            )
+                            (Array.get i rows)
+                            (Array.get j cols)
+                            |> Maybe.withDefault False
+                    )
+            )
+
+
+isSubsetOf : Rel -> Rel -> Bool
+isSubsetOf (Rel relA) (Rel relB) =
+    listAnd <|
+        List.map2
+            (\rowA rowB ->
+                listAnd <|
+                    List.map2
+                        (\cellA cellB -> not cellA || cellB)
+                        (Array.toList rowA)
+                        (Array.toList rowB)
+            )
+            (Array.toList relA)
+            (Array.toList relB)
+
+
 size : Rel -> Int
 size (Rel rows) =
     Array.length rows
@@ -93,7 +138,7 @@ toggle i j ((Rel rows) as rel) =
 
 isReflexive : Rel -> Bool
 isReflexive (Rel rows) =
-    Array.foldl (&&) True <|
+    arrayAnd <|
         Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False) rows
 
 
@@ -108,7 +153,7 @@ isAntisymmetric (Rel rows) =
         maxIdx =
             Array.length rows - 1
     in
-    Array.foldl (&&) True <|
+    arrayAnd <|
         Array.indexedMap
             (\i row ->
                 List.range (i + 1) maxIdx
@@ -125,11 +170,31 @@ isAntisymmetric (Rel rows) =
             rows
 
 
+isTransitive : Rel -> Bool
+isTransitive rel =
+    isSubsetOf (power2 rel) rel
+
+
 unsafeGet : Int -> Int -> Array (Array Bool) -> Bool
 unsafeGet i j rows =
     Array.get i rows
         |> Maybe.andThen (Array.get j)
         |> Maybe.withDefault False
+
+
+listAnd : List Bool -> Bool
+listAnd =
+    List.foldl (&&) True
+
+
+listOr : List Bool -> Bool
+listOr =
+    List.foldl (||) False
+
+
+arrayAnd : Array Bool -> Bool
+arrayAnd =
+    Array.foldl (&&) True
 
 
 
