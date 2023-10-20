@@ -34,7 +34,7 @@
 
 - [ ] Provides operations like
    - [x] reflexive closure
-   - [ ] symmetric closure
+   - [x] symmetric closure
    - [ ] transitive closure
    - [ ] equivalence closure
    - [ ] transitive reduction

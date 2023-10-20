@@ -12,11 +12,13 @@ module Rel exposing
     , reflexiveClosure
     , resize
     , size
+    , symmetricClosure
     , toggle
     , view
     )
 
 import Array exposing (Array)
+import Array.Extra as Array
 import Html exposing (Html)
 import Html.Attributes exposing (rows)
 import Html.Events as E
@@ -84,6 +86,11 @@ converse (Rel rows) =
 complement : Rel -> Rel
 complement (Rel rows) =
     Rel <| Array.map (Array.map not) rows
+
+
+union : Rel -> Rel -> Rel
+union (Rel rowsA) (Rel rowsB) =
+    Rel <| Array.map2 (Array.map2 (||)) rowsA rowsB
 
 
 {-| Compose 2 Rels with each other. Assumes both have the same size.
@@ -196,6 +203,8 @@ isTransitive rel =
 -- CLOSURES
 
 
+{-| <https://en.wikipedia.org/wiki/Reflexive_closure>
+-}
 reflexiveClosure : Rel -> Rel
 reflexiveClosure (Rel rows) =
     Rel <|
@@ -212,6 +221,13 @@ reflexiveClosure (Rel rows) =
                     row
             )
             rows
+
+
+{-| <https://en.wikipedia.org/wiki/Symmetric_closure>
+-}
+symmetricClosure : Rel -> Rel
+symmetricClosure rel =
+    union rel (converse rel)
 
 
 

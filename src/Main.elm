@@ -35,6 +35,7 @@ type Msg
     = SetRelSize Int
     | ToggleRel Int Int
     | DoReflexiveClosure
+    | DoSymmetricClosure
     | DoComplement
     | DoConverse
     | NoOp
@@ -55,6 +56,9 @@ update msg model =
 
         DoReflexiveClosure ->
             { model | rel = Rel.reflexiveClosure model.rel }
+
+        DoSymmetricClosure ->
+            { model | rel = Rel.symmetricClosure model.rel }
 
         DoComplement ->
             { model | rel = Rel.complement model.rel }
@@ -88,13 +92,14 @@ elementaryPropertiesView rel =
     Html.div []
         [ Html.div []
             -- TODO add wikipedia link https://en.wikipedia.org/wiki/Reflexive_relation
-            [ Html.text <| "Is reflexive: " ++ yesNo (Rel.isReflexive rel)
-            , Html.text " "
+            [ Html.text <| "Is reflexive: " ++ yesNo (Rel.isReflexive rel) ++ " "
             , Html.button [ E.onClick DoReflexiveClosure ] [ Html.text "Reflexive Closure" ]
             ]
         , Html.div []
             -- TODO add wikipedia link https://en.wikipedia.org/wiki/Symmetric_relation
-            [ Html.text <| "Is symmetric: " ++ yesNo (Rel.isSymmetric rel) ]
+            [ Html.text <| "Is symmetric: " ++ yesNo (Rel.isSymmetric rel) ++ " "
+            , Html.button [ E.onClick DoSymmetricClosure ] [ Html.text "Symmetric Closure" ]
+            ]
         , Html.div []
             -- TODO add wikipedia link https://en.wikipedia.org/wiki/Antisymmetric_relation
             [ Html.text <| "Is antisymmetric: " ++ yesNo (Rel.isAntisymmetric rel) ]
