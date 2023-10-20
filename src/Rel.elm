@@ -2,7 +2,6 @@ module Rel exposing
     ( Config
     , Rel
     , complement
-    , compose
     , converse
     , empty
     , isAntisymmetric
@@ -20,7 +19,6 @@ module Rel exposing
 import Array exposing (Array)
 import Array.Extra as Array
 import Html exposing (Html)
-import Html.Attributes exposing (rows)
 import Html.Events as E
 import List
 
@@ -289,12 +287,12 @@ unsafeGet i j rows =
 
 listAnd : List Bool -> Bool
 listAnd =
-    List.foldl (&&) True
+    List.all identity
 
 
 listOr : List Bool -> Bool
 listOr =
-    List.foldl (||) False
+    List.any identity
 
 
 arrayAnd : Array Bool -> Bool

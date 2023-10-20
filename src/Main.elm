@@ -38,7 +38,6 @@ type Msg
     | DoSymmetricClosure
     | DoComplement
     | DoConverse
-    | NoOp
 
 
 update : Msg -> Model -> Model
@@ -65,9 +64,6 @@ update msg model =
 
         DoConverse ->
             { model | rel = Rel.converse model.rel }
-
-        NoOp ->
-            model
 
 
 relConfig : Rel.Config Msg
