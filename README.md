@@ -35,7 +35,7 @@
 - [ ] Provides operations like
    - [x] reflexive closure
    - [x] symmetric closure
-   - [ ] transitive closure
+   - [x] transitive closure
    - [ ] equivalence closure
    - [ ] transitive reduction
    - [x] composition (with itself)
@@ -44,3 +44,5 @@
    - [ ] calculate concept lattice (Binary relations have been described through their induced concept lattices)
 
 - [ ] Support for undo / redo history of modifications
+
+- [ ] mention properties of various operations (E.g. The union of two transitive relations need not be transitive, but intersection always is; converse and complement preserve symmetry etc.)

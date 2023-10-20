@@ -13,6 +13,7 @@ module Rel exposing
     , size
     , symmetricClosure
     , toggle
+    , transitiveClosure
     , view
     )
 
@@ -226,6 +227,22 @@ reflexiveClosure (Rel rows) =
 symmetricClosure : Rel -> Rel
 symmetricClosure rel =
     union rel (converse rel)
+
+
+{-| <https://en.wikipedia.org/wiki/Transitive_closure>
+-}
+transitiveClosure : Rel -> Rel
+transitiveClosure rel =
+    let
+        -- TODO this is brute force. See if there's more efficient way
+        transitiveHelp r =
+            if isTransitive r then
+                r
+
+            else
+                transitiveHelp (union r (compose r rel))
+    in
+    transitiveHelp rel
 
 
 

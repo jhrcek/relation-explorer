@@ -36,8 +36,10 @@ type Msg
     | ToggleRel Int Int
     | DoReflexiveClosure
     | DoSymmetricClosure
+    | DoTransitiveClosure
     | DoComplement
     | DoConverse
+    | MakeEmpty
 
 
 update : Msg -> Model -> Model
@@ -59,11 +61,17 @@ update msg model =
         DoSymmetricClosure ->
             { model | rel = Rel.symmetricClosure model.rel }
 
+        DoTransitiveClosure ->
+            { model | rel = Rel.transitiveClosure model.rel }
+
         DoComplement ->
             { model | rel = Rel.complement model.rel }
 
         DoConverse ->
             { model | rel = Rel.converse model.rel }
+
+        MakeEmpty ->
+            { model | rel = Rel.empty <| Rel.size model.rel }
 
 
 relConfig : Rel.Config Msg
@@ -91,6 +99,9 @@ elementaryPropertiesView rel =
 
         isSymmetric =
             Rel.isSymmetric rel
+
+        isTransitive =
+            Rel.isTransitive rel
     in
     Html.div []
         [ Html.div []
@@ -110,7 +121,10 @@ elementaryPropertiesView rel =
             [ Html.text <| "Is antisymmetric: " ++ yesNo (Rel.isAntisymmetric rel) ]
         , Html.div []
             -- TODO add wikipedia link https://en.wikipedia.org/wiki/Transitive_relation
-            [ Html.text <| "Is transitive: " ++ yesNo (Rel.isTransitive rel) ]
+            [ Html.text <| "Is transitive: " ++ yesNo isTransitive ++ " "
+            , Html.button [ E.onClick DoTransitiveClosure, A.disabled isTransitive ]
+                [ Html.text "Transitive Closure" ]
+            ]
         ]
 
 
@@ -149,6 +163,7 @@ operationsView =
         [ Html.h4 [] [ Html.text "Operations" ]
         , Html.div [] [ Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ] ]
         , Html.div [] [ Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ] ]
+        , Html.div [] [ Html.button [ E.onClick MakeEmpty ] [ Html.text "Empty" ] ]
         ]
 
 
