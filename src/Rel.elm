@@ -2,6 +2,7 @@ module Rel exposing
     ( Config
     , Rel
     , empty
+    , isReflexive
     , resize
     , size
     , toggle
@@ -68,6 +69,20 @@ toggle i j ((Rel rows) as rel) =
 
         Nothing ->
             rel
+
+
+
+-- TODO maybe also return a list of cells that are missing for it to be reflexive
+
+
+isReflexive : Rel -> Bool
+isReflexive (Rel rows) =
+    Array.foldl (&&) True <|
+        Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False) rows
+
+
+
+-- VIEW
 
 
 view : Config msg -> Rel -> Html msg

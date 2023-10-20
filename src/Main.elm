@@ -65,7 +65,27 @@ view model =
         [ Html.node "style" [] [ Html.text style ]
         , viewSizeInput model
         , Rel.view relConfig model.rel
+        , viewRelProperties model.rel
         ]
+
+
+viewRelProperties : Rel -> Html Msg
+viewRelProperties rel =
+    Html.div []
+        [ Html.text <|
+            "Is reflexive: "
+                -- TODO add explanation for why it's not reflexive
+                ++ (yesNo <| Rel.isReflexive rel)
+        ]
+
+
+yesNo : Bool -> String
+yesNo b =
+    if b then
+        "Yes"
+
+    else
+        "No"
 
 
 viewSizeInput : Model -> Html Msg

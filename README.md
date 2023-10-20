@@ -1,12 +1,12 @@
 # Relation Explorer
 
 ## (Ideas for) features
-- [ ] Show a relationship editor that allows user to select
-    - [ ] A number n from (0?) 1 to 10
-    - [ ] A rectangular matrix with checkboxes that allows specifying arbitraty relation on set with n elements
+- [x] Show a relationship editor that allows user to select
+    - [x] A number n from (0?) 1 to 10
+    - [x] A rectangular matrix with checkboxes that allows specifying arbitraty relation on set with n elements
 
-- [ ] Show whether the specified relation satisfies some properties:
-    - [ ] reflexivity
+- [ ] Show whether the specified relation satisfies well-known properties:
+    - [x] reflexivity
     - [ ] transitivity
     - [ ] symmetry
     - [ ] antisymmetry
@@ -37,4 +37,4 @@
    - [ ] converse
    - [ ] complement
    - [ ] calculate concept lattice (Binary relations have been described through their induced concept lattices)
-- [ ] 
+
