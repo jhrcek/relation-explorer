@@ -72,10 +72,10 @@ view model =
 viewRelProperties : Rel -> Html Msg
 viewRelProperties rel =
     Html.div []
-        [ Html.text <|
-            "Is reflexive: "
-                -- TODO add explanation for why it's not reflexive
-                ++ (yesNo <| Rel.isReflexive rel)
+        [ Html.div []
+            [ Html.text <| "Is reflexive: " ++ yesNo (Rel.isReflexive rel) ]
+        , Html.div []
+            [ Html.text <| "Is symmetric: " ++ yesNo (Rel.isSymmetric rel) ]
         ]
 
 

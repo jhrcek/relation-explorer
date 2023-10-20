@@ -7,8 +7,8 @@
 
 - [ ] Show whether the specified relation satisfies well-known properties:
     - [x] reflexivity
+    - [x] symmetry
     - [ ] transitivity
-    - [ ] symmetry
     - [ ] antisymmetry
     - [ ] functional(ity?)
         - [ ] partial / total
@@ -16,6 +16,7 @@
         - [ ] injective
         - [ ] bijective
     - [ ] ...
+- [ ] When property is not satisfied add "why?" tooltip that will explain why
 
 - [ ] Given the properties that it satisfies show wheter it is one of well know structures:
     - [ ] Equivalence relation (show corresponding partition)

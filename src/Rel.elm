@@ -3,6 +3,7 @@ module Rel exposing
     , Rel
     , empty
     , isReflexive
+    , isSymmetric
     , resize
     , size
     , toggle
@@ -79,6 +80,29 @@ isReflexive : Rel -> Bool
 isReflexive (Rel rows) =
     Array.foldl (&&) True <|
         Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False) rows
+
+
+isSymmetric : Rel -> Bool
+isSymmetric rel =
+    rel == transpose rel
+
+
+transpose : Rel -> Rel
+transpose (Rel rows) =
+    let
+        n =
+            Array.length rows
+    in
+    Rel <|
+        Array.initialize n
+            (\i ->
+                Array.initialize n
+                    (\j ->
+                        Array.get j rows
+                            |> Maybe.andThen (Array.get i)
+                            |> Maybe.withDefault False
+                    )
+            )
 
 
 
