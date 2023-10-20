@@ -85,16 +85,25 @@ view model =
 
 elementaryPropertiesView : Rel -> Html Msg
 elementaryPropertiesView rel =
+    let
+        isReflexive =
+            Rel.isReflexive rel
+
+        isSymmetric =
+            Rel.isSymmetric rel
+    in
     Html.div []
         [ Html.div []
             -- TODO add wikipedia link https://en.wikipedia.org/wiki/Reflexive_relation
-            [ Html.text <| "Is reflexive: " ++ yesNo (Rel.isReflexive rel) ++ " "
-            , Html.button [ E.onClick DoReflexiveClosure ] [ Html.text "Reflexive Closure" ]
+            [ Html.text <| "Is reflexive: " ++ yesNo isReflexive ++ " "
+            , Html.button [ E.onClick DoReflexiveClosure, A.disabled isReflexive ]
+                [ Html.text "Reflexive Closure" ]
             ]
         , Html.div []
             -- TODO add wikipedia link https://en.wikipedia.org/wiki/Symmetric_relation
-            [ Html.text <| "Is symmetric: " ++ yesNo (Rel.isSymmetric rel) ++ " "
-            , Html.button [ E.onClick DoSymmetricClosure ] [ Html.text "Symmetric Closure" ]
+            [ Html.text <| "Is symmetric: " ++ yesNo isSymmetric ++ " "
+            , Html.button [ E.onClick DoSymmetricClosure, A.disabled isSymmetric ]
+                [ Html.text "Symmetric Closure" ]
             ]
         , Html.div []
             -- TODO add wikipedia link https://en.wikipedia.org/wiki/Antisymmetric_relation

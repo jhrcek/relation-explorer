@@ -9,3 +9,7 @@ live:
 .PHONY: format
 format:
 	elm-format --yes src
+
+.PHONY: review
+review:
+	elm-review
