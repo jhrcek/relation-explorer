@@ -34,10 +34,20 @@ empty n =
     Rel <| Array.repeat n <| Array.repeat n False
 
 
+{-| Preserve already toggled cells of the original
+-}
 resize : Int -> Rel -> Rel
-resize n (Rel _) =
-    -- TODO make is so that stuff is copied from the original rel
-    empty n
+resize n (Rel oldRel) =
+    Rel <|
+        Array.initialize n
+            (\i ->
+                Array.initialize n
+                    (\j ->
+                        Array.get i oldRel
+                            |> Maybe.andThen (Array.get j)
+                            |> Maybe.withDefault False
+                    )
+            )
 
 
 size : Rel -> Int
@@ -70,16 +80,14 @@ view config (Rel rows) =
         [ Html.thead []
             [ Html.tr [] <|
                 Html.th [] [{- empty top-left corner -}]
-                    :: List.map
-                        (\i -> Html.th [{- col header -}] [ Html.text <| String.fromInt i ])
-                        (List.range 1 relSize)
+                    :: List.map headerCell (List.range 1 relSize)
             ]
         , Html.tbody [] <|
             Array.toList <|
                 Array.indexedMap
                     (\i row ->
                         Html.tr [] <|
-                            Html.th [{- row header -}] [ Html.text <| String.fromInt <| i + 1 ]
+                            headerCell (i + 1)
                                 :: (Array.toList <|
                                         Array.indexedMap
                                             (\j cell ->
@@ -97,3 +105,8 @@ view config (Rel rows) =
                     )
                     rows
         ]
+
+
+headerCell : Int -> Html msg
+headerCell i =
+    Html.th [] [ Html.text (String.fromInt i) ]
