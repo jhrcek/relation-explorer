@@ -28,11 +28,13 @@
 - [ ] For each of the above shows the total number of structures of this kind
 
 - [ ] Provides operations like
+   - [ ] reflexive closure
    - [ ] transitive closure
+   - [ ] equivalence closure
    - [ ] transitive reduction
    - [ ] reflexive closure
    - [ ] composition (with itself)
    - [ ] converse
    - [ ] complement
-   - [ ] ...
+   - [ ] calculate concept lattice (Binary relations have been described through their induced concept lattices)
 - [ ] 
