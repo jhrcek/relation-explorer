@@ -105,27 +105,37 @@ elementaryPropertiesView rel =
     in
     Html.div []
         [ Html.div []
-            -- TODO add wikipedia link https://en.wikipedia.org/wiki/Reflexive_relation
-            [ Html.text <| "Is reflexive: " ++ yesNo isReflexive ++ " "
+            [ Html.text "Is "
+            , blankLink "https://en.wikipedia.org/wiki/Reflexive_relation" "reflexive"
+            , Html.text <| ": " ++ yesNo isReflexive ++ " "
             , Html.button [ E.onClick DoReflexiveClosure, A.disabled isReflexive ]
                 [ Html.text "Reflexive Closure" ]
             ]
         , Html.div []
-            -- TODO add wikipedia link https://en.wikipedia.org/wiki/Symmetric_relation
-            [ Html.text <| "Is symmetric: " ++ yesNo isSymmetric ++ " "
+            [ Html.text "Is "
+            , blankLink "https://en.wikipedia.org/wiki/Symmetric_relation" "symmetric"
+            , Html.text <| ": " ++ yesNo isSymmetric ++ " "
             , Html.button [ E.onClick DoSymmetricClosure, A.disabled isSymmetric ]
                 [ Html.text "Symmetric Closure" ]
             ]
         , Html.div []
-            -- TODO add wikipedia link https://en.wikipedia.org/wiki/Antisymmetric_relation
-            [ Html.text <| "Is antisymmetric: " ++ yesNo (Rel.isAntisymmetric rel) ]
+            [ Html.text "Is "
+            , blankLink "https://en.wikipedia.org/wiki/Antisymmetric_relation" "antisymmetric"
+            , Html.text <| ": " ++ yesNo (Rel.isAntisymmetric rel)
+            ]
         , Html.div []
-            -- TODO add wikipedia link https://en.wikipedia.org/wiki/Transitive_relation
-            [ Html.text <| "Is transitive: " ++ yesNo isTransitive ++ " "
+            [ Html.text "Is "
+            , blankLink "https://en.wikipedia.org/wiki/Transitive_relation" "transitive"
+            , Html.text <| ": " ++ yesNo isTransitive ++ " "
             , Html.button [ E.onClick DoTransitiveClosure, A.disabled isTransitive ]
                 [ Html.text "Transitive Closure" ]
             ]
         ]
+
+
+blankLink : String -> String -> Html msg
+blankLink href text =
+    Html.a [ A.href href, A.target "_blank" ] [ Html.text text ]
 
 
 yesNo : Bool -> String
