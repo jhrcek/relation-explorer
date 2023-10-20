@@ -73,9 +73,14 @@ viewRelProperties : Rel -> Html Msg
 viewRelProperties rel =
     Html.div []
         [ Html.div []
+            -- TODO add wikipedia link https://en.wikipedia.org/wiki/Reflexive_relation
             [ Html.text <| "Is reflexive: " ++ yesNo (Rel.isReflexive rel) ]
         , Html.div []
+            -- TODO add wikipedia link https://en.wikipedia.org/wiki/Symmetric_relation
             [ Html.text <| "Is symmetric: " ++ yesNo (Rel.isSymmetric rel) ]
+        , Html.div []
+            -- TODO add wikipedia link https://en.wikipedia.org/wiki/Antisymmetric_relation
+            [ Html.text <| "Is antisymmetric: " ++ yesNo (Rel.isAntisymmetric rel) ]
         ]
 
 

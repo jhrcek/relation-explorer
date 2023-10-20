@@ -2,6 +2,7 @@ module Rel exposing
     ( Config
     , Rel
     , empty
+    , isAntisymmetric
     , isReflexive
     , isSymmetric
     , resize
@@ -12,7 +13,9 @@ module Rel exposing
 
 import Array exposing (Array)
 import Html exposing (Html)
+import Html.Attributes exposing (rows)
 import Html.Events as E
+import List
 
 
 
@@ -39,16 +42,28 @@ empty n =
 {-| Preserve already toggled cells of the original
 -}
 resize : Int -> Rel -> Rel
-resize n (Rel oldRel) =
+resize n (Rel rows) =
     Rel <|
         Array.initialize n
             (\i ->
                 Array.initialize n
                     (\j ->
-                        Array.get i oldRel
-                            |> Maybe.andThen (Array.get j)
-                            |> Maybe.withDefault False
+                        unsafeGet i j rows
                     )
+            )
+
+
+transpose : Rel -> Rel
+transpose (Rel rows) =
+    let
+        n =
+            Array.length rows
+    in
+    Rel <|
+        Array.initialize n
+            (\i ->
+                Array.initialize n
+                    (\j -> unsafeGet j i rows)
             )
 
 
@@ -87,22 +102,34 @@ isSymmetric rel =
     rel == transpose rel
 
 
-transpose : Rel -> Rel
-transpose (Rel rows) =
+isAntisymmetric : Rel -> Bool
+isAntisymmetric (Rel rows) =
     let
-        n =
-            Array.length rows
+        maxIdx =
+            Array.length rows - 1
     in
-    Rel <|
-        Array.initialize n
-            (\i ->
-                Array.initialize n
-                    (\j ->
-                        Array.get j rows
-                            |> Maybe.andThen (Array.get i)
-                            |> Maybe.withDefault False
-                    )
+    Array.foldl (&&) True <|
+        Array.indexedMap
+            (\i row ->
+                List.range (i + 1) maxIdx
+                    -- If iRj with i /= j then jRi must not hold
+                    |> List.all
+                        (\j ->
+                            if Maybe.withDefault False (Array.get j row) then
+                                not <| unsafeGet j i rows
+
+                            else
+                                True
+                        )
             )
+            rows
+
+
+unsafeGet : Int -> Int -> Array (Array Bool) -> Bool
+unsafeGet i j rows =
+    Array.get i rows
+        |> Maybe.andThen (Array.get j)
+        |> Maybe.withDefault False
 
 
 

@@ -8,8 +8,8 @@
 - [ ] Show whether the specified relation satisfies well-known properties:
     - [x] reflexivity
     - [x] symmetry
+    - [x] antisymmetry
     - [ ] transitivity
-    - [ ] antisymmetry
     - [ ] functional(ity?)
         - [ ] partial / total
         - [ ] surjective
