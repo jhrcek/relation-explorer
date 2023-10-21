@@ -125,6 +125,11 @@ elementaryPropertiesView rel =
             ]
         , Html.div []
             [ Html.text "Is "
+            , blankLink "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity" "irreflexive"
+            , Html.text <| ": " ++ yesNo (Rel.isIrreflexive rel)
+            ]
+        , Html.div []
+            [ Html.text "Is "
             , blankLink "https://en.wikipedia.org/wiki/Symmetric_relation" "symmetric"
             , Html.text <| ": " ++ yesNo isSymmetric ++ " "
             , Html.button [ E.onClick DoSymmetricClosure, A.disabled isSymmetric ]
@@ -134,6 +139,11 @@ elementaryPropertiesView rel =
             [ Html.text "Is "
             , blankLink "https://en.wikipedia.org/wiki/Antisymmetric_relation" "antisymmetric"
             , Html.text <| ": " ++ yesNo (Rel.isAntisymmetric rel)
+            ]
+        , Html.div []
+            [ Html.text "Is "
+            , blankLink "https://en.wikipedia.org/wiki/Asymmetric_relation" "assymetric"
+            , Html.text <| ": " ++ yesNo (Rel.isAsymmetric rel)
             ]
         , Html.div []
             [ Html.text "Is "

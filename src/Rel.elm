@@ -6,6 +6,8 @@ module Rel exposing
     , converse
     , empty
     , isAntisymmetric
+    , isAsymmetric
+    , isIrreflexive
     , isReflexive
     , isSymmetric
     , isTransitive
@@ -212,6 +214,12 @@ isReflexive (Rel rows) =
         Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False) rows
 
 
+isIrreflexive : Rel -> Bool
+isIrreflexive (Rel rows) =
+    arrayAnd <|
+        Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False |> not) rows
+
+
 isSymmetric : Rel -> Bool
 isSymmetric rel =
     rel == converse rel
@@ -238,6 +246,11 @@ isAntisymmetric (Rel rows) =
                         )
             )
             rows
+
+
+isAsymmetric : Rel -> Bool
+isAsymmetric rel =
+    isAntisymmetric rel && isIrreflexive rel
 
 
 isTransitive : Rel -> Bool
