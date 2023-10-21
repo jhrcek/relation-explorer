@@ -5,6 +5,7 @@
     - [x] A number n from (0?) 1 to 10
     - [x] A rectangular matrix with checkboxes that allows specifying arbitraty relation on a set with n elements
     - [ ] Support for undo / redo history of modifications
+    - [ ] Show a graph (as in graph theory) of the relation
 
 - [ ] Multiple ways to initialize relation
     - [x] Initialize as empty
@@ -12,6 +13,7 @@
     - [ ] Generate random relation
         - [x] any
         - [x] function
+            - [x] bijective
         - [ ] random relation that is any of the well defined types (equivalence, function, reflexive, lattice etc.)
 
 - [ ] Show whether the specified relation satisfies well-known properties:
@@ -26,7 +28,7 @@
         - [ ] partial / total
         - [ ] surjective
         - [ ] injective
-        - [ ] bijective
+        - [x] bijective
 
 - [ ] When property is not satisfied add "why?" tooltip that will explain why
     - [ ] Also visually highlight missing/extra elements that are breaking the property

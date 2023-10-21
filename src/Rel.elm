@@ -5,10 +5,12 @@ module Rel exposing
     , complement
     , converse
     , empty
+    , genBijectiveFunction
     , genFunction
     , genRelation
     , isAntisymmetric
     , isAsymmetric
+    , isBijectiveFunction
     , isConnected
     , isFunction
     , isIrreflexive
@@ -31,6 +33,7 @@ import Html exposing (Html)
 import Html.Events as E
 import List
 import Random exposing (Generator)
+import Random.Array as Array
 
 
 {-| A homogenous relation
@@ -87,7 +90,7 @@ elements (Rel rows) =
                     |> List.indexedMap
                         (\j cell ->
                             if cell then
-                                Just (Pair i j)
+                                Just (Pair (i + 1) (j + 1))
 
                             else
                                 Nothing
@@ -307,6 +310,11 @@ isFunction (Rel rows) =
             rows
 
 
+isBijectiveFunction : Rel -> Bool
+isBijectiveFunction rel =
+    isFunction rel && isFunction (converse rel)
+
+
 
 -- CLOSURES
 
@@ -382,6 +390,17 @@ genFunction n =
         |> Random.map (\i -> Array.initialize n (\j -> j == i))
         |> Random.list n
         |> Random.map (Array.fromList >> Rel)
+
+
+genBijectiveFunction : Int -> Generator Rel
+genBijectiveFunction n =
+    Array.initialize n identity
+        |> Array.shuffle
+        |> Random.map
+            (\shuffledArr ->
+                Array.map (\indexOfTrue -> Array.initialize n (\i -> i == indexOfTrue)) shuffledArr
+                    |> Rel
+            )
 
 
 

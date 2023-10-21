@@ -43,8 +43,9 @@ type Msg
     | DoComplement
     | DoConverse
     | MakeEmpty
-    | MakeRandomRel
-    | MakeRandomFunction
+    | GenRandomRel
+    | GenRandomFunction
+    | GenRandomBijectiveFunction
     | GotRandom Rel
 
 
@@ -91,17 +92,23 @@ update msg model =
         MakeEmpty ->
             pure { model | rel = Rel.empty <| Rel.size model.rel }
 
-        MakeRandomRel ->
+        GenRandomRel ->
             ( model
             , Random.generate GotRandom <|
                 -- TODO make True-bias configurable via a slider
                 Rel.genRelation 0.5 (Rel.size model.rel)
             )
 
-        MakeRandomFunction ->
+        GenRandomFunction ->
             ( model
             , Random.generate GotRandom <|
                 Rel.genFunction (Rel.size model.rel)
+            )
+
+        GenRandomBijectiveFunction ->
+            ( model
+            , Random.generate GotRandom <|
+                Rel.genBijectiveFunction (Rel.size model.rel)
             )
 
         GotRandom rel ->
@@ -149,7 +156,7 @@ elementaryPropertiesView rel =
             [ Html.text "Is "
             , blankLink "https://en.wikipedia.org/wiki/Reflexive_relation" "relation"
             , Html.text ": Yes "
-            , Html.button [ E.onClick MakeRandomRel, A.title "Generate random relation" ] [ Html.text "⚄" ]
+            , Html.button [ E.onClick GenRandomRel, A.title "Generate random relation" ] [ Html.text "⚄" ]
             ]
         , Html.div []
             [ Html.text "Is "
@@ -196,7 +203,14 @@ elementaryPropertiesView rel =
             [ Html.text "Is "
             , blankLink "https://en.wikipedia.org/wiki/Function_(mathematics)" "function"
             , Html.text <| ": " ++ yesNo (Rel.isFunction rel) ++ " "
-            , Html.button [ E.onClick MakeRandomFunction, A.title "Generate random function" ] [ Html.text "⚄" ]
+            , Html.button [ E.onClick GenRandomFunction, A.title "Generate random function" ] [ Html.text "⚄" ]
+            ]
+        , -- TODO nest this under function
+          Html.div []
+            [ Html.text "Is "
+            , blankLink "https://en.wikipedia.org/wiki/Bijection" "bijection"
+            , Html.text <| ": " ++ yesNo (Rel.isBijectiveFunction rel) ++ " "
+            , Html.button [ E.onClick GenRandomBijectiveFunction, A.title "Generate random bijective function" ] [ Html.text "⚄" ]
             ]
         ]
 
