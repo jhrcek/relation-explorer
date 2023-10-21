@@ -43,7 +43,8 @@ type Msg
     | DoComplement
     | DoConverse
     | MakeEmpty
-    | MakeRandom
+    | MakeRandomRel
+    | MakeRandomFunction
     | GotRandom Rel
 
 
@@ -90,11 +91,17 @@ update msg model =
         MakeEmpty ->
             pure { model | rel = Rel.empty <| Rel.size model.rel }
 
-        MakeRandom ->
+        MakeRandomRel ->
             ( model
             , Random.generate GotRandom <|
                 -- TODO make True-bias configurable via a slider
                 Rel.genRelation 0.5 (Rel.size model.rel)
+            )
+
+        MakeRandomFunction ->
+            ( model
+            , Random.generate GotRandom <|
+                Rel.genFunction (Rel.size model.rel)
             )
 
         GotRandom rel ->
@@ -117,6 +124,7 @@ view model =
         [ Html.node "style" [] [ Html.text style ]
         , sizeInputView model
         , Rel.view relConfig model.rel
+        , Html.text <| "Set of elements: " ++ Rel.showElements model.rel
         , elementaryPropertiesView model.rel
         , Html.hr [] []
         , operationsView
@@ -135,8 +143,15 @@ elementaryPropertiesView rel =
         isTransitive =
             Rel.isTransitive rel
     in
+    -- TODO refactor this UI so that Yes/No, Closure, Random and count are in separate columns
     Html.div []
         [ Html.div []
+            [ Html.text "Is "
+            , blankLink "https://en.wikipedia.org/wiki/Reflexive_relation" "relation"
+            , Html.text ": Yes "
+            , Html.button [ E.onClick MakeRandomRel, A.title "Generate random relation" ] [ Html.text "⚄" ]
+            ]
+        , Html.div []
             [ Html.text "Is "
             , blankLink "https://en.wikipedia.org/wiki/Reflexive_relation" "reflexive"
             , Html.text <| ": " ++ yesNo isReflexive ++ " "
@@ -180,7 +195,8 @@ elementaryPropertiesView rel =
         , Html.div []
             [ Html.text "Is "
             , blankLink "https://en.wikipedia.org/wiki/Function_(mathematics)" "function"
-            , Html.text <| ": " ++ yesNo (Rel.isFunction rel)
+            , Html.text <| ": " ++ yesNo (Rel.isFunction rel) ++ " "
+            , Html.button [ E.onClick MakeRandomFunction, A.title "Generate random function" ] [ Html.text "⚄" ]
             ]
         ]
 
@@ -226,7 +242,6 @@ operationsView =
     Html.div []
         [ Html.h4 [] [ Html.text "Operations" ]
         , Html.button [ E.onClick MakeEmpty, A.title "Empty relation" ] [ Html.text "∅" ]
-        , Html.button [ E.onClick MakeRandom, A.title "Generate random relation" ] [ Html.text "⚄" ]
         , Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ]
         , Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ]
         ]

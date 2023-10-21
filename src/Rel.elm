@@ -5,6 +5,7 @@ module Rel exposing
     , complement
     , converse
     , empty
+    , genFunction
     , genRelation
     , isAntisymmetric
     , isAsymmetric
@@ -373,6 +374,14 @@ genRelation trueProb n =
         |> Random.list n
         |> Random.list n
         |> Random.map (List.map Array.fromList >> Array.fromList >> Rel)
+
+
+genFunction : Int -> Generator Rel
+genFunction n =
+    Random.int 0 (n - 1)
+        |> Random.map (\i -> Array.initialize n (\j -> j == i))
+        |> Random.list n
+        |> Random.map (Array.fromList >> Rel)
 
 
 

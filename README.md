@@ -11,6 +11,7 @@
     - [x] Resize existing relation without changing its elements
     - [ ] Generate random relation
         - [x] any
+        - [x] function
         - [ ] random relation that is any of the well defined types (equivalence, function, reflexive, lattice etc.)
 
 - [ ] Show whether the specified relation satisfies well-known properties:
@@ -34,13 +35,15 @@
     - [ ] Equivalence relation
         - [ ] show corresponding partition
     - [ ] Preorder
-        - [ ] show posset arising from identifying equivalent elements
+        - [ ] show poset arising from identifying equivalent elements
     - [ ] Poset
         - [ ] show hasse diagram
     - [ ] Total order
         - [ ] highlight incomparable elements if not
     - [ ] Lattice
         - [ ] Show table of meet and join operations (if not full lattice, show why it fails to be, e.g. 2 elements don't have meet / have multiple minimal elements in upper set)
+    - [ ] Function
+        - [ ] Show fixed points
 
 - [ ] For each of the above shows the total number of structures of this kind (with links to OEIS, see [counting transitive relations](https://en.wikipedia.org/wiki/Transitive_relation#Counting_transitive_relations))
 
