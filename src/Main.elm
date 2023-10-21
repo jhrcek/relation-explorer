@@ -4,15 +4,17 @@ import Browser
 import Html exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
+import Random
 import Rel exposing (Rel)
 
 
 main : Program () Model Msg
 main =
-    Browser.sandbox
+    Browser.element
         { init = init
         , view = view
         , update = update
+        , subscriptions = \_ -> Sub.none
         }
 
 
@@ -21,14 +23,15 @@ type alias Model =
     }
 
 
-init : Model
-init =
+init : () -> ( Model, Cmd Msg )
+init _ =
     let
         initSize =
             4
     in
-    { rel = Rel.empty initSize
-    }
+    ( { rel = Rel.empty initSize }
+    , Cmd.none
+    )
 
 
 type Msg
@@ -40,9 +43,11 @@ type Msg
     | DoComplement
     | DoConverse
     | MakeEmpty
+    | MakeRandom
+    | GotRandom Rel
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SetRelSize newSize ->
@@ -50,16 +55,16 @@ update msg model =
                 safeSize =
                     clamp 1 10 newSize
             in
-            { model | rel = Rel.resize safeSize model.rel }
+            pure { model | rel = Rel.resize safeSize model.rel }
 
         ToggleRel i j ->
-            { model | rel = Rel.toggle i j model.rel }
+            pure { model | rel = Rel.toggle i j model.rel }
 
         DoReflexiveClosure ->
-            { model | rel = Rel.reflexiveClosure model.rel }
+            pure { model | rel = Rel.reflexiveClosure model.rel }
 
         DoSymmetricClosure ->
-            { model | rel = Rel.symmetricClosure model.rel }
+            pure { model | rel = Rel.symmetricClosure model.rel }
 
         DoTransitiveClosure ->
             let
@@ -74,16 +79,31 @@ update msg model =
                         )
                         ()
             in
-            { model | rel = transitiveRel }
+            pure { model | rel = transitiveRel }
 
         DoComplement ->
-            { model | rel = Rel.complement model.rel }
+            pure { model | rel = Rel.complement model.rel }
 
         DoConverse ->
-            { model | rel = Rel.converse model.rel }
+            pure { model | rel = Rel.converse model.rel }
 
         MakeEmpty ->
-            { model | rel = Rel.empty <| Rel.size model.rel }
+            pure { model | rel = Rel.empty <| Rel.size model.rel }
+
+        MakeRandom ->
+            ( model
+            , Random.generate GotRandom <|
+                -- TODO make True-bias configurable via a slider
+                Rel.genRelation 0.5 (Rel.size model.rel)
+            )
+
+        GotRandom rel ->
+            pure { model | rel = rel }
+
+
+pure : a -> ( a, Cmd msg )
+pure a =
+    ( a, Cmd.none )
 
 
 relConfig : Rel.Config Msg
@@ -205,9 +225,10 @@ operationsView : Html Msg
 operationsView =
     Html.div []
         [ Html.h4 [] [ Html.text "Operations" ]
-        , Html.div [] [ Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ] ]
-        , Html.div [] [ Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ] ]
-        , Html.div [] [ Html.button [ E.onClick MakeEmpty ] [ Html.text "Empty" ] ]
+        , Html.button [ E.onClick MakeEmpty, A.title "Empty relation" ] [ Html.text "∅" ]
+        , Html.button [ E.onClick MakeRandom, A.title "Generate random relation" ] [ Html.text "⚄" ]
+        , Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ]
+        , Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ]
         ]
 
 

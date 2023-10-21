@@ -5,6 +5,7 @@ module Rel exposing
     , complement
     , converse
     , empty
+    , genRelation
     , isAntisymmetric
     , isAsymmetric
     , isConnected
@@ -28,6 +29,7 @@ import Array.Extra as Array
 import Html exposing (Html)
 import Html.Events as E
 import List
+import Random exposing (Generator)
 
 
 {-| A homogenous relation
@@ -354,6 +356,23 @@ transitiveClosure rel =
                 transitiveHelp ( union r (compose r rel), r :: history )
     in
     transitiveHelp ( rel, [] )
+
+
+
+-- GENERATORS
+
+
+genBool : Float -> Generator Bool
+genBool trueProb =
+    Random.weighted ( trueProb, True ) [ ( 1 - trueProb, False ) ]
+
+
+genRelation : Float -> Int -> Generator Rel
+genRelation trueProb n =
+    genBool trueProb
+        |> Random.list n
+        |> Random.list n
+        |> Random.map (List.map Array.fromList >> Array.fromList >> Rel)
 
 
 

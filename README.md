@@ -10,8 +10,8 @@
     - [x] Initialize as empty
     - [x] Resize existing relation without changing its elements
     - [ ] Generate random relation
-        - [ ] any
-        - [ ] random relation that is any of the well defined types
+        - [x] any
+        - [ ] random relation that is any of the well defined types (equivalence, function, reflexive, lattice etc.)
 
 - [ ] Show whether the specified relation satisfies well-known properties:
     - [x] reflexivity
