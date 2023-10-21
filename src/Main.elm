@@ -20,6 +20,13 @@ main =
 
 type alias Model =
     { rel : Rel
+    , explanation : Maybe Explanation
+    }
+
+
+type alias Explanation =
+    { highlightCells : List Rel.Pair
+    , text : String
     }
 
 
@@ -29,7 +36,9 @@ init _ =
         initSize =
             4
     in
-    ( { rel = Rel.empty initSize }
+    ( { rel = Rel.empty initSize
+      , explanation = Nothing
+      }
     , Cmd.none
     )
 
@@ -48,6 +57,9 @@ type Msg
     | GenFunction
     | GenBijectiveFunction
     | GotRandom Rel
+    | HideExplanations
+    | ExplainWhyNotReflexive
+    | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -122,6 +134,23 @@ update msg model =
         GotRandom rel ->
             pure { model | rel = rel }
 
+        HideExplanations ->
+            pure { model | explanation = Nothing }
+
+        -- TODO show explanation and highlights somehow
+        ExplainWhyNotReflexive ->
+            pure
+                { model
+                    | explanation =
+                        Just
+                            { highlightCells = []
+                            , text = "Not reflexive because... TODO"
+                            }
+                }
+
+        NoOp ->
+            pure model
+
 
 pure : a -> ( a, Cmd msg )
 pure a =
@@ -138,25 +167,123 @@ view model =
     Html.div []
         [ Html.node "style" [] [ Html.text style ]
         , sizeInputView model
-        , Rel.view relConfig model.rel
-        , Html.text <| "Set of elements: " ++ Rel.showElements model.rel
+        , Html.div [ A.id "rel-and-explanation" ]
+            [ Rel.view relConfig model.rel
+            , Html.div [ A.id "explanation" ]
+                [ Html.div []
+                    [ Html.text <| "Set of elements: " ++ Rel.showElements model.rel
+                    , case model.explanation of
+                        Just exp ->
+                            Html.div [] [ Html.text exp.text ]
+
+                        Nothing ->
+                            Html.text ""
+                    ]
+                ]
+            ]
         , elementaryPropertiesView model.rel
         , Html.hr [] []
         , operationsView
         ]
 
 
+type alias PropertyConfig msg =
+    { propertyName : String
+    , wikiLink : String
+    , hasProperty : Rel -> Bool
+    , closureButton : Maybe msg
+    , genRandom : Maybe msg
+    , onHoverExplanation : Maybe msg
+    }
+
+
+propertyConfigs : List (PropertyConfig Msg)
+propertyConfigs =
+    [ { propertyName = "Relation"
+      , wikiLink = "https://en.wikipedia.org/wiki/Relation_(mathematics)"
+      , hasProperty = always True
+      , closureButton = Nothing
+      , genRandom = Just GenRel
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Reflexive"
+      , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation"
+      , hasProperty = Rel.isReflexive
+      , closureButton = Just DoReflexiveClosure
+      , genRandom = Just GenReflexive
+      , onHoverExplanation = Just ExplainWhyNotReflexive
+      }
+    , { propertyName = "Irreflexive"
+      , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity"
+      , hasProperty = Rel.isIrreflexive
+      , closureButton = Nothing
+      , genRandom = Nothing
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Symmetric"
+      , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
+      , hasProperty = Rel.isSymmetric
+      , closureButton = Just DoSymmetricClosure
+      , genRandom = Nothing
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Antisymmetric"
+      , wikiLink = "https://en.wikipedia.org/wiki/Antisymmetric_relation"
+      , hasProperty = Rel.isAntisymmetric
+      , closureButton = Nothing
+      , genRandom = Nothing
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Assymetric"
+      , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
+      , hasProperty = Rel.isAsymmetric
+      , closureButton = Nothing
+      , genRandom = Nothing
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Transitive"
+      , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
+      , hasProperty = Rel.isTransitive
+      , closureButton = Just DoTransitiveClosure
+      , genRandom = Nothing
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Connected"
+      , wikiLink = "https://en.wikipedia.org/wiki/Connected_relation"
+      , hasProperty = Rel.isConnected
+      , closureButton = Nothing
+      , genRandom = Nothing
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Function"
+      , wikiLink = "https://en.wikipedia.org/wiki/Function_(mathematics)"
+      , hasProperty = Rel.isFunction
+      , closureButton = Nothing
+      , genRandom = Just GenFunction
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Bijection"
+      , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
+      , hasProperty = Rel.isBijectiveFunction
+      , closureButton = Nothing
+      , genRandom = Just GenBijectiveFunction
+      , onHoverExplanation = Nothing
+      }
+    ]
+
+
 elementaryPropertiesView : Rel -> Html Msg
 elementaryPropertiesView rel =
     let
-        row { propertyName, wikiLink, hasProperty, closureButton, genRandom } =
+        row : PropertyConfig Msg -> Html Msg
+        row { propertyName, wikiLink, hasProperty, closureButton, genRandom, onHoverExplanation } =
             let
                 hasProp =
                     hasProperty rel
             in
             Html.tr []
                 [ Html.td [] [ blankLink wikiLink propertyName ]
-                , Html.td [] [ Html.text <| yesNo hasProp ]
+                , Html.td [] [ yesNo (Maybe.withDefault NoOp onHoverExplanation) hasProp ]
                 , Html.td [] <|
                     case closureButton of
                         Just closureMsg ->
@@ -182,69 +309,7 @@ elementaryPropertiesView rel =
                 , Html.th [] [ Html.text "Generate" ]
                 ]
             ]
-        , Html.tbody [] <|
-            List.map row
-                [ { propertyName = "Relation"
-                  , wikiLink = "https://en.wikipedia.org/wiki/Relation_(mathematics)"
-                  , hasProperty = always True
-                  , closureButton = Nothing
-                  , genRandom = Just GenRel
-                  }
-                , { propertyName = "Reflexive"
-                  , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation"
-                  , hasProperty = Rel.isReflexive
-                  , closureButton = Just DoReflexiveClosure
-                  , genRandom = Just GenReflexive
-                  }
-                , { propertyName = "Irreflexive"
-                  , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity"
-                  , hasProperty = Rel.isIrreflexive
-                  , closureButton = Nothing
-                  , genRandom = Nothing
-                  }
-                , { propertyName = "Symmetric"
-                  , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
-                  , hasProperty = Rel.isSymmetric
-                  , closureButton = Just DoSymmetricClosure
-                  , genRandom = Nothing
-                  }
-                , { propertyName = "Antisymmetric"
-                  , wikiLink = "https://en.wikipedia.org/wiki/Antisymmetric_relation"
-                  , hasProperty = Rel.isAntisymmetric
-                  , closureButton = Nothing
-                  , genRandom = Nothing
-                  }
-                , { propertyName = "Assymetric"
-                  , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
-                  , hasProperty = Rel.isAsymmetric
-                  , closureButton = Nothing
-                  , genRandom = Nothing
-                  }
-                , { propertyName = "Transitive"
-                  , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
-                  , hasProperty = Rel.isTransitive
-                  , closureButton = Just DoTransitiveClosure
-                  , genRandom = Nothing
-                  }
-                , { propertyName = "Connected"
-                  , wikiLink = "https://en.wikipedia.org/wiki/Connected_relation"
-                  , hasProperty = Rel.isConnected
-                  , closureButton = Nothing
-                  , genRandom = Nothing
-                  }
-                , { propertyName = "Function"
-                  , wikiLink = "https://en.wikipedia.org/wiki/Function_(mathematics)"
-                  , hasProperty = Rel.isFunction
-                  , closureButton = Nothing
-                  , genRandom = Just GenFunction
-                  }
-                , { propertyName = "Bijection"
-                  , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
-                  , hasProperty = Rel.isBijectiveFunction
-                  , closureButton = Nothing
-                  , genRandom = Just GenBijectiveFunction
-                  }
-                ]
+        , Html.tbody [] <| List.map row propertyConfigs
         ]
 
 
@@ -253,13 +318,13 @@ blankLink href text =
     Html.a [ A.href href, A.target "_blank" ] [ Html.text text ]
 
 
-yesNo : Bool -> String
-yesNo b =
+yesNo : Msg -> Bool -> Html Msg
+yesNo onHover b =
     if b then
-        "Yes"
+        Html.text "Yes"
 
     else
-        "No"
+        Html.span [ E.onMouseEnter onHover, E.onMouseLeave HideExplanations ] [ Html.text "No - ⓘ" ]
 
 
 sizeInputView : Model -> Html Msg
@@ -299,7 +364,6 @@ style =
     """
 table {
     border-collapse: collapse;
-    margin: 20px;
 }
 
 th, td {
@@ -326,5 +390,15 @@ a:hover {
 
 a:visited {
     color: sienna;
+}
+
+#rel-and-explanation {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+
+    #explanation {
+        max-width: 40%;
+    }
 }
 """
