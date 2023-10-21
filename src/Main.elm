@@ -152,6 +152,11 @@ elementaryPropertiesView rel =
             , Html.button [ E.onClick DoTransitiveClosure, A.disabled isTransitive ]
                 [ Html.text "Transitive Closure" ]
             ]
+        , Html.div []
+            [ Html.text "Is "
+            , blankLink "https://en.wikipedia.org/wiki/Function_(mathematics)" "function"
+            , Html.text <| ": " ++ yesNo (Rel.isFunction rel)
+            ]
         ]
 
 

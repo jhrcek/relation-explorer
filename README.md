@@ -20,7 +20,7 @@
     - [x] antisymmetry
     - [x] transitivity
     - [x] assymetric (<=> antisymmetric and irreflexive)
-    - [ ] functional(ity?)
+    - [x] function
         - [ ] partial / total
         - [ ] surjective
         - [ ] injective

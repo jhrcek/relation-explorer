@@ -7,6 +7,7 @@ module Rel exposing
     , empty
     , isAntisymmetric
     , isAsymmetric
+    , isFunction
     , isIrreflexive
     , isReflexive
     , isSymmetric
@@ -256,6 +257,27 @@ isAsymmetric rel =
 isTransitive : Rel -> Bool
 isTransitive rel =
     isSubsetOf (compose rel rel) rel
+
+
+isFunction : Rel -> Bool
+isFunction (Rel rows) =
+    arrayAnd <|
+        Array.map
+            (\row ->
+                1
+                    -- There's exactly one element in each row
+                    == Array.foldl
+                        (\elem elemCount ->
+                            if elem then
+                                elemCount + 1
+
+                            else
+                                elemCount
+                        )
+                        0
+                        row
+            )
+            rows
 
 
 
