@@ -201,10 +201,8 @@ toggle i j ((Rel rows) as rel) =
             rel
 
 
-
--- TODO maybe also return a list of cells that are missing for it to be reflexive
-
-
+{-| aRa
+-}
 isReflexive : Rel -> Bool
 isReflexive (Rel rows) =
     arrayAnd <|
@@ -212,6 +210,8 @@ isReflexive (Rel rows) =
         Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False) rows
 
 
+{-| not aRa
+-}
 isIrreflexive : Rel -> Bool
 isIrreflexive (Rel rows) =
     arrayAnd <|
@@ -219,12 +219,16 @@ isIrreflexive (Rel rows) =
         Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False |> not) rows
 
 
+{-| aRb => bRa
+-}
 isSymmetric : Rel -> Bool
 isSymmetric rel =
-    -- If iRj then jRi must hold
     rel == converse rel
 
 
+{-| aRb and bRa => a == b
+Or equivalently: a/=b and aRb => not bRa
+-}
 isAntisymmetric : Rel -> Bool
 isAntisymmetric (Rel rows) =
     let
@@ -235,7 +239,6 @@ isAntisymmetric (Rel rows) =
         Array.indexedMap
             (\i row ->
                 List.range (i + 1) maxIdx
-                    -- If i /= j and iRj then jRi must not hold
                     |> List.all
                         (\j ->
                             if Maybe.withDefault False (Array.get j row) then
@@ -248,6 +251,8 @@ isAntisymmetric (Rel rows) =
             rows
 
 
+{-| aRb => not bRa
+-}
 isAsymmetric : Rel -> Bool
 isAsymmetric rel =
     isAntisymmetric rel && isIrreflexive rel
@@ -258,6 +263,8 @@ isTransitive rel =
     isSubsetOf (compose rel rel) rel
 
 
+{-| a/=b => aRb or bRa
+-}
 isConnected : Rel -> Bool
 isConnected (Rel rows) =
     let
@@ -268,7 +275,6 @@ isConnected (Rel rows) =
         Array.indexedMap
             (\i row ->
                 List.range (i + 1) maxIdx
-                    -- if i /= j then iRj or jRi must hold
                     |> List.all
                         (\j ->
                             Maybe.withDefault False (Array.get j row) || unsafeGet j i rows
