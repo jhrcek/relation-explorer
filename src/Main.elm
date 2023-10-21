@@ -154,6 +154,11 @@ elementaryPropertiesView rel =
             ]
         , Html.div []
             [ Html.text "Is "
+            , blankLink "https://en.wikipedia.org/wiki/Connected_relation" "connected"
+            , Html.text <| ": " ++ yesNo (Rel.isConnected rel)
+            ]
+        , Html.div []
+            [ Html.text "Is "
             , blankLink "https://en.wikipedia.org/wiki/Function_(mathematics)" "function"
             , Html.text <| ": " ++ yesNo (Rel.isFunction rel)
             ]

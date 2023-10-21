@@ -7,6 +7,7 @@ module Rel exposing
     , empty
     , isAntisymmetric
     , isAsymmetric
+    , isConnected
     , isFunction
     , isIrreflexive
     , isReflexive
@@ -27,11 +28,6 @@ import Array.Extra as Array
 import Html exposing (Html)
 import Html.Events as E
 import List
-
-
-
--- TODO generate random Rel
--- TODO a way to clean existing Rel
 
 
 {-| A homogenous relation
@@ -212,17 +208,20 @@ toggle i j ((Rel rows) as rel) =
 isReflexive : Rel -> Bool
 isReflexive (Rel rows) =
     arrayAnd <|
+        -- All elements on the diagonal must be True
         Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False) rows
 
 
 isIrreflexive : Rel -> Bool
 isIrreflexive (Rel rows) =
     arrayAnd <|
+        -- All elements on the diagonal must be False
         Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False |> not) rows
 
 
 isSymmetric : Rel -> Bool
 isSymmetric rel =
+    -- If iRj then jRi must hold
     rel == converse rel
 
 
@@ -236,7 +235,7 @@ isAntisymmetric (Rel rows) =
         Array.indexedMap
             (\i row ->
                 List.range (i + 1) maxIdx
-                    -- If iRj with i /= j then jRi must not hold
+                    -- If i /= j and iRj then jRi must not hold
                     |> List.all
                         (\j ->
                             if Maybe.withDefault False (Array.get j row) then
@@ -257,6 +256,25 @@ isAsymmetric rel =
 isTransitive : Rel -> Bool
 isTransitive rel =
     isSubsetOf (compose rel rel) rel
+
+
+isConnected : Rel -> Bool
+isConnected (Rel rows) =
+    let
+        maxIdx =
+            Array.length rows - 1
+    in
+    arrayAnd <|
+        Array.indexedMap
+            (\i row ->
+                List.range (i + 1) maxIdx
+                    -- if i /= j then iRj or jRi must hold
+                    |> List.all
+                        (\j ->
+                            Maybe.withDefault False (Array.get j row) || unsafeGet j i rows
+                        )
+            )
+            rows
 
 
 isFunction : Rel -> Bool

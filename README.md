@@ -20,6 +20,7 @@
     - [x] antisymmetry
     - [x] transitivity
     - [x] assymetric (<=> antisymmetric and irreflexive)
+    - [x] connected
     - [x] function
         - [ ] partial / total
         - [ ] surjective
