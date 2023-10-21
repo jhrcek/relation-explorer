@@ -7,9 +7,11 @@
 
 - [ ] Show whether the specified relation satisfies well-known properties:
     - [x] reflexivity
+    - [x] irreflexivity
     - [x] symmetry
     - [x] antisymmetry
     - [x] transitivity
+    - [ ] assymetric (<=> irreflexive and irreflexive)
     - [ ] functional(ity?)
         - [ ] partial / total
         - [ ] surjective
@@ -23,11 +25,13 @@
     - [ ] Equivalence relation
         - [ ] show corresponding partition
     - [ ] Preorder
+        - [ ] show posset arising from identifying equivalent elements
     - [ ] Poset
         - [ ] show hasse diagram
     - [ ] Total order
         - [ ] highlight incomparable elements if not
     - [ ] Lattice
+        - [ ] Show table of meet and join operations (if not full lattice, show why it fails to be, e.g. 2 elements don't have meet / have multiple minimal elements in upper set)
     - [ ] ...
 
 - [ ] For each of the above shows the total number of structures of this kind (with links to OEIS, see [counting transitive relations](https://en.wikipedia.org/wiki/Transitive_relation#Counting_transitive_relations))
@@ -47,3 +51,4 @@
 - [ ] Support for undo / redo history of modifications
 
 - [ ] mention properties of various operations (E.g. The union of two transitive relations need not be transitive, but intersection always is; converse and complement preserve symmetry etc.)
+- [ ] use inclusion-exclusion principle to show exact numbers of relations within each cocnept of concept lattice or relations

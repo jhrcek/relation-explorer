@@ -1,5 +1,6 @@
 module Rel exposing
     ( Config
+    , Pair(..)
     , Rel
     , complement
     , converse
@@ -10,6 +11,7 @@ module Rel exposing
     , isTransitive
     , reflexiveClosure
     , resize
+    , showElements
     , size
     , symmetricClosure
     , toggle
@@ -33,6 +35,14 @@ import List
 -}
 type Rel
     = Rel (Array (Array Bool))
+
+
+{-| An element of a relation.
+For relation on set of size n, the are n^2 possible elements:
+{(a,b) | a in {1..n}, b in {1..n}}
+-}
+type Pair
+    = Pair Int Int
 
 
 type alias Config msg =
@@ -64,6 +74,34 @@ resize n (Rel rows) =
             )
 
 
+{-| List of pairs that are members of this relation
+-}
+elements : Rel -> List Pair
+elements (Rel rows) =
+    Array.toList rows
+        |> List.indexedMap
+            (\i row ->
+                Array.toList row
+                    |> List.indexedMap
+                        (\j cell ->
+                            if cell then
+                                Just (Pair i j)
+
+                            else
+                                Nothing
+                        )
+            )
+        |> List.concat
+        |> List.filterMap identity
+
+
+{-| Does given relation contain given Pair?
+-}
+member : Pair -> Rel -> Bool
+member (Pair i j) (Rel rows) =
+    unsafeGet i j rows
+
+
 {-| The relation that occurs when the order of the elements is switched in the relation.
 -}
 converse : Rel -> Rel
@@ -87,9 +125,18 @@ complement (Rel rows) =
     Rel <| Array.map (Array.map not) rows
 
 
+{-| Union consists of all the pairs that are in first or second relation
+-}
 union : Rel -> Rel -> Rel
 union (Rel rowsA) (Rel rowsB) =
     Rel <| Array.map2 (Array.map2 (||)) rowsA rowsB
+
+
+{-| Difference consists of all the pairs that are in the first, but not in the 2nd relation
+-}
+difference : Rel -> Rel -> Rel
+difference (Rel rowsA) (Rel rowsB) =
+    Rel <| Array.map2 (Array.map2 (\a b -> a && not b)) rowsA rowsB
 
 
 {-| Compose 2 Rels with each other. Assumes both have the same size.
@@ -230,19 +277,24 @@ symmetricClosure rel =
 
 
 {-| <https://en.wikipedia.org/wiki/Transitive_closure>
+
+Returns a non-empty list of relations.
+The last one is the input, each successive one is the composition of the previous relation with the original relation.
+The first one is the transitive closure.
+
 -}
-transitiveClosure : Rel -> Rel
+transitiveClosure : Rel -> ( Rel, List Rel )
 transitiveClosure rel =
     let
         -- TODO this is brute force. See if there's more efficient way
-        transitiveHelp r =
+        transitiveHelp ( r, history ) =
             if isTransitive r then
-                r
+                ( r, history )
 
             else
-                transitiveHelp (union r (compose r rel))
+                transitiveHelp ( union r (compose r rel), r :: history )
     in
-    transitiveHelp rel
+    transitiveHelp ( rel, [] )
 
 
 
@@ -289,6 +341,14 @@ view config (Rel rows) =
 headerCell : Int -> Html msg
 headerCell i =
     Html.th [] [ Html.text (String.fromInt i) ]
+
+
+showElements : Rel -> String
+showElements rel =
+    elements rel
+        |> List.map (\(Pair i j) -> "(" ++ String.fromInt i ++ "," ++ String.fromInt j ++ ")")
+        |> String.join ", "
+        |> (\s -> "{" ++ s ++ "}")
 
 
 

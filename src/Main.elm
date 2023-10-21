@@ -62,7 +62,19 @@ update msg model =
             { model | rel = Rel.symmetricClosure model.rel }
 
         DoTransitiveClosure ->
-            { model | rel = Rel.transitiveClosure model.rel }
+            let
+                ( transitiveRel, history ) =
+                    Rel.transitiveClosure model.rel
+
+                _ =
+                    Debug.log
+                        (List.map Rel.showElements (transitiveRel :: history)
+                            |> List.reverse
+                            |> String.join "\n"
+                        )
+                        ()
+            in
+            { model | rel = transitiveRel }
 
         DoComplement ->
             { model | rel = Rel.complement model.rel }
