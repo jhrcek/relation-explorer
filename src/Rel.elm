@@ -7,6 +7,7 @@ module Rel exposing
     , empty
     , genBijectiveFunction
     , genFunction
+    , genReflexiveRelation
     , genRelation
     , isAntisymmetric
     , isAsymmetric
@@ -382,6 +383,12 @@ genRelation trueProb n =
         |> Random.list n
         |> Random.list n
         |> Random.map (List.map Array.fromList >> Array.fromList >> Rel)
+
+
+genReflexiveRelation : Float -> Int -> Random.Generator Rel
+genReflexiveRelation trueProb n =
+    genRelation trueProb n
+        |> Random.map reflexiveClosure
 
 
 genFunction : Int -> Generator Rel
