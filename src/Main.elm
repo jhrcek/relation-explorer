@@ -63,6 +63,7 @@ type Msg
     | HideExplanations
     | ExplainWhyNotReflexive
     | ExplainWhyNotIrreflexive
+    | ExplainWhyNotSymmetric
     | NoOp
 
 
@@ -177,6 +178,27 @@ update msg model =
                             }
                 }
 
+        ExplainWhyNotSymmetric ->
+            let
+                missing =
+                    Rel.missingForSymmetry model.rel
+            in
+            pure
+                { model
+                    | explanation =
+                        Just
+                            { highlight = missing
+                            , textLines =
+                                [ "This relation is not symmetric."
+                                , "Whenever relation contains an element (x,y), it also needs to contain (y,x) to be symmetric."
+
+                                -- TODO I'd like the explanation to be more granular, to make it clearer.
+                                -- something like: "since we have (1,2), we alson need (2,1) ..."
+                                , "The following elements would have to be added to satisfy that condition: " ++ Rel.showPairSet missing
+                                ]
+                            }
+                }
+
         NoOp ->
             pure model
 
@@ -273,7 +295,7 @@ propertyConfigs =
       , hasProperty = Rel.isSymmetric
       , closureButton = Just DoSymmetricClosure
       , genRandom = Nothing
-      , onHoverExplanation = Nothing
+      , onHoverExplanation = Just ExplainWhyNotSymmetric
       }
     , { propertyName = "Antisymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Antisymmetric_relation"
@@ -372,6 +394,8 @@ yesNo onHover b =
         Html.text "Yes"
 
     else
+        -- Hiding and showing explanations on hover can cause jumping - for small relations and long explanations.
+        -- TODO shuffle the UI arround to avoid this
         Html.span [ E.onMouseEnter onHover, E.onMouseLeave HideExplanations ] [ Html.text "No - ⓘ" ]
 
 

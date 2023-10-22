@@ -19,6 +19,7 @@ module Rel exposing
     , isSymmetric
     , isTransitive
     , missingForReflexivity
+    , missingForSymmetry
     , reflexiveClosure
     , resize
     , showElements
@@ -106,13 +107,6 @@ elements (Rel rows) =
         |> List.filterMap identity
 
 
-{-| Does given relation contain given Pair?
--}
-member : Pair -> Rel -> Bool
-member ( i, j ) (Rel rows) =
-    unsafeGet i j rows
-
-
 {-| The relation that occurs when the order of the elements is switched in the relation.
 -}
 converse : Rel -> Rel
@@ -139,15 +133,15 @@ complement (Rel rows) =
 {-| Union consists of all the pairs that are in first or second relation
 -}
 union : Rel -> Rel -> Rel
-union (Rel rowsA) (Rel rowsB) =
-    Rel <| Array.map2 (Array.map2 (||)) rowsA rowsB
+union =
+    pointwise (||)
 
 
 {-| Difference consists of all the pairs that are in the first, but not in the 2nd relation
 -}
 difference : Rel -> Rel -> Rel
-difference (Rel rowsA) (Rel rowsB) =
-    Rel <| Array.map2 (Array.map2 (\a b -> a && not b)) rowsA rowsB
+difference =
+    pointwise (\a b -> a && not b)
 
 
 {-| Compose 2 Rels with each other. Assumes both have the same size.
@@ -268,6 +262,15 @@ superfluousForIrreflexivity (Rel rows) =
 isSymmetric : Rel -> Bool
 isSymmetric rel =
     rel == converse rel
+
+
+{-| Set of pairs that would have to be added for the relation to be symmetric
+-}
+missingForSymmetry : Rel -> Set Pair
+missingForSymmetry rel =
+    difference (pointwise xor rel (converse rel)) rel
+        |> elements
+        |> Set.fromList
 
 
 {-| aRb and bRa => a == b
@@ -531,6 +534,11 @@ showPair ( i, j ) =
 
 
 -- Internal helpers
+
+
+pointwise : (Bool -> Bool -> Bool) -> Rel -> Rel -> Rel
+pointwise op (Rel r1) (Rel r2) =
+    Rel <| Array.map2 (Array.map2 op) r1 r2
 
 
 unsafeGet : Int -> Int -> Array (Array Bool) -> Bool
