@@ -1,6 +1,6 @@
 module Rel exposing
     ( Config
-    , Pair(..)
+    , Pair
     , Rel
     , complement
     , converse
@@ -18,9 +18,11 @@ module Rel exposing
     , isReflexive
     , isSymmetric
     , isTransitive
+    , missingForReflexivity
     , reflexiveClosure
     , resize
     , showElements
+    , showPairSet
     , size
     , symmetricClosure
     , toggle
@@ -31,10 +33,12 @@ module Rel exposing
 import Array exposing (Array)
 import Array.Extra as Array
 import Html exposing (Html)
+import Html.Attributes as A
 import Html.Events as E
 import List
 import Random exposing (Generator)
 import Random.Array as Array
+import Set exposing (Set)
 
 
 {-| A homogenous relation
@@ -47,8 +51,8 @@ type Rel
 For relation on set of size n, the are n^2 possible elements:
 {(a,b) | a in {1..n}, b in {1..n}}
 -}
-type Pair
-    = Pair Int Int
+type alias Pair =
+    ( Int, Int )
 
 
 type alias Config msg =
@@ -91,7 +95,7 @@ elements (Rel rows) =
                     |> List.indexedMap
                         (\j cell ->
                             if cell then
-                                Just (Pair (i + 1) (j + 1))
+                                Just ( i, j )
 
                             else
                                 Nothing
@@ -104,7 +108,7 @@ elements (Rel rows) =
 {-| Does given relation contain given Pair?
 -}
 member : Pair -> Rel -> Bool
-member (Pair i j) (Rel rows) =
+member ( i, j ) (Rel rows) =
     unsafeGet i j rows
 
 
@@ -215,6 +219,22 @@ isReflexive (Rel rows) =
     arrayAnd <|
         -- All elements on the diagonal must be True
         Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False) rows
+
+
+{-| Get Set of Pairs missing for the relation to be reflexive
+-}
+missingForReflexivity : Rel -> Set Pair
+missingForReflexivity (Rel rows) =
+    Array.toIndexedList rows
+        |> List.foldr
+            (\( i, row ) ->
+                if Array.get i row |> Maybe.withDefault False then
+                    identity
+
+                else
+                    Set.insert ( i, i )
+            )
+            Set.empty
 
 
 {-| not aRa
@@ -414,8 +434,8 @@ genBijectiveFunction n =
 -- VIEW
 
 
-view : Config msg -> Rel -> Html msg
-view config (Rel rows) =
+view : Config msg -> Rel -> Set Pair -> Html msg
+view config (Rel rows) highlight =
     let
         relSize =
             Array.length rows
@@ -435,7 +455,15 @@ view config (Rel rows) =
                                 :: (Array.toList <|
                                         Array.indexedMap
                                             (\j cell ->
-                                                Html.td [ E.onClick <| config.toggle i j ]
+                                                Html.td
+                                                    [ E.onClick <| config.toggle i j
+                                                    , A.style "background-color" <|
+                                                        if Set.member ( i, j ) highlight then
+                                                            "tomato"
+
+                                                        else
+                                                            "white"
+                                                    ]
                                                     [ Html.text <|
                                                         if cell then
                                                             "✓"
@@ -457,11 +485,29 @@ headerCell i =
 
 
 showElements : Rel -> String
-showElements rel =
-    elements rel
-        |> List.map (\(Pair i j) -> "(" ++ String.fromInt i ++ "," ++ String.fromInt j ++ ")")
+showElements =
+    elements >> showPairList
+
+
+showPairSet : Set Pair -> String
+showPairSet pairs =
+    Set.toList pairs |> List.sort |> showPairList
+
+
+showPairList : List Pair -> String
+showPairList pairs =
+    pairs
+        |> List.map showPair
         |> String.join ", "
         |> (\s -> "{" ++ s ++ "}")
+
+
+{-| Internally pairs are 0-based for easier array indexing.
+But we're showing them as 1-based to the user.
+-}
+showPair : Pair -> String
+showPair ( i, j ) =
+    "(" ++ String.fromInt (i + 1) ++ "," ++ String.fromInt (j + 1) ++ ")"
 
 
 

@@ -6,6 +6,7 @@ import Html.Attributes as A
 import Html.Events as E
 import Random
 import Rel exposing (Rel)
+import Set exposing (Set)
 
 
 main : Program () Model Msg
@@ -25,8 +26,8 @@ type alias Model =
 
 
 type alias Explanation =
-    { highlightCells : List Rel.Pair
-    , text : String
+    { highlight : Set Rel.Pair
+    , textLines : List String
     }
 
 
@@ -137,14 +138,21 @@ update msg model =
         HideExplanations ->
             pure { model | explanation = Nothing }
 
-        -- TODO show explanation and highlights somehow
         ExplainWhyNotReflexive ->
+            let
+                missing =
+                    Rel.missingForReflexivity model.rel
+            in
             pure
                 { model
                     | explanation =
                         Just
-                            { highlightCells = []
-                            , text = "Not reflexive because... TODO"
+                            { highlight = missing
+                            , textLines =
+                                [ "This relation is not reflexive."
+                                , "To be reflexive it would need to conain all elements of the form (x,x)."
+                                , "But the following elements are missing: " ++ Rel.showPairSet missing
+                                ]
                             }
                 }
 
@@ -168,13 +176,22 @@ view model =
         [ Html.node "style" [] [ Html.text style ]
         , sizeInputView model
         , Html.div [ A.id "rel-and-explanation" ]
-            [ Rel.view relConfig model.rel
+            [ let
+                highlight =
+                    case model.explanation of
+                        Nothing ->
+                            Set.empty
+
+                        Just exp ->
+                            exp.highlight
+              in
+              Rel.view relConfig model.rel highlight
             , Html.div [ A.id "explanation" ]
                 [ Html.div []
                     [ Html.text <| "Set of elements: " ++ Rel.showElements model.rel
                     , case model.explanation of
                         Just exp ->
-                            Html.div [] [ Html.text exp.text ]
+                            Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.textLines
 
                         Nothing ->
                             Html.text ""

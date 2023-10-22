@@ -24,11 +24,15 @@
     - [x] transitivity
     - [x] assymetric (<=> antisymmetric and irreflexive)
     - [x] connected
+    - [ ] acyclic - A binary relation is acyclic if it contains no "cycles": equivalently, its transitive closure is antisymmetric
     - [x] function
-        - [ ] partial / total
-        - [ ] surjective
-        - [ ] injective
-        - [x] bijective
+        - [ ] partial
+            - [ ] total
+            - [ ] surjective
+            - [ ] injective
+            - [x] bijective
+                - [ ] derangement
+                - [ ] involution
 
 - [ ] When property is not satisfied add "why?" tooltip that will explain why
     - [ ] Also visually highlight missing/extra elements that are breaking the property
