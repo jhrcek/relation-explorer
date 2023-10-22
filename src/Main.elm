@@ -407,7 +407,8 @@ sizeInputView model =
     in
     Html.div []
         [ Html.label []
-            [ Html.text <| "|X| = " ++ String.fromInt relSize ++ " "
+            [ Html.span [ A.id "size-label" ]
+                [ Html.text <| "|X| = " ++ String.fromInt relSize ]
             , Html.input
                 [ A.type_ "range"
                 , A.min "1"
@@ -461,6 +462,12 @@ a:hover {
 
 a:visited {
     color: sienna;
+}
+
+#size-label {
+    display: inline-block;
+    width: 60px;
+    text-align: right;
 }
 
 #rel-and-explanation {
