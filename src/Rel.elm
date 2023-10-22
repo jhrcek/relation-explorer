@@ -440,6 +440,8 @@ view config (Rel rows) highlight =
         relSize =
             Array.length rows
     in
+    -- TODO it's not clear that cells should be clicked
+    -- Need something like "click cells to toggle them / add/remove elements to/from relation"
     Html.table []
         [ Html.thead []
             [ Html.tr [] <|

@@ -188,7 +188,17 @@ view model =
               Rel.view relConfig model.rel highlight
             , Html.div [ A.id "explanation" ]
                 [ Html.div []
-                    [ Html.text <| "Set of elements: " ++ Rel.showElements model.rel
+                    [ Html.div []
+                        [ Html.text <|
+                            "X = {"
+                                ++ (String.join ", " <| List.map String.fromInt <| List.range 1 (Rel.size model.rel))
+                                ++ "}"
+                        ]
+                    , Html.div []
+                        [ Html.text <|
+                            "R ⊆ X ⨯ X, R = "
+                                ++ Rel.showElements model.rel
+                        ]
                     , case model.explanation of
                         Just exp ->
                             Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.textLines
@@ -352,7 +362,7 @@ sizeInputView model =
     in
     Html.div []
         [ Html.label []
-            [ Html.text "Relation size"
+            [ Html.text <| "|X| = " ++ String.fromInt relSize ++ " "
             , Html.input
                 [ A.type_ "range"
                 , A.min "1"
@@ -362,7 +372,6 @@ sizeInputView model =
                 ]
                 []
             ]
-        , Html.text <| String.fromInt relSize
         ]
 
 
