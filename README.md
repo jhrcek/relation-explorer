@@ -67,3 +67,6 @@
 
 - [ ] mention properties of various operations (E.g. The union of two transitive relations need not be transitive, but intersection always is; converse and complement preserve symmetry etc.)
 - [ ] use inclusion-exclusion principle to show exact numbers of relations within each cocnept of concept lattice or relations
+
+Various interesting facts that could be shown in UI:
+- [ ] We can reconstruct the order relation from the lattice operation infimum and supremum by x ≤ y <=> x = x ⋀ y <=> x ⋁ y = y

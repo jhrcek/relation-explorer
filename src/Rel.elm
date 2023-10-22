@@ -24,6 +24,7 @@ module Rel exposing
     , showElements
     , showPairSet
     , size
+    , superfluousForIrreflexivity
     , symmetricClosure
     , toggle
     , transitiveClosure
@@ -221,7 +222,7 @@ isReflexive (Rel rows) =
         Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False) rows
 
 
-{-| Get Set of Pairs missing for the relation to be reflexive
+{-| Set of Pairs missing for the relation to be reflexive
 -}
 missingForReflexivity : Rel -> Set Pair
 missingForReflexivity (Rel rows) =
@@ -244,6 +245,22 @@ isIrreflexive (Rel rows) =
     arrayAnd <|
         -- All elements on the diagonal must be False
         Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False |> not) rows
+
+
+{-| Set of pairs that would have to be removed for the relation to be irreflexive
+-}
+superfluousForIrreflexivity : Rel -> Set Pair
+superfluousForIrreflexivity (Rel rows) =
+    Array.toIndexedList rows
+        |> List.foldr
+            (\( i, row ) ->
+                if Array.get i row |> Maybe.withDefault False then
+                    Set.insert ( i, i )
+
+                else
+                    identity
+            )
+            Set.empty
 
 
 {-| aRb => bRa

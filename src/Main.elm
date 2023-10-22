@@ -53,13 +53,16 @@ type Msg
     | DoComplement
     | DoConverse
     | MakeEmpty
+      -- Random generation
     | GenRel
     | GenReflexive
     | GenFunction
     | GenBijectiveFunction
     | GotRandom Rel
+      -- Explanations
     | HideExplanations
     | ExplainWhyNotReflexive
+    | ExplainWhyNotIrreflexive
     | NoOp
 
 
@@ -156,6 +159,24 @@ update msg model =
                             }
                 }
 
+        ExplainWhyNotIrreflexive ->
+            let
+                superfluous =
+                    Rel.superfluousForIrreflexivity model.rel
+            in
+            pure
+                { model
+                    | explanation =
+                        Just
+                            { highlight = superfluous
+                            , textLines =
+                                [ "This relation is not irreflexive."
+                                , "To make it irreflexive we would have to remove all elements of the form (x,x)."
+                                , "The following elements would have to be removed: " ++ Rel.showPairSet superfluous
+                                ]
+                            }
+                }
+
         NoOp ->
             pure model
 
@@ -245,7 +266,7 @@ propertyConfigs =
       , hasProperty = Rel.isIrreflexive
       , closureButton = Nothing
       , genRandom = Nothing
-      , onHoverExplanation = Nothing
+      , onHoverExplanation = Just ExplainWhyNotIrreflexive
       }
     , { propertyName = "Symmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
