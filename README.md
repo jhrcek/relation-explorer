@@ -12,8 +12,11 @@
     - [x] Resize existing relation without changing its elements
     - [ ] Generate random relation
         - [x] any
-        - [x] function
-            - [x] bijective
+        - [x] partial function
+            - [x] function
+                - [x] bijective
+                    - [ ] involution
+                    - [ ] derangement
         - [ ] random relation that is any of the well defined types (equivalence, function, reflexive, lattice etc.)
 
 - [ ] Show whether the specified relation satisfies well-known properties:
@@ -25,9 +28,8 @@
     - [x] assymetric (<=> antisymmetric and irreflexive)
     - [x] connected
     - [ ] acyclic - A binary relation is acyclic if it contains no "cycles": equivalently, its transitive closure is antisymmetric
-    - [x] function
-        - [ ] partial
-            - [ ] total
+    - [x] partial function
+        - [x] total function
             - [ ] surjective
             - [ ] injective
             - [x] bijective

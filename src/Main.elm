@@ -62,6 +62,7 @@ type Msg
       -- Random generation
     | GenRel
     | GenReflexive
+    | GenPartialFunction
     | GenFunction
     | GenBijectiveFunction
     | GotRandom Rel
@@ -135,6 +136,12 @@ update msg model =
                 Rel.genReflexiveRelation model.trueProb (Rel.size model.rel)
             )
 
+        GenPartialFunction ->
+            ( model
+            , Random.generate GotRandom <|
+                Rel.genPartialFunction (Rel.size model.rel)
+            )
+
         GenFunction ->
             ( model
             , Random.generate GotRandom <|
@@ -201,7 +208,7 @@ update msg model =
                             { highlight = missing
                             , textLines =
                                 [ "This relation is not symmetric."
-                                , "Whenever relation contains an element (x,y), it also needs to contain (y,x) to be symmetric."
+                                , "To be symmetric, the relation has to contain element (y,x) whenever it contains an element (x,y)."
 
                                 -- TODO I'd like the explanation to be more granular, to make it clearer.
                                 -- something like: "since we have (1,2), we alson need (2,1) ..."
@@ -334,6 +341,13 @@ propertyConfigs =
       , hasProperty = Rel.isConnected
       , closureButton = Nothing
       , genRandom = Nothing
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Partial function"
+      , wikiLink = "https://en.wikipedia.org/wiki/Partial_function"
+      , hasProperty = Rel.isPartialFunction
+      , closureButton = Nothing
+      , genRandom = Just GenPartialFunction
       , onHoverExplanation = Nothing
       }
     , { propertyName = "Function"

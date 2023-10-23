@@ -7,6 +7,7 @@ module Rel exposing
     , empty
     , genBijectiveFunction
     , genFunction
+    , genPartialFunction
     , genReflexiveRelation
     , genRelation
     , isAntisymmetric
@@ -15,6 +16,7 @@ module Rel exposing
     , isConnected
     , isFunction
     , isIrreflexive
+    , isPartialFunction
     , isReflexive
     , isSymmetric
     , isTransitive
@@ -330,6 +332,29 @@ isConnected (Rel rows) =
             rows
 
 
+isPartialFunction : Rel -> Bool
+isPartialFunction (Rel rows) =
+    arrayAnd <|
+        Array.map
+            (\row ->
+                let
+                    trueCountInRow =
+                        Array.foldl
+                            (\elem elemCount ->
+                                if elem then
+                                    elemCount + 1
+
+                                else
+                                    elemCount
+                            )
+                            0
+                            row
+                in
+                trueCountInRow == 0 || trueCountInRow == 1
+            )
+            rows
+
+
 isFunction : Rel -> Bool
 isFunction (Rel rows) =
     arrayAnd <|
@@ -431,6 +456,16 @@ genReflexiveRelation trueProb n =
         -- TODO this way doesn't generate all reflexive relations with equal probability.
         -- We should set all diagonal entries to True and only generate the rest.
         |> Random.map reflexiveClosure
+
+
+genPartialFunction : Int -> Generator Rel
+genPartialFunction n =
+    -- Like genFunction except we geneerate 1 extra element (n) which
+    -- leads to Array.initialize not setting any element in given row to True
+    Random.int 0 n
+        |> Random.map (\i -> Array.initialize n (\j -> j == i))
+        |> Random.list n
+        |> Random.map (Array.fromList >> Rel)
 
 
 genFunction : Int -> Generator Rel
