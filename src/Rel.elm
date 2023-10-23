@@ -25,8 +25,10 @@ module Rel exposing
     , reflexiveClosure
     , resize
     , showElements
+    , showPair
     , showPairSet
     , size
+    , superfluousForAntisymmetry
     , superfluousForIrreflexivity
     , symmetricClosure
     , toggle
@@ -72,6 +74,13 @@ size (Rel rows) =
 empty : Int -> Rel
 empty n =
     Rel <| Array.repeat n <| Array.repeat n False
+
+
+{-| Identity relation
+-}
+eye : Int -> Rel
+eye n =
+    Rel <| Array.initialize n (\i -> Array.initialize n (\j -> i == j))
 
 
 {-| Change the size, while preserving as much as possible from the original.
@@ -137,6 +146,13 @@ complement (Rel rows) =
 union : Rel -> Rel -> Rel
 union =
     pointwise (||)
+
+
+{-| Intersection consists of all the pairs that are in both first and second relation
+-}
+intersection : Rel -> Rel -> Rel
+intersection =
+    pointwise (&&)
 
 
 {-| Difference consists of all the pairs that are in the first, but not in the 2nd relation
@@ -271,6 +287,22 @@ isSymmetric rel =
 missingForSymmetry : Rel -> Set Pair
 missingForSymmetry rel =
     difference (pointwise xor rel (converse rel)) rel
+        |> elements
+        |> Set.fromList
+
+
+{-| Set of pairs that are problematic.
+-- TODO this is not satisfactory, because it doesn't mean that all "problematic" elements must be removed
+-- to get antisymetry. Only one of each "mirror image" pair would be enough to remove to get antisymmetry.
+-- It would be nice to "pair up" the pairs to have "mirror images" that cause trouble for antisymmetry.
+-}
+superfluousForAntisymmetry : Rel -> Set Pair
+superfluousForAntisymmetry rel =
+    let
+        relMinusEye =
+            difference rel (eye (size rel))
+    in
+    intersection relMinusEye (converse relMinusEye)
         |> elements
         |> Set.fromList
 

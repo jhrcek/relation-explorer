@@ -71,6 +71,7 @@ type Msg
     | ExplainWhyNotReflexive
     | ExplainWhyNotIrreflexive
     | ExplainWhyNotSymmetric
+    | ExplainWhyNotAntisymmetric
     | NoOp
 
 
@@ -217,6 +218,31 @@ update msg model =
                             }
                 }
 
+        ExplainWhyNotAntisymmetric ->
+            let
+                superfluous =
+                    Rel.superfluousForAntisymmetry model.rel
+
+                problematicPairs =
+                    Set.toList superfluous
+                        |> List.filter (\( a, b ) -> a > b)
+                        |> List.map (\( a, b ) -> Rel.showPair ( a, b ) ++ " <-> " ++ Rel.showPair ( b, a ))
+                        |> String.join ", "
+            in
+            pure
+                { model
+                    | explanation =
+                        Just
+                            { highlight = superfluous
+                            , textLines =
+                                [ "This relation is not antisymmetric."
+                                , "To be antisymmetric, the relation must not contain both (a,b) and (b,a), such that a ≠ b."
+                                , "But this relation contains such pair(s): " ++ problematicPairs
+                                , "One (or both) of each such pair would have to be removed to make the relation antisymmetric."
+                                ]
+                            }
+                }
+
         NoOp ->
             pure model
 
@@ -320,7 +346,7 @@ propertyConfigs =
       , hasProperty = Rel.isAntisymmetric
       , closureButton = Nothing
       , genRandom = Nothing
-      , onHoverExplanation = Nothing
+      , onHoverExplanation = Just ExplainWhyNotAntisymmetric
       }
     , { propertyName = "Assymetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
