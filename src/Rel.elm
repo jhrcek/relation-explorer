@@ -428,6 +428,8 @@ genRelation trueProb n =
 genReflexiveRelation : Float -> Int -> Random.Generator Rel
 genReflexiveRelation trueProb n =
     genRelation trueProb n
+        -- TODO this way doesn't generate all reflexive relations with equal probability.
+        -- We should set all diagonal entries to True and only generate the rest.
         |> Random.map reflexiveClosure
 
 

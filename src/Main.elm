@@ -22,6 +22,10 @@ main =
 type alias Model =
     { rel : Rel
     , explanation : Maybe Explanation
+
+    -- Number between 0 and 1, indicating how likely it is that random generators
+    -- will produce a True value (and thus generate an element of a relation)
+    , trueProb : Float
     }
 
 
@@ -39,6 +43,7 @@ init _ =
     in
     ( { rel = Rel.empty initSize
       , explanation = Nothing
+      , trueProb = 0.2
       }
     , Cmd.none
     )
@@ -46,6 +51,7 @@ init _ =
 
 type Msg
     = SetRelSize Int
+    | SetTrueProb Float
     | ToggleRel Int Int
     | DoReflexiveClosure
     | DoSymmetricClosure
@@ -76,6 +82,13 @@ update msg model =
                     clamp 1 10 newSize
             in
             pure { model | rel = Rel.resize safeSize model.rel }
+
+        SetTrueProb newProb ->
+            let
+                safeProb =
+                    clamp 0.0 1.0 newProb
+            in
+            pure { model | trueProb = safeProb }
 
         ToggleRel i j ->
             pure { model | rel = Rel.toggle i j model.rel }
@@ -113,15 +126,13 @@ update msg model =
         GenRel ->
             ( model
             , Random.generate GotRandom <|
-                -- TODO make True-bias configurable via a slider
-                Rel.genRelation 0.5 (Rel.size model.rel)
+                Rel.genRelation model.trueProb (Rel.size model.rel)
             )
 
         GenReflexive ->
             ( model
             , Random.generate GotRandom <|
-                -- TODO make True-bias configurable via a slider
-                Rel.genReflexiveRelation 0.5 (Rel.size model.rel)
+                Rel.genReflexiveRelation model.trueProb (Rel.size model.rel)
             )
 
         GenFunction ->
@@ -217,7 +228,7 @@ view : Model -> Html Msg
 view model =
     Html.div []
         [ Html.node "style" [] [ Html.text style ]
-        , sizeInputView model
+        , sizeInputView model.rel
         , Html.div [ A.id "rel-and-explanation" ]
             [ let
                 highlight =
@@ -253,7 +264,7 @@ view model =
             ]
         , elementaryPropertiesView model.rel
         , Html.hr [] []
-        , operationsView
+        , miscControls model.trueProb
         ]
 
 
@@ -399,11 +410,11 @@ yesNo onHover b =
         Html.span [ E.onMouseEnter onHover, E.onMouseLeave HideExplanations ] [ Html.text "No - ⓘ" ]
 
 
-sizeInputView : Model -> Html Msg
-sizeInputView model =
+sizeInputView : Rel -> Html Msg
+sizeInputView rel =
     let
         relSize =
-            Rel.size model.rel
+            Rel.size rel
     in
     Html.div []
         [ Html.label []
@@ -421,13 +432,34 @@ sizeInputView model =
         ]
 
 
-operationsView : Html Msg
-operationsView =
+setTrueProbView : Float -> Html Msg
+setTrueProbView trueProb =
+    Html.div []
+        [ Html.label []
+            [ Html.span [ A.id "size-label" ]
+                [ Html.text <| "P(True) = " ++ String.fromFloat trueProb ]
+            , Html.input
+                [ A.type_ "range"
+                , A.min "0"
+                , A.max "1"
+                , A.step "0.01"
+                , E.onInput <| SetTrueProb << Maybe.withDefault 0.5 << String.toFloat
+                , A.value <| String.fromFloat trueProb
+                ]
+                []
+            ]
+        ]
+
+
+miscControls : Float -> Html Msg
+miscControls trueProb =
     Html.div []
         [ Html.h4 [] [ Html.text "Operations" ]
-        , Html.button [ E.onClick MakeEmpty, A.title "Empty relation" ] [ Html.text "∅" ]
+        , -- TODO think about how to decompose this hodpodge of controls
+          Html.button [ E.onClick MakeEmpty, A.title "Empty relation" ] [ Html.text "∅" ]
         , Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ]
         , Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ]
+        , setTrueProbView trueProb
         ]
 
 
