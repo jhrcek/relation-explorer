@@ -30,7 +30,8 @@ type alias Model =
 
 
 type alias Explanation =
-    { highlight : Set Rel.Pair
+    { -- TODO use at least 2 different colors: one for missing, one for superfluous
+      highlight : Set Rel.Pair
     , textLines : List String
     }
 
@@ -72,6 +73,7 @@ type Msg
     | ExplainWhyNotIrreflexive
     | ExplainWhyNotSymmetric
     | ExplainWhyNotAntisymmetric
+    | ExplainWhyNotConnected
     | NoOp
 
 
@@ -237,8 +239,37 @@ update msg model =
                             , textLines =
                                 [ "This relation is not antisymmetric."
                                 , "To be antisymmetric, the relation must not contain both (a,b) and (b,a), such that a ≠ b."
+
+                                -- TODO pluralize properly based on the number of pairs
                                 , "But this relation contains such pair(s): " ++ problematicPairs
                                 , "One (or both) of each such pair would have to be removed to make the relation antisymmetric."
+                                ]
+                            }
+                }
+
+        ExplainWhyNotConnected ->
+            let
+                missing =
+                    Rel.missingForConnectedness model.rel
+
+                problematicPairs =
+                    Set.toList missing
+                        |> List.filter (\( a, b ) -> a > b)
+                        |> List.map (\( a, b ) -> Rel.showPair ( a, b ) ++ " <-> " ++ Rel.showPair ( b, a ))
+                        |> String.join ", "
+            in
+            pure
+                { model
+                    | explanation =
+                        Just
+                            { highlight = missing
+                            , textLines =
+                                [ "This relation is not connected."
+                                , "To be connected, it would have to contain at least one of the elements (a,b) or (b,a), for each a ≠ b."
+
+                                -- TODO pluralize properly based on the number of pairs
+                                , "These are the problematic pair(s): " ++ problematicPairs
+                                , "We would have to add at leat one of each such pair to make the relation connected."
                                 ]
                             }
                 }
@@ -353,6 +384,8 @@ propertyConfigs =
       , hasProperty = Rel.isAsymmetric
       , closureButton = Nothing
       , genRandom = Nothing
+
+      -- TODO explain why not antisymmetric
       , onHoverExplanation = Nothing
       }
     , { propertyName = "Transitive"
@@ -360,6 +393,8 @@ propertyConfigs =
       , hasProperty = Rel.isTransitive
       , closureButton = Just DoTransitiveClosure
       , genRandom = Nothing
+
+      -- TODO explain why not transitive
       , onHoverExplanation = Nothing
       }
     , { propertyName = "Connected"
@@ -367,13 +402,15 @@ propertyConfigs =
       , hasProperty = Rel.isConnected
       , closureButton = Nothing
       , genRandom = Nothing
-      , onHoverExplanation = Nothing
+      , onHoverExplanation = Just ExplainWhyNotConnected
       }
     , { propertyName = "Partial function"
       , wikiLink = "https://en.wikipedia.org/wiki/Partial_function"
       , hasProperty = Rel.isPartialFunction
       , closureButton = Nothing
       , genRandom = Just GenPartialFunction
+
+      -- TODO explain why not partial function
       , onHoverExplanation = Nothing
       }
     , { propertyName = "Function"
@@ -381,6 +418,8 @@ propertyConfigs =
       , hasProperty = Rel.isFunction
       , closureButton = Nothing
       , genRandom = Just GenFunction
+
+      -- TODO explain why not function
       , onHoverExplanation = Nothing
       }
     , { propertyName = "Bijection"
@@ -388,6 +427,8 @@ propertyConfigs =
       , hasProperty = Rel.isBijectiveFunction
       , closureButton = Nothing
       , genRandom = Just GenBijectiveFunction
+
+      -- TODO explain why not bijective function
       , onHoverExplanation = Nothing
       }
     ]

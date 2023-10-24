@@ -20,6 +20,7 @@ module Rel exposing
     , isReflexive
     , isSymmetric
     , isTransitive
+    , missingForConnectedness
     , missingForReflexivity
     , missingForSymmetry
     , reflexiveClosure
@@ -362,6 +363,13 @@ isConnected (Rel rows) =
                         )
             )
             rows
+
+
+missingForConnectedness : Rel -> Set Pair
+missingForConnectedness rel =
+    difference (complement (union rel (converse rel))) (eye (size rel))
+        |> elements
+        |> Set.fromList
 
 
 isPartialFunction : Rel -> Bool

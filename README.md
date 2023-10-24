@@ -39,17 +39,20 @@
 - [ ] When property is not satisfied add "why?" tooltip that will explain why
     - [ ] Also visually highlight missing/extra elements that are breaking the property
 
-- [ ] Given the properties that it satisfies show wheter it is one of well know structures:
+- [ ] Given the properties that it satisfies show whether it is one of well know structures:
     - [ ] Equivalence relation
         - [ ] show corresponding partition
     - [ ] Preorder
         - [ ] show poset arising from identifying equivalent elements
     - [ ] Poset
         - [ ] show hasse diagram
+        - [ ] show covering relation
     - [ ] Total order
         - [ ] highlight incomparable elements if not
     - [ ] Lattice
         - [ ] Show table of meet and join operations (if not full lattice, show why it fails to be, e.g. 2 elements don't have meet / have multiple minimal elements in upper set)
+        - [ ] show infimum and supremum-irreducible elements
+        - [ ] show equivalence classes
     - [ ] Function
         - [ ] Show fixed points
 
