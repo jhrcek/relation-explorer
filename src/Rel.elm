@@ -10,6 +10,7 @@ module Rel exposing
     , genPartialFunction
     , genReflexiveRelation
     , genRelation
+    , isAcyclic
     , isAntisymmetric
     , isAsymmetric
     , isBijectiveFunction
@@ -30,6 +31,7 @@ module Rel exposing
     , showPairSet
     , size
     , superfluousForAntisymmetry
+    , superfluousForAsymmetry
     , superfluousForIrreflexivity
     , symmetricClosure
     , toggle
@@ -183,8 +185,7 @@ compose (Rel rows) rel2 =
                             (\rowi colj ->
                                 -- composition of relations corresponds to matrix multiplication in boolean semiring
                                 --  (+ corresponds to OR, * corresponds to AND)
-                                List.map2 (&&) (Array.toList rowi) (Array.toList colj)
-                                    |> listOr
+                                arrayOr <| Array.map2 (&&) rowi colj
                             )
                             (Array.get i rows)
                             (Array.get j cols)
@@ -308,6 +309,14 @@ superfluousForAntisymmetry rel =
         |> Set.fromList
 
 
+superfluousForAsymmetry : Rel -> ( Set Pair, Set Pair )
+superfluousForAsymmetry rel =
+    intersection rel (converse rel)
+        |> elements
+        |> Set.fromList
+        |> Set.partition (\( i, j ) -> i == j)
+
+
 {-| aRb and bRa => a == b
 Or equivalently: a/=b and aRb => not bRa
 -}
@@ -363,6 +372,18 @@ isConnected (Rel rows) =
                         )
             )
             rows
+
+
+{-| A binary relation is acyclic if it contains no cycles.
+Equivalently, its transitive closure is antisymmetric.
+-}
+isAcyclic : Rel -> Bool
+isAcyclic rel =
+    let
+        ( relTran, _ ) =
+            transitiveClosure rel
+    in
+    isAntisymmetric relTran
 
 
 missingForConnectedness : Rel -> Set Pair
@@ -630,11 +651,11 @@ listAnd =
     List.all identity
 
 
-listOr : List Bool -> Bool
-listOr =
-    List.any identity
-
-
 arrayAnd : Array Bool -> Bool
 arrayAnd =
     Array.foldl (&&) True
+
+
+arrayOr : Array Bool -> Bool
+arrayOr =
+    Array.foldl (||) False

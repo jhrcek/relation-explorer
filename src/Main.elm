@@ -73,6 +73,7 @@ type Msg
     | ExplainWhyNotIrreflexive
     | ExplainWhyNotSymmetric
     | ExplainWhyNotAntisymmetric
+    | ExplainWhyNotAsymmetric
     | ExplainWhyNotConnected
     | NoOp
 
@@ -215,6 +216,7 @@ update msg model =
 
                                 -- TODO I'd like the explanation to be more granular, to make it clearer.
                                 -- something like: "since we have (1,2), we alson need (2,1) ..."
+                                -- TODO also it would be nice to highlight the potentially "superfluous" elements
                                 , "The following elements would have to be added to satisfy that condition: " ++ Rel.showPairSet missing
                                 ]
                             }
@@ -226,10 +228,7 @@ update msg model =
                     Rel.superfluousForAntisymmetry model.rel
 
                 problematicPairs =
-                    Set.toList superfluous
-                        |> List.filter (\( a, b ) -> a > b)
-                        |> List.map (\( a, b ) -> Rel.showPair ( a, b ) ++ " <-> " ++ Rel.showPair ( b, a ))
-                        |> String.join ", "
+                    renderMirrorImagePairs superfluous
             in
             pure
                 { model
@@ -247,16 +246,35 @@ update msg model =
                             }
                 }
 
+        ExplainWhyNotAsymmetric ->
+            let
+                ( diagonalPairs, offDiagonalPairs ) =
+                    Rel.superfluousForAsymmetry model.rel
+            in
+            pure
+                { model
+                    | explanation =
+                        Just
+                            { highlight = Set.union offDiagonalPairs diagonalPairs
+                            , textLines =
+                                [ "This relation is not asymmetric."
+                                , "To be asymmetric, the relation must not contain (b,a) when it contains (a,b)."
+
+                                -- TODO pluralize properly based on the number of pairs
+                                -- TODO also either of these could be empty, in which case the respective sentence should be omitted
+                                , "To make it asymmetric we would have to remove the following pairs of the form (a,a): " ++ Rel.showPairSet diagonalPairs
+                                , "Moreover we'd also have to remove at least of each of the following pairs: " ++ renderMirrorImagePairs offDiagonalPairs
+                                ]
+                            }
+                }
+
         ExplainWhyNotConnected ->
             let
                 missing =
                     Rel.missingForConnectedness model.rel
 
                 problematicPairs =
-                    Set.toList missing
-                        |> List.filter (\( a, b ) -> a > b)
-                        |> List.map (\( a, b ) -> Rel.showPair ( a, b ) ++ " <-> " ++ Rel.showPair ( b, a ))
-                        |> String.join ", "
+                    renderMirrorImagePairs missing
             in
             pure
                 { model
@@ -269,13 +287,23 @@ update msg model =
 
                                 -- TODO pluralize properly based on the number of pairs
                                 , "These are the problematic pair(s): " ++ problematicPairs
-                                , "We would have to add at leat one of each such pair to make the relation connected."
+                                , "We would have to add at least one of each such pair to make the relation connected."
                                 ]
                             }
                 }
 
         NoOp ->
             pure model
+
+
+{-| select subset of pairs above diagonal and render them as pairs of pairs connected by "<->"
+-}
+renderMirrorImagePairs : Set Rel.Pair -> String
+renderMirrorImagePairs pairs =
+    Set.toList pairs
+        |> List.filter (\( a, b ) -> a > b)
+        |> List.map (\( a, b ) -> Rel.showPair ( a, b ) ++ " <-> " ++ Rel.showPair ( b, a ))
+        |> String.join ", "
 
 
 pure : a -> ( a, Cmd msg )
@@ -379,14 +407,12 @@ propertyConfigs =
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotAntisymmetric
       }
-    , { propertyName = "Assymetric"
+    , { propertyName = "Asymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
       , hasProperty = Rel.isAsymmetric
       , closureButton = Nothing
       , genRandom = Nothing
-
-      -- TODO explain why not antisymmetric
-      , onHoverExplanation = Nothing
+      , onHoverExplanation = Just ExplainWhyNotAsymmetric
       }
     , { propertyName = "Transitive"
       , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
@@ -403,6 +429,15 @@ propertyConfigs =
       , closureButton = Nothing
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotConnected
+      }
+    , { propertyName = "Acyclic"
+      , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"
+      , hasProperty = Rel.isAcyclic
+      , closureButton = Nothing
+      , genRandom = Nothing
+
+      -- TODO explain why not acyclic, probably by showing the cycle(s)
+      , onHoverExplanation = Nothing
       }
     , { propertyName = "Partial function"
       , wikiLink = "https://en.wikipedia.org/wiki/Partial_function"

@@ -25,9 +25,9 @@
     - [x] symmetry
     - [x] antisymmetry
     - [x] transitivity
-    - [x] assymetric (<=> antisymmetric and irreflexive)
+    - [x] asymmetric (<=> antisymmetric and irreflexive)
     - [x] connected
-    - [ ] acyclic - A binary relation is acyclic if it contains no "cycles": equivalently, its transitive closure is antisymmetric
+    - [x] acyclic
     - [x] partial function
         - [x] total function
             - [ ] surjective
@@ -46,7 +46,7 @@
         - [ ] show poset arising from identifying equivalent elements
     - [ ] Poset
         - [ ] show hasse diagram
-        - [ ] show covering relation
+        - [ ] show [covering relation](https://en.wikipedia.org/wiki/Covering_relation)
     - [ ] Total order
         - [ ] highlight incomparable elements if not
     - [ ] Lattice
@@ -75,3 +75,6 @@
 
 Various interesting facts that could be shown in UI:
 - [ ] We can reconstruct the order relation from the lattice operation infimum and supremum by x ≤ y <=> x = x ⋀ y <=> x ⋁ y = y
+
+- Number of labeled and unlabeled lattices: https://oeis.org/A055512 and https://www.researchgate.net/publication/225384356_Counting_Finite_Lattices
+
