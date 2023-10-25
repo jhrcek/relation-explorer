@@ -30,9 +30,11 @@ module Rel exposing
     , showPair
     , showPairSet
     , size
+    , superfluousAndMissingForFunction
     , superfluousForAntisymmetry
     , superfluousForAsymmetry
     , superfluousForIrreflexivity
+    , superfluousForPartialFunction
     , symmetricClosure
     , toggle
     , transitiveClosure
@@ -416,6 +418,27 @@ isPartialFunction (Rel rows) =
             rows
 
 
+{-| Return all pairs that live within rows with more than one True element
+-}
+superfluousForPartialFunction : Rel -> Set Pair
+superfluousForPartialFunction (Rel rows) =
+    -- TODO ugly. It would be great to have indexed fold on arrays
+    Array.toIndexedList rows
+        |> List.foldl
+            (\( i, row ) acc ->
+                case Array.toIndexedList row |> List.filter Tuple.second |> List.map Tuple.first of
+                    [] ->
+                        acc
+
+                    [ _ ] ->
+                        acc
+
+                    more ->
+                        List.map (\j -> ( i, j )) more |> Set.fromList |> Set.union acc
+            )
+            Set.empty
+
+
 isFunction : Rel -> Bool
 isFunction (Rel rows) =
     arrayAnd <|
@@ -435,6 +458,34 @@ isFunction (Rel rows) =
                         row
             )
             rows
+
+
+superfluousAndMissingForFunction : Rel -> ( Set Pair, Set Pair )
+superfluousAndMissingForFunction ((Rel rows) as rel) =
+    Array.toIndexedList rows
+        |> List.foldl
+            (\( i, row ) ( sup, mis ) ->
+                case Array.toIndexedList row |> List.filter Tuple.second |> List.map Tuple.first of
+                    [] ->
+                        -- mark whole row of pairs as missing
+                        ( sup
+                        , List.range 0 (size rel)
+                            |> List.map (Tuple.pair i)
+                            |> Set.fromList
+                            |> Set.union mis
+                        )
+
+                    [ _ ] ->
+                        ( sup, mis )
+
+                    more ->
+                        ( List.map (\j -> ( i, j )) more
+                            |> Set.fromList
+                            |> Set.union sup
+                        , mis
+                        )
+            )
+            ( Set.empty, Set.empty )
 
 
 isBijectiveFunction : Rel -> Bool

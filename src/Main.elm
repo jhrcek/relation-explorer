@@ -75,6 +75,8 @@ type Msg
     | ExplainWhyNotAntisymmetric
     | ExplainWhyNotAsymmetric
     | ExplainWhyNotConnected
+    | ExplainWhyNotPartialFunction
+    | ExplainWhyNotFunction
     | NoOp
 
 
@@ -292,6 +294,65 @@ update msg model =
                             }
                 }
 
+        ExplainWhyNotPartialFunction ->
+            let
+                superfluous =
+                    Rel.superfluousForPartialFunction model.rel
+            in
+            pure
+                { model
+                    | explanation =
+                        Just
+                            { highlight = superfluous
+                            , textLines =
+                                [ "This relation is not a partial function."
+                                , "To be partial function there should be at most one pair (a,b) for each a ∈ X."
+
+                                -- TODO pluralize properly
+                                , "But some a's we have multiple pairs(s): " ++ Rel.showPairSet superfluous
+                                , "We would have to remove some of these so that each row has at most one pair."
+                                ]
+                            }
+                }
+
+        ExplainWhyNotFunction ->
+            let
+                -- TODO candidate for color distinction between superfluous and missing
+                ( superfluous, missing ) =
+                    Rel.superfluousAndMissingForFunction model.rel
+            in
+            pure
+                { model
+                    | explanation =
+                        Just
+                            { highlight = Set.union superfluous missing
+                            , textLines =
+                                [ "This relation is not a function."
+                                , "To be a function there should be exactly one pair (a,b) for each a ∈ X."
+
+                                -- TODO pluralize properly
+                                , if Set.size superfluous > 0 then
+                                    "But in some row sthere's multipe pairs for one a: " ++ Rel.showPairSet superfluous
+
+                                  else
+                                    ""
+                                , let
+                                    rowIndicesWithMissingPairs =
+                                        Set.map Tuple.first missing
+                                  in
+                                  if Set.size rowIndicesWithMissingPairs > 0 then
+                                    "In some rows there's no pair, namely for a ∈ {"
+                                        ++ String.join ", "
+                                            (List.map (\i -> String.fromInt (i + 1)) <| Set.toList rowIndicesWithMissingPairs)
+                                        ++ "}"
+
+                                  else
+                                    ""
+                                , "We would have to remove some of these so that each row has at most one pair."
+                                ]
+                            }
+                }
+
         NoOp ->
             pure model
 
@@ -444,18 +505,14 @@ propertyConfigs =
       , hasProperty = Rel.isPartialFunction
       , closureButton = Nothing
       , genRandom = Just GenPartialFunction
-
-      -- TODO explain why not partial function
-      , onHoverExplanation = Nothing
+      , onHoverExplanation = Just ExplainWhyNotPartialFunction
       }
     , { propertyName = "Function"
       , wikiLink = "https://en.wikipedia.org/wiki/Function_(mathematics)"
       , hasProperty = Rel.isFunction
       , closureButton = Nothing
       , genRandom = Just GenFunction
-
-      -- TODO explain why not function
-      , onHoverExplanation = Nothing
+      , onHoverExplanation = Just ExplainWhyNotFunction
       }
     , { propertyName = "Bijection"
       , wikiLink = "https://en.wikipedia.org/wiki/Bijection"

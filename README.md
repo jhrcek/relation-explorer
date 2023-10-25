@@ -77,4 +77,4 @@ Various interesting facts that could be shown in UI:
 - [ ] We can reconstruct the order relation from the lattice operation infimum and supremum by x ≤ y <=> x = x ⋀ y <=> x ⋁ y = y
 
 - Number of labeled and unlabeled lattices: https://oeis.org/A055512 and https://www.researchgate.net/publication/225384356_Counting_Finite_Lattices
-
+- Show various powers of the relation (what happens if we keep composing relation with itself?)
