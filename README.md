@@ -78,3 +78,10 @@ Various interesting facts that could be shown in UI:
 
 - Number of labeled and unlabeled lattices: https://oeis.org/A055512 and https://www.researchgate.net/publication/225384356_Counting_Finite_Lattices
 - Show various powers of the relation (what happens if we keep composing relation with itself?)
+- Identify (lattice) antichain within given lattice
+- Implement a function that (only for posets) gives cover relation
+- There should be bunch of functions like toPoset : Rel -> Maybe Poset, toLattice : Rel -> Maybe Lattice etc., in the spirit of "parse, don't validate" and then there should be operations that are valid e.g. only on lattices
+- Implement a way to generate all posets (find paper?)
+- Implement a way to generate all lattices
+- Consider if it wouldn't be easier to use {0,..., n-1} as an underlying set (to simplify indexing vs. display); the only disadvantage is that size of rel is -1 maximum label.
+- get better understanding of antichains in posets: https://en.wikipedia.org/wiki/Antichain

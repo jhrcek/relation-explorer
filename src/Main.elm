@@ -77,6 +77,7 @@ type Msg
     | ExplainWhyNotConnected
     | ExplainWhyNotPartialFunction
     | ExplainWhyNotFunction
+    | ExplainWhyNotAcyclic
     | NoOp
 
 
@@ -353,6 +354,40 @@ update msg model =
                             }
                 }
 
+        ExplainWhyNotAcyclic ->
+            let
+                elemsToPairs xs =
+                    case xs of
+                        [] ->
+                            []
+
+                        fst :: rest ->
+                            List.map2 Tuple.pair xs (rest ++ [ fst ])
+            in
+            pure
+                { model
+                    | explanation =
+                        Maybe.map
+                            (\cycleElems ->
+                                let
+                                    cyclePairs =
+                                        elemsToPairs cycleElems
+                                in
+                                { highlight = Set.fromList cyclePairs
+                                , textLines =
+                                    [ "This relation is not acyclic."
+                                    , "These the following pairs form a cycle: " ++ Rel.showPairList cyclePairs
+                                    , "so the cycle consists of these elements: {"
+                                        ++ String.join ", "
+                                            (List.map (String.fromInt << (+) 1) cycleElems)
+                                        ++ "}"
+                                    ]
+                                }
+                            )
+                        <|
+                            Rel.findCycle model.rel
+                }
+
         NoOp ->
             pure model
 
@@ -496,9 +531,7 @@ propertyConfigs =
       , hasProperty = Rel.isAcyclic
       , closureButton = Nothing
       , genRandom = Nothing
-
-      -- TODO explain why not acyclic, probably by showing the cycle(s)
-      , onHoverExplanation = Nothing
+      , onHoverExplanation = Just ExplainWhyNotAcyclic
       }
     , { propertyName = "Partial function"
       , wikiLink = "https://en.wikipedia.org/wiki/Partial_function"

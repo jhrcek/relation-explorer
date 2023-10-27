@@ -5,6 +5,7 @@ module Rel exposing
     , complement
     , converse
     , empty
+    , findCycle
     , genBijectiveFunction
     , genFunction
     , genPartialFunction
@@ -28,6 +29,7 @@ module Rel exposing
     , resize
     , showElements
     , showPair
+    , showPairList
     , showPairSet
     , size
     , superfluousAndMissingForFunction
@@ -388,6 +390,55 @@ isAcyclic rel =
     isAntisymmetric relTran
 
 
+findCycle : Rel -> Maybe (List Int)
+findCycle (Rel rows) =
+    let
+        n =
+            Array.length rows
+
+        adjacentNodes : Int -> List Int
+        adjacentNodes i =
+            Array.get i rows
+                |> Maybe.withDefault Array.empty
+                |> Array.toIndexedList
+                |> List.filter Tuple.second
+                |> List.map Tuple.first
+                |> List.filter (\j -> i /= j)
+
+        dfs : Int -> Maybe (List Int)
+        dfs start =
+            let
+                loop : List ( Int, List Int ) -> Set Int -> Maybe (List Int)
+                loop stack visited =
+                    case stack of
+                        [] ->
+                            Nothing
+
+                        ( i, path ) :: rest ->
+                            if Set.member i visited then
+                                if List.member i path then
+                                    Just (takeWhile ((/=) i) path ++ [ i ])
+
+                                else
+                                    loop rest visited
+
+                            else
+                                loop
+                                    (List.map
+                                        (\adj -> ( adj, i :: path ))
+                                        (adjacentNodes i)
+                                        ++ rest
+                                    )
+                                    (Set.insert i visited)
+            in
+            loop [ ( start, [] ) ] Set.empty
+    in
+    List.range 0 (n - 1)
+        |> List.filterMap dfs
+        |> List.head
+        |> Maybe.map List.reverse
+
+
 missingForConnectedness : Rel -> Set Pair
 missingForConnectedness rel =
     difference (complement (union rel (converse rel))) (eye (size rel))
@@ -710,3 +761,21 @@ arrayAnd =
 arrayOr : Array Bool -> Bool
 arrayOr =
     Array.foldl (||) False
+
+
+takeWhile : (a -> Bool) -> List a -> List a
+takeWhile predicate =
+    let
+        takeWhileMemo memo list =
+            case list of
+                [] ->
+                    List.reverse memo
+
+                x :: xs ->
+                    if predicate x then
+                        takeWhileMemo (x :: memo) xs
+
+                    else
+                        List.reverse memo
+    in
+    takeWhileMemo []
