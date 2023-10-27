@@ -49,6 +49,7 @@ import Html exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
 import List
+import List.Extra as List
 import Random exposing (Generator)
 import Random.Array as Array
 import Set exposing (Set)
@@ -417,7 +418,7 @@ findCycle (Rel rows) =
                         ( i, path ) :: rest ->
                             if Set.member i visited then
                                 if List.member i path then
-                                    Just (takeWhile ((/=) i) path ++ [ i ])
+                                    Just (i :: List.reverse (List.takeWhile ((/=) i) path))
 
                                 else
                                     loop rest visited
@@ -434,9 +435,7 @@ findCycle (Rel rows) =
             loop [ ( start, [] ) ] Set.empty
     in
     List.range 0 (n - 1)
-        |> List.filterMap dfs
-        |> List.head
-        |> Maybe.map List.reverse
+        |> List.findMap dfs
 
 
 missingForConnectedness : Rel -> Set Pair
@@ -761,21 +760,3 @@ arrayAnd =
 arrayOr : Array Bool -> Bool
 arrayOr =
     Array.foldl (||) False
-
-
-takeWhile : (a -> Bool) -> List a -> List a
-takeWhile predicate =
-    let
-        takeWhileMemo memo list =
-            case list of
-                [] ->
-                    List.reverse memo
-
-                x :: xs ->
-                    if predicate x then
-                        takeWhileMemo (x :: memo) xs
-
-                    else
-                        List.reverse memo
-    in
-    takeWhileMemo []

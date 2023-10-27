@@ -109,16 +109,8 @@ update msg model =
 
         DoTransitiveClosure ->
             let
-                ( transitiveRel, history ) =
+                ( transitiveRel, _ ) =
                     Rel.transitiveClosure model.rel
-
-                _ =
-                    Debug.log
-                        (List.map Rel.showElements (transitiveRel :: history)
-                            |> List.reverse
-                            |> String.join "\n"
-                        )
-                        ()
             in
             pure { model | rel = transitiveRel }
 
