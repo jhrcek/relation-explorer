@@ -549,6 +549,15 @@ propertyConfigs =
       -- TODO explain why not bijective function
       , onHoverExplanation = Nothing
       }
+    , { propertyName = "Involution"
+      , wikiLink = "https://en.wikipedia.org/wiki/Involution_(mathematics)"
+      , hasProperty = Rel.isInvolution
+      , closureButton = Nothing
+      , genRandom = Nothing
+
+      -- TODO explain why not involution
+      , onHoverExplanation = Nothing
+      }
     ]
 
 

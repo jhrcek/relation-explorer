@@ -17,6 +17,7 @@ module Rel exposing
     , isBijectiveFunction
     , isConnected
     , isFunction
+    , isInvolution
     , isIrreflexive
     , isPartialFunction
     , isReflexive
@@ -551,6 +552,11 @@ superfluousAndMissingForFunction ((Rel rows) as rel) =
 isBijectiveFunction : Rel -> Bool
 isBijectiveFunction rel =
     isFunction rel && isFunction (converse rel)
+
+
+isInvolution : Rel -> Bool
+isInvolution rel =
+    isFunction rel && rel == converse rel
 
 
 

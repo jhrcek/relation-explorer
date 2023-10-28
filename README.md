@@ -34,7 +34,7 @@
             - [ ] injective
             - [x] bijective
                 - [ ] derangement
-                - [ ] involution
+                - [x] involution
 
 - [ ] When property is not satisfied add "why?" tooltip that will explain why
     - [ ] Also visually highlight missing/extra elements that are breaking the property
