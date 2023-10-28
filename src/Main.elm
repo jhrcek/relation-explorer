@@ -325,7 +325,7 @@ update msg model =
 
                                 -- TODO pluralize properly
                                 , if Set.size superfluous > 0 then
-                                    "But in some row sthere's multipe pairs for one a: " ++ Rel.showPairSet superfluous
+                                    "But in some rows there's multipe pairs for one a: " ++ Rel.showPairSet superfluous
 
                                   else
                                     ""
@@ -730,6 +730,7 @@ a:visited {
         max-width: 40%;
     }
 }
+
 #rel {
     padding-top: 20px;
     height: 250px;
