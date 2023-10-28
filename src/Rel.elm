@@ -401,10 +401,24 @@ findCycle (Rel rows) =
         adjacentNodes i =
             Array.get i rows
                 |> Maybe.withDefault Array.empty
-                |> Array.toIndexedList
-                |> List.filter Tuple.second
-                |> List.map Tuple.first
-                |> List.filter (\j -> i /= j)
+                |> (\row ->
+                        let
+                            ( _, adjacent ) =
+                                Array.foldl
+                                    (\bool ( j, acc ) ->
+                                        ( j + 1
+                                        , if bool && i /= j then
+                                            j :: acc
+
+                                          else
+                                            acc
+                                        )
+                                    )
+                                    ( 0, [] )
+                                    row
+                        in
+                        adjacent
+                   )
 
         dfs : Int -> Maybe (List Int)
         dfs start =
@@ -417,11 +431,7 @@ findCycle (Rel rows) =
 
                         ( i, path ) :: rest ->
                             if Set.member i visited then
-                                if List.member i path then
-                                    Just (i :: List.reverse (List.takeWhile ((/=) i) path))
-
-                                else
-                                    loop rest visited
+                                Just (i :: List.reverse (List.takeWhile ((/=) i) path))
 
                             else
                                 loop
