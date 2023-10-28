@@ -33,7 +33,7 @@
             - [ ] surjective
             - [ ] injective
             - [x] bijective
-                - [ ] derangement
+                - [x] derangement
                 - [x] involution
 
 - [ ] When property is not satisfied add "why?" tooltip that will explain why

@@ -16,6 +16,7 @@ module Rel exposing
     , isAsymmetric
     , isBijectiveFunction
     , isConnected
+    , isDerangement
     , isFunction
     , isInvolution
     , isIrreflexive
@@ -552,6 +553,11 @@ superfluousAndMissingForFunction ((Rel rows) as rel) =
 isBijectiveFunction : Rel -> Bool
 isBijectiveFunction rel =
     isFunction rel && isFunction (converse rel)
+
+
+isDerangement : Rel -> Bool
+isDerangement rel =
+    isBijectiveFunction rel && isIrreflexive rel
 
 
 isInvolution : Rel -> Bool

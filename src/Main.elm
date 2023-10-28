@@ -540,13 +540,22 @@ propertyConfigs =
       , genRandom = Just GenFunction
       , onHoverExplanation = Just ExplainWhyNotFunction
       }
-    , { propertyName = "Bijection"
+    , { propertyName = "Bijection (Permutation)"
       , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
       , hasProperty = Rel.isBijectiveFunction
       , closureButton = Nothing
       , genRandom = Just GenBijectiveFunction
 
       -- TODO explain why not bijective function
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Derangement"
+      , wikiLink = "https://en.wikipedia.org/wiki/Derangement"
+      , hasProperty = Rel.isDerangement
+      , closureButton = Nothing
+      , genRandom = Nothing
+
+      -- TODO explain why not Derangement
       , onHoverExplanation = Nothing
       }
     , { propertyName = "Involution"
