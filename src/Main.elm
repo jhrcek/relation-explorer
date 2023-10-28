@@ -408,18 +408,22 @@ view : Model -> Html Msg
 view model =
     Html.div []
         [ Html.node "style" [] [ Html.text style ]
-        , sizeInputView model.rel
-        , Html.div [ A.id "rel-and-explanation" ]
-            [ let
-                highlight =
-                    case model.explanation of
-                        Nothing ->
-                            Set.empty
+        , Html.div [ A.id "top-container" ]
+            [ Html.div [ A.id "rel-and-controls" ]
+                [ sizeInputView model.rel
+                , let
+                    highlight =
+                        case model.explanation of
+                            Nothing ->
+                                Set.empty
 
-                        Just exp ->
-                            exp.highlight
-              in
-              Rel.view relConfig model.rel highlight
+                            Just exp ->
+                                exp.highlight
+                  in
+                  Rel.view relConfig model.rel highlight
+                , elementaryPropertiesView model.rel
+                , miscControls model.trueProb
+                ]
             , Html.div [ A.id "explanation" ]
                 [ Html.div []
                     [ Html.div []
@@ -442,9 +446,6 @@ view model =
                     ]
                 ]
             ]
-        , elementaryPropertiesView model.rel
-        , Html.hr [] []
-        , miscControls model.trueProb
         ]
 
 
@@ -603,9 +604,11 @@ yesNo onHover b =
         Html.text "Yes"
 
     else
-        -- Hiding and showing explanations on hover can cause jumping - for small relations and long explanations.
-        -- TODO shuffle the UI arround to avoid this
-        Html.span [ E.onMouseEnter onHover, E.onMouseLeave HideExplanations ] [ Html.text "No - ⓘ" ]
+        Html.span
+            [ E.onMouseEnter onHover
+            , E.onMouseLeave HideExplanations
+            ]
+            [ Html.text "No - ⓘ" ]
 
 
 sizeInputView : Rel -> Html Msg
@@ -700,7 +703,7 @@ a:visited {
     text-align: right;
 }
 
-#rel-and-explanation {
+#top-container {
     display: flex;
     gap: 20px;
     padding: 20px;
@@ -708,5 +711,10 @@ a:visited {
     #explanation {
         max-width: 40%;
     }
+}
+#rel {
+    padding-top: 20px;
+    height: 250px;
+    width: 250px;
 }
 """

@@ -404,9 +404,9 @@ findCycle (Rel rows) =
                 |> (\row ->
                         let
                             ( _, adjacent ) =
-                                Array.foldl
+                                Array.foldr
                                     (\bool ( j, acc ) ->
-                                        ( j + 1
+                                        ( j - 1
                                         , if bool && i /= j then
                                             j :: acc
 
@@ -414,7 +414,7 @@ findCycle (Rel rows) =
                                             acc
                                         )
                                     )
-                                    ( 0, [] )
+                                    ( n - 1, [] )
                                     row
                         in
                         adjacent
@@ -671,42 +671,44 @@ view config (Rel rows) highlight =
     in
     -- TODO it's not clear that cells should be clicked
     -- Need something like "click cells to toggle them / add/remove elements to/from relation"
-    Html.table []
-        [ Html.thead []
-            [ Html.tr [] <|
-                Html.th [] [{- empty top-left corner -}]
-                    :: List.map headerCell (List.range 1 relSize)
+    Html.div [ A.id "rel" ]
+        [ Html.table []
+            [ Html.thead []
+                [ Html.tr [] <|
+                    Html.th [] [{- empty top-left corner -}]
+                        :: List.map headerCell (List.range 1 relSize)
+                ]
+            , Html.tbody [] <|
+                Array.toList <|
+                    Array.indexedMap
+                        (\i row ->
+                            Html.tr [] <|
+                                headerCell (i + 1)
+                                    :: (Array.toList <|
+                                            Array.indexedMap
+                                                (\j cell ->
+                                                    Html.td
+                                                        [ E.onClick <| config.toggle i j
+                                                        , A.style "background-color" <|
+                                                            if Set.member ( i, j ) highlight then
+                                                                "tomato"
+
+                                                            else
+                                                                "white"
+                                                        ]
+                                                        [ Html.text <|
+                                                            if cell then
+                                                                "✓"
+
+                                                            else
+                                                                ""
+                                                        ]
+                                                )
+                                                row
+                                       )
+                        )
+                        rows
             ]
-        , Html.tbody [] <|
-            Array.toList <|
-                Array.indexedMap
-                    (\i row ->
-                        Html.tr [] <|
-                            headerCell (i + 1)
-                                :: (Array.toList <|
-                                        Array.indexedMap
-                                            (\j cell ->
-                                                Html.td
-                                                    [ E.onClick <| config.toggle i j
-                                                    , A.style "background-color" <|
-                                                        if Set.member ( i, j ) highlight then
-                                                            "tomato"
-
-                                                        else
-                                                            "white"
-                                                    ]
-                                                    [ Html.text <|
-                                                        if cell then
-                                                            "✓"
-
-                                                        else
-                                                            ""
-                                                    ]
-                                            )
-                                            row
-                                   )
-                    )
-                    rows
         ]
 
 
