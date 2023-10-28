@@ -1,0 +1,22 @@
+{
+  "name": "relation-explorer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhrcek/relation-explorer.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jhrcek/relation-explorer/issues"
+  },
+  "homepage": "https://github.com/jhrcek/relation-explorer#readme",
+  "devDependencies": {
+    "elm-review": "^2.10.3"
+  }
+}

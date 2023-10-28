@@ -1,3 +1,4 @@
+node_modules/
 elm-stuff/
 dist/index.html
 dist/js/elm.js
