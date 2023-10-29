@@ -8,6 +8,7 @@ module Rel exposing
     , converse
     , deriveInfo
     , empty
+    , explainAntisymmetric
     , explainIrreflexive
     , explainReflexive
     , explainSymmetric
@@ -17,6 +18,7 @@ module Rel exposing
     , genPartialFunction
     , genReflexiveRelation
     , genRelation
+    , isAntisymmetric
     , isIrreflexive
     , isReflexive
     , isSymmetric
@@ -29,7 +31,6 @@ module Rel exposing
     , showPairSet
     , size
     , superfluousAndMissingForFunction
-    , superfluousForAntisymmetry
     , superfluousForAsymmetry
     , superfluousForPartialFunction
     , symmetricClosure
@@ -77,7 +78,7 @@ type alias DerivedInfo =
     , missingForReflexivity : Set Pair
     , superfluousForIrreflexivity : Set Pair
     , missingForSymmetry : Set Pair
-    , isAntisymmetric : Bool
+    , superfuousForAntisymmetry : Set Pair
     , isAsymmetric : Bool
     , isTransitive : Bool
     , isConnected : Bool
@@ -97,7 +98,7 @@ deriveInfo rel =
     , missingForReflexivity = missingForReflexivity rel
     , superfluousForIrreflexivity = superfluousForIrreflexivity rel
     , missingForSymmetry = missingForSymmetry rel
-    , isAntisymmetric = isAntisymmetric rel
+    , superfuousForAntisymmetry = superfluousForAntisymmetry rel
     , isAsymmetric = isAsymmetric rel
     , isTransitive = isTransitive rel
     , isConnected = isConnected rel
@@ -490,10 +491,15 @@ explainSymmetric info =
         }
 
 
-{-| Set of pairs that are problematic.
--- TODO this is not satisfactory, because it doesn't mean that all "problematic" elements must be removed
--- to get antisymetry. Only one of each "mirror image" pair would be enough to remove to get antisymmetry.
--- It would be nice to "pair up" the pairs to have "mirror images" that cause trouble for antisymmetry.
+{-| ∀ x, y ∈ X: (x, y) ∈ R ∧ (y, x) ∈ R ⇒ x = y
+Or equivalently: ∀ x, y ∈ X: x ≠ y ∧ (x, y) ∈ R ⇒ (x, y) ∉ R
+-}
+isAntisymmetric : DerivedInfo -> Bool
+isAntisymmetric info =
+    Set.isEmpty info.superfuousForAntisymmetry
+
+
+{-| Set of pairs that are problematic for antisymmetry.
 -}
 superfluousForAntisymmetry : Rel -> Set Pair
 superfluousForAntisymmetry rel =
@@ -506,44 +512,88 @@ superfluousForAntisymmetry rel =
         |> Set.fromList
 
 
-superfluousForAsymmetry : Rel -> ( Set Pair, Set Pair )
-superfluousForAsymmetry rel =
-    intersection rel (converse rel)
-        |> elements
-        |> Set.fromList
-        |> Set.partition (\( i, j ) -> i == j)
-
-
-{-| aRb and bRa ⇒ a == b
-Or equivalently: a/=b and aRb ⇒ not bRa
--}
-isAntisymmetric : Rel -> Bool
-isAntisymmetric (Rel rows) =
+explainAntisymmetric : DerivedInfo -> Explanation
+explainAntisymmetric info =
     let
-        maxIdx =
-            Array.length rows - 1
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is antisymmetric if ∀ x, y ∈ X: (x, y) ∈ R ∧ (y, x) ∈ R ⇒ x = y."
     in
-    arrayAnd <|
-        Array.indexedMap
-            (\i row ->
-                List.range (i + 1) maxIdx
-                    |> List.all
-                        (\j ->
-                            if Maybe.withDefault False (Array.get j row) then
-                                not <| unsafeGet j i rows
+    if Set.isEmpty info.superfuousForAntisymmetry then
+        { greenHighlight = Set.empty
+        , redHighlight = Set.empty
+        , lines =
+            [ "This relation is antisymmetric."
+            , definition
+            , "Explanation: whenever there is an off-diagonal element (x, y), "
+                ++ "the corresponding \"mirror image\" element (y, x) must not be present."
+            ]
+                ++ List.map
+                    (\( x, y ) ->
+                        showPair ( x, y )
+                            ++ " is present, so "
+                            ++ showPair ( y, x )
+                            ++ " must not be present. ✓"
+                    )
+                    (Set.toList info.offDiagonalElements)
+        }
+
+    else
+        let
+            belowDiagonalProblematic =
+                Set.filter (\( x, y ) -> x > y) info.superfuousForAntisymmetry
+        in
+        { greenHighlight = Set.empty
+        , redHighlight = info.superfuousForAntisymmetry
+        , lines =
+            [ "This relation is not antisymmetric."
+            , definition
+            , "Explanation: Negating the condition from the definition above, "
+                ++ "we get the following condition satisfied by relations which "
+                ++ "are not antisymmetric: ∃ x, y ∈ X: x ≠ y ∧ (x, y) ∈ R ∧ (y, x) ∈ R."
+                ++ (let
+                        problematicPairCount =
+                            Set.size belowDiagonalProblematic
+
+                        ( isAre, elements_ ) =
+                            if problematicPairCount == 1 then
+                                ( "is", "one element" )
 
                             else
-                                True
-                        )
-            )
-            rows
+                                ( "are", String.fromInt problematicPairCount ++ " elements" )
+                    in
+                    "There "
+                        ++ isAre
+                        ++ " "
+                        ++ elements_
+                        ++ " of the form (x, y) for which the corresponding \"mirror image\""
+                        ++ " (y, x) is also present, which breaks the antisymmetry:"
+                   )
+            ]
+                ++ List.map
+                    (\( x, y ) ->
+                        "Both "
+                            ++ showPair ( x, y )
+                            ++ " and "
+                            ++ showPair ( y, x )
+                            ++ " are present. ✗"
+                    )
+                    (Set.toList belowDiagonalProblematic)
+        }
 
 
 {-| aRb ⇒ not bRa
 -}
 isAsymmetric : Rel -> Bool
 isAsymmetric rel =
-    isAntisymmetric rel && Set.isEmpty (superfluousForIrreflexivity rel)
+    Set.isEmpty (superfluousForAntisymmetry rel) && Set.isEmpty (superfluousForIrreflexivity rel)
+
+
+superfluousForAsymmetry : Rel -> ( Set Pair, Set Pair )
+superfluousForAsymmetry rel =
+    intersection rel (converse rel)
+        |> elements
+        |> Set.fromList
+        |> Set.partition (\( i, j ) -> i == j)
 
 
 isTransitive : Rel -> Bool
@@ -580,7 +630,7 @@ isAcyclic rel =
         ( relTran, _ ) =
             transitiveClosure rel
     in
-    isAntisymmetric relTran
+    Set.isEmpty <| superfluousForAntisymmetry relTran
 
 
 findCycle : Rel -> Maybe (List Int)
@@ -987,3 +1037,7 @@ arrayAnd =
 arrayOr : Array Bool -> Bool
 arrayOr =
     Array.foldl (||) False
+
+
+
+{- Unicode corner: ⇒ ∈ ∉ ∀ ∃ ∧ ∨ ≠ -}

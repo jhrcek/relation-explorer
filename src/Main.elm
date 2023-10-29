@@ -70,7 +70,7 @@ type Msg
     | ExplainReflexive
     | ExplainIrreflexive
     | ExplainSymmetric
-    | ExplainWhyNotAntisymmetric
+    | ExplainAntisymmetric
     | ExplainWhyNotAsymmetric
     | ExplainWhyNotConnected
     | ExplainWhyNotPartialFunction
@@ -147,30 +147,8 @@ update msg model =
         ExplainSymmetric ->
             pure { model | explanation = Just <| Rel.explainSymmetric model.derivedInfo }
 
-        ExplainWhyNotAntisymmetric ->
-            let
-                superfluous =
-                    Rel.superfluousForAntisymmetry model.rel
-
-                problematicPairs =
-                    renderMirrorImagePairs superfluous
-            in
-            pure
-                { model
-                    | explanation =
-                        Just
-                            { redHighlight = superfluous
-                            , greenHighlight = Set.empty
-                            , lines =
-                                [ "This relation is not antisymmetric."
-                                , "To be antisymmetric, the relation must not contain both (a,b) and (b,a), such that a ≠ b."
-
-                                -- TODO pluralize properly based on the number of pairs
-                                , "But this relation contains such pair(s): " ++ problematicPairs
-                                , "One (or both) of each such pair would have to be removed to make the relation antisymmetric."
-                                ]
-                            }
-                }
+        ExplainAntisymmetric ->
+            pure { model | explanation = Just <| Rel.explainAntisymmetric model.derivedInfo }
 
         ExplainWhyNotAsymmetric ->
             let
@@ -441,10 +419,10 @@ propertyConfigs =
       }
     , { propertyName = "Antisymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Antisymmetric_relation"
-      , hasProperty = .isAntisymmetric
+      , hasProperty = Rel.isAntisymmetric
       , closureButton = Nothing
       , genRandom = Nothing
-      , onHoverExplanation = Just ExplainWhyNotAntisymmetric
+      , onHoverExplanation = Just ExplainAntisymmetric
       }
     , { propertyName = "Asymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
