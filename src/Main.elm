@@ -336,7 +336,7 @@ update msg model =
                                   if Set.size rowIndicesWithMissingPairs > 0 then
                                     "In some rows there's no pair, namely for a ∈ {"
                                         ++ String.join ", "
-                                            (List.map (\i -> String.fromInt (i + 1)) <| Set.toList rowIndicesWithMissingPairs)
+                                            (List.map String.fromInt <| Set.toList rowIndicesWithMissingPairs)
                                         ++ "}"
 
                                   else
@@ -371,7 +371,7 @@ update msg model =
                                     , "These the following pairs form a cycle: " ++ Rel.showPairList cyclePairs
                                     , "so the cycle consists of these elements: {"
                                         ++ String.join ", "
-                                            (List.map (String.fromInt << (+) 1) cycleElems)
+                                            (List.map String.fromInt cycleElems)
                                         ++ "}"
                                     ]
                                 }
@@ -429,7 +429,7 @@ view model =
                     [ Html.div []
                         [ Html.text <|
                             "X = {"
-                                ++ (String.join ", " <| List.map String.fromInt <| List.range 1 (Rel.size model.rel))
+                                ++ (String.join ", " <| List.map String.fromInt <| List.range 0 (Rel.size model.rel - 1))
                                 ++ "}"
                         ]
                     , Html.div []

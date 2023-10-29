@@ -65,7 +65,7 @@ type Rel
 
 {-| An element of a relation.
 For relation on set of size n, the are n^2 possible elements:
-{(a,b) | a in {1..n}, b in {1..n}}
+{(a,b) | a in {0..n-1}, b in {0..n-1}}
 -}
 type alias Pair =
     ( Int, Int )
@@ -396,8 +396,8 @@ isAcyclic rel =
 findCycle : Rel -> Maybe (List Int)
 findCycle (Rel rows) =
     let
-        n =
-            Array.length rows
+        maxIndex =
+            Array.length rows - 1
 
         adjacentNodes : Int -> List Int
         adjacentNodes i =
@@ -416,7 +416,7 @@ findCycle (Rel rows) =
                                             acc
                                         )
                                     )
-                                    ( n - 1, [] )
+                                    ( maxIndex, [] )
                                     row
                         in
                         adjacent
@@ -446,7 +446,7 @@ findCycle (Rel rows) =
             in
             loop [ ( start, [] ) ] Set.empty
     in
-    List.range 0 (n - 1)
+    List.range 0 maxIndex
         |> List.findMap dfs
 
 
@@ -678,8 +678,8 @@ genBijectiveFunction n =
 view : Config msg -> Rel -> Set Pair -> Html msg
 view config (Rel rows) highlight =
     let
-        relSize =
-            Array.length rows
+        maxIndex =
+            Array.length rows - 1
     in
     -- TODO it's not clear that cells should be clicked
     -- Need something like "click cells to toggle them / add/remove elements to/from relation"
@@ -688,14 +688,14 @@ view config (Rel rows) highlight =
             [ Html.thead []
                 [ Html.tr [] <|
                     Html.th [] [{- empty top-left corner -}]
-                        :: List.map headerCell (List.range 1 relSize)
+                        :: List.map headerCell (List.range 0 maxIndex)
                 ]
             , Html.tbody [] <|
                 Array.toList <|
                     Array.indexedMap
                         (\i row ->
                             Html.tr [] <|
-                                headerCell (i + 1)
+                                headerCell i
                                     :: (Array.toList <|
                                             Array.indexedMap
                                                 (\j cell ->
@@ -747,12 +747,9 @@ showPairList pairs =
         |> (\s -> "{" ++ s ++ "}")
 
 
-{-| Internally pairs are 0-based for easier array indexing.
-But we're showing them as 1-based to the user.
--}
 showPair : Pair -> String
 showPair ( i, j ) =
-    "(" ++ String.fromInt (i + 1) ++ "," ++ String.fromInt (j + 1) ++ ")"
+    "(" ++ String.fromInt i ++ "," ++ String.fromInt j ++ ")"
 
 
 

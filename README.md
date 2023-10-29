@@ -83,5 +83,6 @@ Various interesting facts that could be shown in UI:
 - There should be bunch of functions like toPoset : Rel -> Maybe Poset, toLattice : Rel -> Maybe Lattice etc., in the spirit of "parse, don't validate" and then there should be operations that are valid e.g. only on lattices
 - Implement a way to generate all posets (find paper?)
 - Implement a way to generate all lattices
-- Consider if it wouldn't be easier to use {0,..., n-1} as an underlying set (to simplify indexing vs. display); the only disadvantage is that size of rel is -1 maximum label.
 - get better understanding of antichains in posets: https://en.wikipedia.org/wiki/Antichain
+
+- switch to calculations in the update
