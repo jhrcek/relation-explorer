@@ -1,20 +1,22 @@
 module Rel exposing
     ( Config
     , DerivedInfo
+    , Explanation
     , Pair
     , Rel
     , complement
     , converse
     , deriveInfo
     , empty
+    , explainReflexive
     , findCycle
     , genBijectiveFunction
     , genFunction
     , genPartialFunction
     , genReflexiveRelation
     , genRelation
+    , isReflexive
     , missingForConnectedness
-    , missingForReflexivity
     , missingForSymmetry
     , reflexiveClosure
     , resize
@@ -36,7 +38,7 @@ module Rel exposing
 
 import Array exposing (Array)
 import Array.Extra as Array
-import Html exposing (Html)
+import Html exposing (Attribute, Html)
 import Html.Attributes as A
 import Html.Events as E
 import List
@@ -60,8 +62,16 @@ type alias Pair =
     ( Int, Int )
 
 
+type alias Explanation =
+    { greenHighlight : Set Pair
+    , redHighlight : Set Pair
+    , lines : List String
+    }
+
+
 type alias DerivedInfo =
-    { isReflexive : Bool
+    { relSize : Int
+    , missingForReflexivity : Set Pair
     , isIrreflexive : Bool
     , isSymmetric : Bool
     , isAntisymmetric : Bool
@@ -79,7 +89,8 @@ type alias DerivedInfo =
 
 deriveInfo : Rel -> DerivedInfo
 deriveInfo rel =
-    { isReflexive = isReflexive rel
+    { relSize = size rel
+    , missingForReflexivity = missingForReflexivity rel
     , isIrreflexive = isIrreflexive rel
     , isSymmetric = isSymmetric rel
     , isAntisymmetric = isAntisymmetric rel
@@ -260,11 +271,9 @@ toggle i j ((Rel rows) as rel) =
 
 {-| aRa
 -}
-isReflexive : Rel -> Bool
-isReflexive (Rel rows) =
-    arrayAnd <|
-        -- All elements on the diagonal must be True
-        Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False) rows
+isReflexive : DerivedInfo -> Bool
+isReflexive info =
+    Set.isEmpty info.missingForReflexivity
 
 
 {-| Set of Pairs missing for the relation to be reflexive
@@ -281,6 +290,53 @@ missingForReflexivity (Rel rows) =
                     Set.insert ( i, i )
             )
             Set.empty
+
+
+explainReflexive : DerivedInfo -> Explanation
+explainReflexive info =
+    let
+        reflexivityDef =
+            "Definition: a relation R ⊆ X ⨯ X is reflexive if ∀ x ∈ X : (x, x) ∈ R."
+    in
+    if Set.isEmpty info.missingForReflexivity then
+        { greenHighlight = Set.fromList <| List.map (\i -> ( i, i )) <| List.range 0 (info.relSize - 1)
+        , redHighlight = Set.empty
+        , lines =
+            [ "This relation is reflexive."
+            , reflexivityDef
+            , "Explanation: this relation contains all elements of the form (x, x), so it is reflexive."
+            ]
+        }
+
+    else
+        { greenHighlight = Set.empty
+        , redHighlight = info.missingForReflexivity
+        , lines =
+            [ "This relation is not reflexive."
+            , reflexivityDef
+            , "Explanation: Negating the definition above we get the following condition that  "
+                ++ "the relation must satisfy, not to be reflexive: ∃ x ∈ X : (x, x) ∉ R."
+            , let
+                missingCount =
+                    Set.size info.missingForReflexivity
+
+                ( isAre, elements_ ) =
+                    if missingCount == 1 then
+                        ( "is", "one element" )
+
+                    else
+                        ( "are", String.fromInt missingCount ++ " elements" )
+              in
+              "There "
+                ++ isAre
+                ++ " "
+                ++ elements_
+                ++ " of the form (x, x) which "
+                ++ isAre
+                ++ " not in the relation: "
+                ++ showPairSet info.missingForReflexivity
+            ]
+        }
 
 
 {-| not aRa
@@ -451,10 +507,6 @@ findCycle (Rel rows) =
             let
                 loop : List ( Int, List Int ) -> Set Int -> Maybe (List Int)
                 loop stack visited =
-                    let
-                        _ =
-                            Debug.log "" ( stack, visited )
-                    in
                     case stack of
                         [] ->
                             Nothing
@@ -707,11 +759,30 @@ genBijectiveFunction n =
 -- VIEW
 
 
-view : Config msg -> Rel -> Set Pair -> Html msg
-view config (Rel rows) highlight =
+view : Config msg -> Rel -> Maybe Explanation -> Html msg
+view config (Rel rows) mExplanation =
     let
         maxIndex =
             Array.length rows - 1
+
+        addBgColor : Int -> Int -> List (Attribute msg) -> List (Attribute msg)
+        addBgColor i j =
+            case mExplanation of
+                Just explanation ->
+                    (::)
+                        (A.style "background-color" <|
+                            if Set.member ( i, j ) explanation.redHighlight then
+                                "salmon"
+
+                            else if Set.member ( i, j ) explanation.greenHighlight then
+                                "lightgreen"
+
+                            else
+                                "white"
+                        )
+
+                Nothing ->
+                    identity
     in
     -- TODO it's not clear that cells should be clicked
     -- Need something like "click cells to toggle them / add/remove elements to/from relation"
@@ -732,14 +803,7 @@ view config (Rel rows) highlight =
                                             Array.indexedMap
                                                 (\j cell ->
                                                     Html.td
-                                                        [ E.onClick <| config.toggle i j
-                                                        , A.style "background-color" <|
-                                                            if Set.member ( i, j ) highlight then
-                                                                "tomato"
-
-                                                            else
-                                                                "white"
-                                                        ]
+                                                        (addBgColor i j [ E.onClick <| config.toggle i j ])
                                                         [ Html.text <|
                                                             if cell then
                                                                 "✓"

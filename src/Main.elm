@@ -5,7 +5,7 @@ import Html exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
 import Random exposing (Generator)
-import Rel exposing (DerivedInfo, Rel)
+import Rel exposing (DerivedInfo, Explanation, Rel)
 import Set exposing (Set)
 
 
@@ -27,13 +27,6 @@ type alias Model =
     -- Number between 0 and 1, indicating how likely it is that random generators
     -- will produce a True value (and thus generate an element of a relation)
     , trueProb : Float
-    }
-
-
-type alias Explanation =
-    { -- TODO use at least 2 different colors: one for missing, one for superfluous
-      highlight : Set Rel.Pair
-    , textLines : List String
     }
 
 
@@ -74,7 +67,7 @@ type Msg
     | GotRandom Rel
       -- Explanations
     | HideExplanations
-    | ExplainWhyNotReflexive
+    | ExplainReflexive
     | ExplainWhyNotIrreflexive
     | ExplainWhyNotSymmetric
     | ExplainWhyNotAntisymmetric
@@ -145,23 +138,8 @@ update msg model =
         HideExplanations ->
             pure { model | explanation = Nothing }
 
-        ExplainWhyNotReflexive ->
-            let
-                missing =
-                    Rel.missingForReflexivity model.rel
-            in
-            pure
-                { model
-                    | explanation =
-                        Just
-                            { highlight = missing
-                            , textLines =
-                                [ "This relation is not reflexive."
-                                , "To be reflexive it would need to conain all elements of the form (x,x)."
-                                , "But the following elements are missing: " ++ Rel.showPairSet missing
-                                ]
-                            }
-                }
+        ExplainReflexive ->
+            pure { model | explanation = Just <| Rel.explainReflexive model.derivedInfo }
 
         ExplainWhyNotIrreflexive ->
             let
@@ -172,8 +150,9 @@ update msg model =
                 { model
                     | explanation =
                         Just
-                            { highlight = superfluous
-                            , textLines =
+                            { redHighlight = superfluous
+                            , greenHighlight = Set.empty
+                            , lines =
                                 [ "This relation is not irreflexive."
                                 , "To make it irreflexive we would have to remove all elements of the form (x,x)."
                                 , "The following elements would have to be removed: " ++ Rel.showPairSet superfluous
@@ -190,8 +169,9 @@ update msg model =
                 { model
                     | explanation =
                         Just
-                            { highlight = missing
-                            , textLines =
+                            { redHighlight = missing
+                            , greenHighlight = Set.empty
+                            , lines =
                                 [ "This relation is not symmetric."
                                 , "To be symmetric, the relation has to contain element (y,x) whenever it contains an element (x,y)."
 
@@ -215,8 +195,9 @@ update msg model =
                 { model
                     | explanation =
                         Just
-                            { highlight = superfluous
-                            , textLines =
+                            { redHighlight = superfluous
+                            , greenHighlight = Set.empty
+                            , lines =
                                 [ "This relation is not antisymmetric."
                                 , "To be antisymmetric, the relation must not contain both (a,b) and (b,a), such that a ≠ b."
 
@@ -236,8 +217,9 @@ update msg model =
                 { model
                     | explanation =
                         Just
-                            { highlight = Set.union offDiagonalPairs diagonalPairs
-                            , textLines =
+                            { redHighlight = Set.union offDiagonalPairs diagonalPairs
+                            , greenHighlight = Set.empty
+                            , lines =
                                 [ "This relation is not asymmetric."
                                 , "To be asymmetric, the relation must not contain (b,a) when it contains (a,b)."
 
@@ -261,8 +243,9 @@ update msg model =
                 { model
                     | explanation =
                         Just
-                            { highlight = missing
-                            , textLines =
+                            { redHighlight = missing
+                            , greenHighlight = Set.empty
+                            , lines =
                                 [ "This relation is not connected."
                                 , "To be connected, it would have to contain at least one of the elements (a,b) or (b,a), for each a ≠ b."
 
@@ -282,8 +265,9 @@ update msg model =
                 { model
                     | explanation =
                         Just
-                            { highlight = superfluous
-                            , textLines =
+                            { redHighlight = superfluous
+                            , greenHighlight = Set.empty
+                            , lines =
                                 [ "This relation is not a partial function."
                                 , "To be partial function there should be at most one pair (a,b) for each a ∈ X."
 
@@ -304,8 +288,9 @@ update msg model =
                 { model
                     | explanation =
                         Just
-                            { highlight = Set.union superfluous missing
-                            , textLines =
+                            { redHighlight = Set.union superfluous missing
+                            , greenHighlight = Set.empty
+                            , lines =
                                 [ "This relation is not a function."
                                 , "To be a function there should be exactly one pair (a,b) for each a ∈ X."
 
@@ -351,8 +336,9 @@ update msg model =
                                     cyclePairs =
                                         elemsToPairs cycleElems
                                 in
-                                { highlight = Set.fromList cyclePairs
-                                , textLines =
+                                { redHighlight = Set.fromList cyclePairs
+                                , greenHighlight = Set.empty
+                                , lines =
                                     [ "This relation is not acyclic."
                                     , "These the following pairs form a cycle: " ++ Rel.showPairList cyclePairs
                                     , "so the cycle consists of these elements: {"
@@ -418,16 +404,7 @@ view model =
         , Html.div [ A.id "top-container" ]
             [ Html.div [ A.id "rel-and-controls" ]
                 [ sizeInputView model.rel
-                , let
-                    highlight =
-                        case model.explanation of
-                            Nothing ->
-                                Set.empty
-
-                            Just exp ->
-                                exp.highlight
-                  in
-                  Rel.view relConfig model.rel highlight
+                , Rel.view relConfig model.rel model.explanation
                 , elementaryPropertiesView model.derivedInfo
                 , miscControls model.trueProb
                 ]
@@ -446,7 +423,7 @@ view model =
                         ]
                     , case model.explanation of
                         Just exp ->
-                            Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.textLines
+                            Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.lines
 
                         Nothing ->
                             Html.text ""
@@ -473,14 +450,16 @@ propertyConfigs =
       , hasProperty = always True
       , closureButton = Nothing
       , genRandom = Just GenRel
+
+      -- TODO explain that any subset of cartesian product is a relation
       , onHoverExplanation = Nothing
       }
     , { propertyName = "Reflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation"
-      , hasProperty = .isReflexive
+      , hasProperty = Rel.isReflexive
       , closureButton = Just DoReflexiveClosure
       , genRandom = Just GenReflexive
-      , onHoverExplanation = Just ExplainWhyNotReflexive
+      , onHoverExplanation = Just ExplainReflexive
       }
     , { propertyName = "Irreflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity"
@@ -625,15 +604,19 @@ blankLink href text =
 
 yesNo : Msg -> Bool -> Html Msg
 yesNo onHover b =
-    if b then
-        Html.text "Yes"
+    Html.span
+        [ E.onMouseEnter onHover
+        , E.onMouseLeave HideExplanations
+        ]
+        [ Html.text <|
+            (if b then
+                "Yes"
 
-    else
-        Html.span
-            [ E.onMouseEnter onHover
-            , E.onMouseLeave HideExplanations
-            ]
-            [ Html.text "No - ⓘ" ]
+             else
+                "No"
+            )
+                ++ " - ⓘ"
+        ]
 
 
 sizeInputView : Rel -> Html Msg
