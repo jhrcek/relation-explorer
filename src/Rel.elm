@@ -10,6 +10,7 @@ module Rel exposing
     , empty
     , explainIrreflexive
     , explainReflexive
+    , explainSymmetric
     , findCycle
     , genBijectiveFunction
     , genFunction
@@ -18,8 +19,8 @@ module Rel exposing
     , genRelation
     , isIrreflexive
     , isReflexive
+    , isSymmetric
     , missingForConnectedness
-    , missingForSymmetry
     , reflexiveClosure
     , resize
     , showElements
@@ -72,9 +73,10 @@ type alias Explanation =
 
 type alias DerivedInfo =
     { relSize : Int
+    , offDiagonalElements : Set Pair
     , missingForReflexivity : Set Pair
     , superfluousForIrreflexivity : Set Pair
-    , isSymmetric : Bool
+    , missingForSymmetry : Set Pair
     , isAntisymmetric : Bool
     , isAsymmetric : Bool
     , isTransitive : Bool
@@ -91,9 +93,10 @@ type alias DerivedInfo =
 deriveInfo : Rel -> DerivedInfo
 deriveInfo rel =
     { relSize = size rel
+    , offDiagonalElements = offDiagnoalElements rel
     , missingForReflexivity = missingForReflexivity rel
     , superfluousForIrreflexivity = superfluousForIrreflexivity rel
-    , isSymmetric = isSymmetric rel
+    , missingForSymmetry = missingForSymmetry rel
     , isAntisymmetric = isAntisymmetric rel
     , isAsymmetric = isAsymmetric rel
     , isTransitive = isTransitive rel
@@ -127,6 +130,11 @@ empty n =
 eye : Int -> Rel
 eye n =
     Rel <| Array.initialize n (\i -> Array.initialize n (\j -> i == j))
+
+
+offDiagnoalElements : Rel -> Set Pair
+offDiagnoalElements =
+    elements >> Set.fromList >> Set.filter (\( i, j ) -> i /= j)
 
 
 {-| Change the size, while preserving as much as possible from the original.
@@ -270,7 +278,7 @@ toggle i j ((Rel rows) as rel) =
             rel
 
 
-{-| ∀ x ∈ X : (x, x) ∈ R
+{-| ∀ x ∈ X: (x, x) ∈ R
 -}
 isReflexive : DerivedInfo -> Bool
 isReflexive info =
@@ -297,7 +305,7 @@ explainReflexive : DerivedInfo -> Explanation
 explainReflexive info =
     let
         definition =
-            "Definition: a relation R ⊆ X ⨯ X is reflexive if ∀ x ∈ X : (x, x) ∈ R."
+            "Definition: a relation R ⊆ X ⨯ X is reflexive if ∀ x ∈ X: (x, x) ∈ R."
     in
     if Set.isEmpty info.missingForReflexivity then
         { greenHighlight = Set.fromList <| List.map (\i -> ( i, i )) <| List.range 0 (info.relSize - 1)
@@ -317,7 +325,7 @@ explainReflexive info =
             , definition
             , "Explanation: Negating the condition from the definition above, "
                 ++ "we get the following condition satisfied by relations which "
-                ++ "are not reflexive: ∃ x ∈ X : (x, x) ∉ R."
+                ++ "are not reflexive: ∃ x ∈ X: (x, x) ∉ R."
                 ++ (let
                         missingCount =
                             Set.size info.missingForReflexivity
@@ -342,7 +350,7 @@ explainReflexive info =
         }
 
 
-{-| ∀ x ∈ X : (x, x) ∉ R
+{-| ∀ x ∈ X: (x, x) ∉ R
 -}
 isIrreflexive : DerivedInfo -> Bool
 isIrreflexive info =
@@ -369,7 +377,7 @@ explainIrreflexive : DerivedInfo -> Explanation
 explainIrreflexive info =
     let
         definition =
-            "Definition: a relation R ⊆ X ⨯ X is irreflexive if ∀ x ∈ X : (x, x) ∉ R."
+            "Definition: a relation R ⊆ X ⨯ X is irreflexive if ∀ x ∈ X: (x, x) ∉ R."
     in
     if Set.isEmpty info.superfluousForIrreflexivity then
         { greenHighlight = Set.fromList <| List.map (\i -> ( i, i )) <| List.range 0 (info.relSize - 1)
@@ -389,7 +397,7 @@ explainIrreflexive info =
             , definition
             , "Explanation: Negating the condition from the definition above, "
                 ++ "we get the following condition satisfied by relations which "
-                ++ "are not irreflexive: ∃ x ∈ X : (x, x) ∈ R."
+                ++ "are not irreflexive: ∃ x ∈ X: (x, x) ∈ R."
                 ++ (let
                         extraneousCount =
                             Set.size info.superfluousForIrreflexivity
@@ -414,11 +422,11 @@ explainIrreflexive info =
         }
 
 
-{-| aRb => bRa
+{-| ∀ x, y ∈ X: (x, y) ∈ R ⇒ (y, x) ∈ R
 -}
-isSymmetric : Rel -> Bool
-isSymmetric rel =
-    rel == converse rel
+isSymmetric : DerivedInfo -> Bool
+isSymmetric info =
+    Set.isEmpty info.missingForSymmetry
 
 
 {-| Set of pairs that would have to be added for the relation to be symmetric
@@ -428,6 +436,58 @@ missingForSymmetry rel =
     difference (pointwise xor rel (converse rel)) rel
         |> elements
         |> Set.fromList
+
+
+explainSymmetric : DerivedInfo -> Explanation
+explainSymmetric info =
+    let
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is symmetric if ∀ x, y ∈ X: (x, y) ∈ R ⇒ (y, x) ∈ R."
+    in
+    if Set.isEmpty info.missingForSymmetry then
+        { greenHighlight = info.offDiagonalElements
+        , redHighlight = Set.empty
+        , lines =
+            [ "This relation is symmetric."
+            , definition
+            , "Explanation: whenever there is an off-diagonal element (x, y), "
+                ++ "it's \"mirror image\" (y, x) is also present, so the relation is symmetric."
+            ]
+        }
+
+    else
+        { greenHighlight = Set.map (\( x, y ) -> ( y, x )) info.missingForSymmetry
+        , redHighlight = info.missingForSymmetry
+        , lines =
+            [ "This relation is not symmetric."
+            , definition
+            , "Explanation: Negating the condition from the definition above, "
+                ++ "we get the following condition satisfied by relations which "
+                ++ "are not symmetric: ∃ x, y ∈ X: (x, y) ∈ R ∧ (y, x) ∉ R."
+                ++ (let
+                        missingCount =
+                            Set.size info.missingForSymmetry
+
+                        ( isAre, elements_ ) =
+                            if missingCount == 1 then
+                                ( "is", "one element" )
+
+                            else
+                                ( "are", String.fromInt missingCount ++ " elements" )
+                    in
+                    "There "
+                        ++ isAre
+                        ++ " "
+                        ++ elements_
+                        ++ " of the form (x, y) (highlighted in green), for which the corresponding "
+                        ++ "\"mirror image\" (y, x) (highlighted in red) "
+                        ++ isAre
+                        ++ " missing:"
+                   )
+            ]
+                ++ List.map (\( x, y ) -> showPair ( y, x ) ++ " is present, but " ++ showPair ( x, y ) ++ " is missing.")
+                    (Set.toList info.missingForSymmetry)
+        }
 
 
 {-| Set of pairs that are problematic.
@@ -454,8 +514,8 @@ superfluousForAsymmetry rel =
         |> Set.partition (\( i, j ) -> i == j)
 
 
-{-| aRb and bRa => a == b
-Or equivalently: a/=b and aRb => not bRa
+{-| aRb and bRa ⇒ a == b
+Or equivalently: a/=b and aRb ⇒ not bRa
 -}
 isAntisymmetric : Rel -> Bool
 isAntisymmetric (Rel rows) =
@@ -479,7 +539,7 @@ isAntisymmetric (Rel rows) =
             rows
 
 
-{-| aRb => not bRa
+{-| aRb ⇒ not bRa
 -}
 isAsymmetric : Rel -> Bool
 isAsymmetric rel =
@@ -491,7 +551,7 @@ isTransitive rel =
     isSubsetOf (compose rel rel) rel
 
 
-{-| a/=b => aRb or bRa
+{-| a/=b ⇒ aRb or bRa
 -}
 isConnected : Rel -> Bool
 isConnected (Rel rows) =

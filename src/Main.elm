@@ -69,7 +69,7 @@ type Msg
     | HideExplanations
     | ExplainReflexive
     | ExplainIrreflexive
-    | ExplainWhyNotSymmetric
+    | ExplainSymmetric
     | ExplainWhyNotAntisymmetric
     | ExplainWhyNotAsymmetric
     | ExplainWhyNotConnected
@@ -144,28 +144,8 @@ update msg model =
         ExplainIrreflexive ->
             pure { model | explanation = Just <| Rel.explainIrreflexive model.derivedInfo }
 
-        ExplainWhyNotSymmetric ->
-            let
-                missing =
-                    Rel.missingForSymmetry model.rel
-            in
-            pure
-                { model
-                    | explanation =
-                        Just
-                            { redHighlight = missing
-                            , greenHighlight = Set.empty
-                            , lines =
-                                [ "This relation is not symmetric."
-                                , "To be symmetric, the relation has to contain element (y,x) whenever it contains an element (x,y)."
-
-                                -- TODO I'd like the explanation to be more granular, to make it clearer.
-                                -- something like: "since we have (1,2), we alson need (2,1) ..."
-                                -- TODO also it would be nice to highlight the potentially "superfluous" elements
-                                , "The following elements would have to be added to satisfy that condition: " ++ Rel.showPairSet missing
-                                ]
-                            }
-                }
+        ExplainSymmetric ->
+            pure { model | explanation = Just <| Rel.explainSymmetric model.derivedInfo }
 
         ExplainWhyNotAntisymmetric ->
             let
@@ -454,10 +434,10 @@ propertyConfigs =
       }
     , { propertyName = "Symmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
-      , hasProperty = .isSymmetric
+      , hasProperty = Rel.isSymmetric
       , closureButton = Just DoSymmetricClosure
       , genRandom = Nothing
-      , onHoverExplanation = Just ExplainWhyNotSymmetric
+      , onHoverExplanation = Just ExplainSymmetric
       }
     , { propertyName = "Antisymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Antisymmetric_relation"
