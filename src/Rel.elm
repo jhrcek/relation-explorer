@@ -8,6 +8,7 @@ module Rel exposing
     , converse
     , deriveInfo
     , empty
+    , explainIrreflexive
     , explainReflexive
     , findCycle
     , genBijectiveFunction
@@ -15,6 +16,7 @@ module Rel exposing
     , genPartialFunction
     , genReflexiveRelation
     , genRelation
+    , isIrreflexive
     , isReflexive
     , missingForConnectedness
     , missingForSymmetry
@@ -28,7 +30,6 @@ module Rel exposing
     , superfluousAndMissingForFunction
     , superfluousForAntisymmetry
     , superfluousForAsymmetry
-    , superfluousForIrreflexivity
     , superfluousForPartialFunction
     , symmetricClosure
     , toggle
@@ -72,7 +73,7 @@ type alias Explanation =
 type alias DerivedInfo =
     { relSize : Int
     , missingForReflexivity : Set Pair
-    , isIrreflexive : Bool
+    , superfluousForIrreflexivity : Set Pair
     , isSymmetric : Bool
     , isAntisymmetric : Bool
     , isAsymmetric : Bool
@@ -91,7 +92,7 @@ deriveInfo : Rel -> DerivedInfo
 deriveInfo rel =
     { relSize = size rel
     , missingForReflexivity = missingForReflexivity rel
-    , isIrreflexive = isIrreflexive rel
+    , superfluousForIrreflexivity = superfluousForIrreflexivity rel
     , isSymmetric = isSymmetric rel
     , isAntisymmetric = isAntisymmetric rel
     , isAsymmetric = isAsymmetric rel
@@ -269,7 +270,7 @@ toggle i j ((Rel rows) as rel) =
             rel
 
 
-{-| aRa
+{-| ∀ x ∈ X : (x, x) ∈ R
 -}
 isReflexive : DerivedInfo -> Bool
 isReflexive info =
@@ -295,7 +296,7 @@ missingForReflexivity (Rel rows) =
 explainReflexive : DerivedInfo -> Explanation
 explainReflexive info =
     let
-        reflexivityDef =
+        definition =
             "Definition: a relation R ⊆ X ⨯ X is reflexive if ∀ x ∈ X : (x, x) ∈ R."
     in
     if Set.isEmpty info.missingForReflexivity then
@@ -303,7 +304,7 @@ explainReflexive info =
         , redHighlight = Set.empty
         , lines =
             [ "This relation is reflexive."
-            , reflexivityDef
+            , definition
             , "Explanation: this relation contains all elements of the form (x, x), so it is reflexive."
             ]
         }
@@ -313,39 +314,39 @@ explainReflexive info =
         , redHighlight = info.missingForReflexivity
         , lines =
             [ "This relation is not reflexive."
-            , reflexivityDef
-            , "Explanation: Negating the definition above we get the following condition that  "
-                ++ "the relation must satisfy, not to be reflexive: ∃ x ∈ X : (x, x) ∉ R."
-            , let
-                missingCount =
-                    Set.size info.missingForReflexivity
+            , definition
+            , "Explanation: Negating the condition from the definition above, "
+                ++ "we get the following condition satisfied by relations which "
+                ++ "are not reflexive: ∃ x ∈ X : (x, x) ∉ R."
+                ++ (let
+                        missingCount =
+                            Set.size info.missingForReflexivity
 
-                ( isAre, elements_ ) =
-                    if missingCount == 1 then
-                        ( "is", "one element" )
+                        ( isAre, elements_ ) =
+                            if missingCount == 1 then
+                                ( "is", "one element" )
 
-                    else
-                        ( "are", String.fromInt missingCount ++ " elements" )
-              in
-              "There "
-                ++ isAre
-                ++ " "
-                ++ elements_
-                ++ " of the form (x, x) which "
-                ++ isAre
-                ++ " not in the relation: "
-                ++ showPairSet info.missingForReflexivity
+                            else
+                                ( "are", String.fromInt missingCount ++ " elements" )
+                    in
+                    "There "
+                        ++ isAre
+                        ++ " "
+                        ++ elements_
+                        ++ " of the form (x, x) which "
+                        ++ isAre
+                        ++ " not in the relation: "
+                        ++ showPairSet info.missingForReflexivity
+                   )
             ]
         }
 
 
-{-| not aRa
+{-| ∀ x ∈ X : (x, x) ∉ R
 -}
-isIrreflexive : Rel -> Bool
-isIrreflexive (Rel rows) =
-    arrayAnd <|
-        -- All elements on the diagonal must be False
-        Array.indexedMap (\i row -> Array.get i row |> Maybe.withDefault False |> not) rows
+isIrreflexive : DerivedInfo -> Bool
+isIrreflexive info =
+    Set.isEmpty info.superfluousForIrreflexivity
 
 
 {-| Set of pairs that would have to be removed for the relation to be irreflexive
@@ -362,6 +363,55 @@ superfluousForIrreflexivity (Rel rows) =
                     identity
             )
             Set.empty
+
+
+explainIrreflexive : DerivedInfo -> Explanation
+explainIrreflexive info =
+    let
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is irreflexive if ∀ x ∈ X : (x, x) ∉ R."
+    in
+    if Set.isEmpty info.superfluousForIrreflexivity then
+        { greenHighlight = Set.fromList <| List.map (\i -> ( i, i )) <| List.range 0 (info.relSize - 1)
+        , redHighlight = Set.empty
+        , lines =
+            [ "This relation is irreflexive."
+            , definition
+            , "Explanation: this relation has no elements of the form (x, x), so it is irreflexive."
+            ]
+        }
+
+    else
+        { greenHighlight = Set.empty
+        , redHighlight = info.superfluousForIrreflexivity
+        , lines =
+            [ "This relation is not irreflexive."
+            , definition
+            , "Explanation: Negating the condition from the definition above, "
+                ++ "we get the following condition satisfied by relations which "
+                ++ "are not irreflexive: ∃ x ∈ X : (x, x) ∈ R."
+                ++ (let
+                        extraneousCount =
+                            Set.size info.superfluousForIrreflexivity
+
+                        ( isAre, elements_ ) =
+                            if extraneousCount == 1 then
+                                ( "is", "one element" )
+
+                            else
+                                ( "are", String.fromInt extraneousCount ++ " elements" )
+                    in
+                    "There "
+                        ++ isAre
+                        ++ " "
+                        ++ elements_
+                        ++ " of the form (x, x) which "
+                        ++ isAre
+                        ++ " in the relation: "
+                        ++ showPairSet info.superfluousForIrreflexivity
+                   )
+            ]
+        }
 
 
 {-| aRb => bRa
@@ -433,7 +483,7 @@ isAntisymmetric (Rel rows) =
 -}
 isAsymmetric : Rel -> Bool
 isAsymmetric rel =
-    isAntisymmetric rel && isIrreflexive rel
+    isAntisymmetric rel && Set.isEmpty (superfluousForIrreflexivity rel)
 
 
 isTransitive : Rel -> Bool
@@ -641,7 +691,7 @@ isBijectiveFunction rel =
 
 isDerangement : Rel -> Bool
 isDerangement rel =
-    isBijectiveFunction rel && isIrreflexive rel
+    isBijectiveFunction rel && Set.isEmpty (superfluousForIrreflexivity rel)
 
 
 isInvolution : Rel -> Bool

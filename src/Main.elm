@@ -68,7 +68,7 @@ type Msg
       -- Explanations
     | HideExplanations
     | ExplainReflexive
-    | ExplainWhyNotIrreflexive
+    | ExplainIrreflexive
     | ExplainWhyNotSymmetric
     | ExplainWhyNotAntisymmetric
     | ExplainWhyNotAsymmetric
@@ -141,24 +141,8 @@ update msg model =
         ExplainReflexive ->
             pure { model | explanation = Just <| Rel.explainReflexive model.derivedInfo }
 
-        ExplainWhyNotIrreflexive ->
-            let
-                superfluous =
-                    Rel.superfluousForIrreflexivity model.rel
-            in
-            pure
-                { model
-                    | explanation =
-                        Just
-                            { redHighlight = superfluous
-                            , greenHighlight = Set.empty
-                            , lines =
-                                [ "This relation is not irreflexive."
-                                , "To make it irreflexive we would have to remove all elements of the form (x,x)."
-                                , "The following elements would have to be removed: " ++ Rel.showPairSet superfluous
-                                ]
-                            }
-                }
+        ExplainIrreflexive ->
+            pure { model | explanation = Just <| Rel.explainIrreflexive model.derivedInfo }
 
         ExplainWhyNotSymmetric ->
             let
@@ -463,10 +447,10 @@ propertyConfigs =
       }
     , { propertyName = "Irreflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity"
-      , hasProperty = .isIrreflexive
+      , hasProperty = Rel.isIrreflexive
       , closureButton = Nothing
       , genRandom = Nothing
-      , onHoverExplanation = Just ExplainWhyNotIrreflexive
+      , onHoverExplanation = Just ExplainIrreflexive
       }
     , { propertyName = "Symmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
