@@ -4,8 +4,8 @@ import Browser
 import Html exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
-import Random
-import Rel exposing (Rel)
+import Random exposing (Generator)
+import Rel exposing (DerivedInfo, Rel)
 import Set exposing (Set)
 
 
@@ -21,6 +21,7 @@ main =
 
 type alias Model =
     { rel : Rel
+    , derivedInfo : DerivedInfo
     , explanation : Maybe Explanation
 
     -- Number between 0 and 1, indicating how likely it is that random generators
@@ -41,8 +42,12 @@ init _ =
     let
         initSize =
             4
+
+        initRel =
+            Rel.empty initSize
     in
-    ( { rel = Rel.empty initSize
+    ( { rel = initRel
+      , derivedInfo = Rel.deriveInfo initRel
       , explanation = Nothing
       , trueProb = 0.2
       }
@@ -84,13 +89,6 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        SetRelSize newSize ->
-            let
-                safeSize =
-                    clamp 1 10 newSize
-            in
-            pure { model | rel = Rel.resize safeSize model.rel }
-
         SetTrueProb newProb ->
             let
                 safeProb =
@@ -98,63 +96,51 @@ update msg model =
             in
             pure { model | trueProb = safeProb }
 
+        SetRelSize newSize ->
+            let
+                safeSize =
+                    clamp 1 10 newSize
+            in
+            updateRel (Rel.resize safeSize) model
+
         ToggleRel i j ->
-            pure { model | rel = Rel.toggle i j model.rel }
+            updateRel (Rel.toggle i j) model
 
         DoReflexiveClosure ->
-            pure { model | rel = Rel.reflexiveClosure model.rel }
+            updateRel Rel.reflexiveClosure model
 
         DoSymmetricClosure ->
-            pure { model | rel = Rel.symmetricClosure model.rel }
+            updateRel Rel.symmetricClosure model
 
         DoTransitiveClosure ->
-            let
-                ( transitiveRel, _ ) =
-                    Rel.transitiveClosure model.rel
-            in
-            pure { model | rel = transitiveRel }
+            updateRel (Tuple.first << Rel.transitiveClosure) model
 
         DoComplement ->
-            pure { model | rel = Rel.complement model.rel }
+            updateRel Rel.complement model
 
         DoConverse ->
-            pure { model | rel = Rel.converse model.rel }
+            updateRel Rel.converse model
 
         MakeEmpty ->
-            pure { model | rel = Rel.empty <| Rel.size model.rel }
-
-        GenRel ->
-            ( model
-            , Random.generate GotRandom <|
-                Rel.genRelation model.trueProb (Rel.size model.rel)
-            )
-
-        GenReflexive ->
-            ( model
-            , Random.generate GotRandom <|
-                Rel.genReflexiveRelation model.trueProb (Rel.size model.rel)
-            )
-
-        GenPartialFunction ->
-            ( model
-            , Random.generate GotRandom <|
-                Rel.genPartialFunction (Rel.size model.rel)
-            )
-
-        GenFunction ->
-            ( model
-            , Random.generate GotRandom <|
-                Rel.genFunction (Rel.size model.rel)
-            )
-
-        GenBijectiveFunction ->
-            ( model
-            , Random.generate GotRandom <|
-                Rel.genBijectiveFunction (Rel.size model.rel)
-            )
+            updateRel (Rel.empty << Rel.size) model
 
         GotRandom rel ->
-            pure { model | rel = rel }
+            updateRel (always rel) model
+
+        GenRel ->
+            generateRel (Rel.genRelation model.trueProb) model
+
+        GenReflexive ->
+            generateRel (Rel.genReflexiveRelation model.trueProb) model
+
+        GenPartialFunction ->
+            generateRel Rel.genPartialFunction model
+
+        GenFunction ->
+            generateRel Rel.genFunction model
+
+        GenBijectiveFunction ->
+            generateRel Rel.genBijectiveFunction model
 
         HideExplanations ->
             pure { model | explanation = Nothing }
@@ -384,14 +370,25 @@ update msg model =
             pure model
 
 
-{-| select subset of pairs above diagonal and render them as pairs of pairs connected by "<->"
--}
-renderMirrorImagePairs : Set Rel.Pair -> String
-renderMirrorImagePairs pairs =
-    Set.toList pairs
-        |> List.filter (\( a, b ) -> a > b)
-        |> List.map (\( a, b ) -> Rel.showPair ( a, b ) ++ " <-> " ++ Rel.showPair ( b, a ))
-        |> String.join ", "
+updateRel : (Rel -> Rel) -> Model -> ( Model, Cmd Msg )
+updateRel f model =
+    let
+        newRel =
+            f model.rel
+    in
+    ( { model
+        | rel = newRel
+        , derivedInfo = Rel.deriveInfo newRel
+      }
+    , Cmd.none
+    )
+
+
+generateRel : (Int -> Generator Rel) -> Model -> ( Model, Cmd Msg )
+generateRel gen model =
+    ( model
+    , Random.generate GotRandom <| gen <| Rel.size model.rel
+    )
 
 
 pure : a -> ( a, Cmd msg )
@@ -402,6 +399,16 @@ pure a =
 relConfig : Rel.Config Msg
 relConfig =
     { toggle = ToggleRel }
+
+
+{-| select subset of pairs above diagonal and render them as pairs of pairs connected by "<->"
+-}
+renderMirrorImagePairs : Set Rel.Pair -> String
+renderMirrorImagePairs pairs =
+    Set.toList pairs
+        |> List.filter (\( a, b ) -> a > b)
+        |> List.map (\( a, b ) -> Rel.showPair ( a, b ) ++ " <-> " ++ Rel.showPair ( b, a ))
+        |> String.join ", "
 
 
 view : Model -> Html Msg
@@ -421,7 +428,7 @@ view model =
                                 exp.highlight
                   in
                   Rel.view relConfig model.rel highlight
-                , elementaryPropertiesView model.rel
+                , elementaryPropertiesView model.derivedInfo
                 , miscControls model.trueProb
                 ]
             , Html.div [ A.id "explanation" ]
@@ -452,7 +459,7 @@ view model =
 type alias PropertyConfig msg =
     { propertyName : String
     , wikiLink : String
-    , hasProperty : Rel -> Bool
+    , hasProperty : DerivedInfo -> Bool
     , closureButton : Maybe msg
     , genRandom : Maybe msg
     , onHoverExplanation : Maybe msg
@@ -470,42 +477,42 @@ propertyConfigs =
       }
     , { propertyName = "Reflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation"
-      , hasProperty = Rel.isReflexive
+      , hasProperty = .isReflexive
       , closureButton = Just DoReflexiveClosure
       , genRandom = Just GenReflexive
       , onHoverExplanation = Just ExplainWhyNotReflexive
       }
     , { propertyName = "Irreflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity"
-      , hasProperty = Rel.isIrreflexive
+      , hasProperty = .isIrreflexive
       , closureButton = Nothing
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotIrreflexive
       }
     , { propertyName = "Symmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
-      , hasProperty = Rel.isSymmetric
+      , hasProperty = .isSymmetric
       , closureButton = Just DoSymmetricClosure
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotSymmetric
       }
     , { propertyName = "Antisymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Antisymmetric_relation"
-      , hasProperty = Rel.isAntisymmetric
+      , hasProperty = .isAntisymmetric
       , closureButton = Nothing
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotAntisymmetric
       }
     , { propertyName = "Asymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
-      , hasProperty = Rel.isAsymmetric
+      , hasProperty = .isAsymmetric
       , closureButton = Nothing
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotAsymmetric
       }
     , { propertyName = "Transitive"
       , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
-      , hasProperty = Rel.isTransitive
+      , hasProperty = .isTransitive
       , closureButton = Just DoTransitiveClosure
       , genRandom = Nothing
 
@@ -514,35 +521,35 @@ propertyConfigs =
       }
     , { propertyName = "Connected"
       , wikiLink = "https://en.wikipedia.org/wiki/Connected_relation"
-      , hasProperty = Rel.isConnected
+      , hasProperty = .isConnected
       , closureButton = Nothing
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotConnected
       }
     , { propertyName = "Acyclic"
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"
-      , hasProperty = Rel.isAcyclic
+      , hasProperty = .isAcyclic
       , closureButton = Nothing
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotAcyclic
       }
     , { propertyName = "Partial function"
       , wikiLink = "https://en.wikipedia.org/wiki/Partial_function"
-      , hasProperty = Rel.isPartialFunction
+      , hasProperty = .isPartialFunction
       , closureButton = Nothing
       , genRandom = Just GenPartialFunction
       , onHoverExplanation = Just ExplainWhyNotPartialFunction
       }
     , { propertyName = "Function"
       , wikiLink = "https://en.wikipedia.org/wiki/Function_(mathematics)"
-      , hasProperty = Rel.isFunction
+      , hasProperty = .isFunction
       , closureButton = Nothing
       , genRandom = Just GenFunction
       , onHoverExplanation = Just ExplainWhyNotFunction
       }
     , { propertyName = "Bijection (Permutation)"
       , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
-      , hasProperty = Rel.isBijectiveFunction
+      , hasProperty = .isBijectiveFunction
       , closureButton = Nothing
       , genRandom = Just GenBijectiveFunction
 
@@ -551,7 +558,7 @@ propertyConfigs =
       }
     , { propertyName = "Derangement"
       , wikiLink = "https://en.wikipedia.org/wiki/Derangement"
-      , hasProperty = Rel.isDerangement
+      , hasProperty = .isDerangement
       , closureButton = Nothing
       , genRandom = Nothing
 
@@ -560,7 +567,7 @@ propertyConfigs =
       }
     , { propertyName = "Involution"
       , wikiLink = "https://en.wikipedia.org/wiki/Involution_(mathematics)"
-      , hasProperty = Rel.isInvolution
+      , hasProperty = .isInvolution
       , closureButton = Nothing
       , genRandom = Nothing
 
@@ -570,14 +577,14 @@ propertyConfigs =
     ]
 
 
-elementaryPropertiesView : Rel -> Html Msg
-elementaryPropertiesView rel =
+elementaryPropertiesView : DerivedInfo -> Html Msg
+elementaryPropertiesView derivedInfo =
     let
         row : PropertyConfig Msg -> Html Msg
         row { propertyName, wikiLink, hasProperty, closureButton, genRandom, onHoverExplanation } =
             let
                 hasProp =
-                    hasProperty rel
+                    hasProperty derivedInfo
             in
             Html.tr []
                 [ Html.td [] [ blankLink wikiLink propertyName ]

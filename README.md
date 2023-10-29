@@ -85,4 +85,3 @@ Various interesting facts that could be shown in UI:
 - Implement a way to generate all lattices
 - get better understanding of antichains in posets: https://en.wikipedia.org/wiki/Antichain
 
-- switch to calculations in the update

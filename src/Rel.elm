@@ -1,9 +1,11 @@
 module Rel exposing
     ( Config
+    , DerivedInfo
     , Pair
     , Rel
     , complement
     , converse
+    , deriveInfo
     , empty
     , findCycle
     , genBijectiveFunction
@@ -11,19 +13,6 @@ module Rel exposing
     , genPartialFunction
     , genReflexiveRelation
     , genRelation
-    , isAcyclic
-    , isAntisymmetric
-    , isAsymmetric
-    , isBijectiveFunction
-    , isConnected
-    , isDerangement
-    , isFunction
-    , isInvolution
-    , isIrreflexive
-    , isPartialFunction
-    , isReflexive
-    , isSymmetric
-    , isTransitive
     , missingForConnectedness
     , missingForReflexivity
     , missingForSymmetry
@@ -69,6 +58,41 @@ For relation on set of size n, the are n^2 possible elements:
 -}
 type alias Pair =
     ( Int, Int )
+
+
+type alias DerivedInfo =
+    { isReflexive : Bool
+    , isIrreflexive : Bool
+    , isSymmetric : Bool
+    , isAntisymmetric : Bool
+    , isAsymmetric : Bool
+    , isTransitive : Bool
+    , isConnected : Bool
+    , isAcyclic : Bool
+    , isPartialFunction : Bool
+    , isFunction : Bool
+    , isBijectiveFunction : Bool
+    , isDerangement : Bool
+    , isInvolution : Bool
+    }
+
+
+deriveInfo : Rel -> DerivedInfo
+deriveInfo rel =
+    { isReflexive = isReflexive rel
+    , isIrreflexive = isIrreflexive rel
+    , isSymmetric = isSymmetric rel
+    , isAntisymmetric = isAntisymmetric rel
+    , isAsymmetric = isAsymmetric rel
+    , isTransitive = isTransitive rel
+    , isConnected = isConnected rel
+    , isAcyclic = isAcyclic rel
+    , isPartialFunction = isPartialFunction rel
+    , isFunction = isFunction rel
+    , isBijectiveFunction = isBijectiveFunction rel
+    , isDerangement = isDerangement rel
+    , isInvolution = isInvolution rel
+    }
 
 
 type alias Config msg =
@@ -427,13 +451,21 @@ findCycle (Rel rows) =
             let
                 loop : List ( Int, List Int ) -> Set Int -> Maybe (List Int)
                 loop stack visited =
+                    let
+                        _ =
+                            Debug.log "" ( stack, visited )
+                    in
                     case stack of
                         [] ->
                             Nothing
 
                         ( i, path ) :: rest ->
                             if Set.member i visited then
-                                Just (i :: List.reverse (List.takeWhile ((/=) i) path))
+                                if List.member i path then
+                                    Just (i :: List.reverse (List.takeWhile ((/=) i) path))
+
+                                else
+                                    loop rest visited
 
                             else
                                 loop
