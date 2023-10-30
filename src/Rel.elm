@@ -9,6 +9,7 @@ module Rel exposing
     , deriveInfo
     , empty
     , explainAntisymmetric
+    , explainAsymmetric
     , explainIrreflexive
     , explainReflexive
     , explainSymmetric
@@ -19,6 +20,7 @@ module Rel exposing
     , genReflexiveRelation
     , genRelation
     , isAntisymmetric
+    , isAsymmetric
     , isIrreflexive
     , isReflexive
     , isSymmetric
@@ -31,7 +33,6 @@ module Rel exposing
     , showPairSet
     , size
     , superfluousAndMissingForFunction
-    , superfluousForAsymmetry
     , superfluousForPartialFunction
     , symmetricClosure
     , toggle
@@ -75,11 +76,12 @@ type alias Explanation =
 type alias DerivedInfo =
     { relSize : Int
     , offDiagonalElements : Set Pair
+    , onDiagonalElements : Set Pair
     , missingForReflexivity : Set Pair
     , superfluousForIrreflexivity : Set Pair
     , missingForSymmetry : Set Pair
     , superfuousForAntisymmetry : Set Pair
-    , isAsymmetric : Bool
+    , superfluousForAsymmetry : ( Set Pair, Set Pair )
     , isTransitive : Bool
     , isConnected : Bool
     , isAcyclic : Bool
@@ -93,13 +95,18 @@ type alias DerivedInfo =
 
 deriveInfo : Rel -> DerivedInfo
 deriveInfo rel =
+    let
+        ( onDiagonalElements, offDiagonalElements ) =
+            onAndOffDiagnoalElements rel
+    in
     { relSize = size rel
-    , offDiagonalElements = offDiagnoalElements rel
+    , onDiagonalElements = onDiagonalElements
+    , offDiagonalElements = offDiagonalElements
     , missingForReflexivity = missingForReflexivity rel
     , superfluousForIrreflexivity = superfluousForIrreflexivity rel
     , missingForSymmetry = missingForSymmetry rel
     , superfuousForAntisymmetry = superfluousForAntisymmetry rel
-    , isAsymmetric = isAsymmetric rel
+    , superfluousForAsymmetry = superfluousForAsymmetry rel
     , isTransitive = isTransitive rel
     , isConnected = isConnected rel
     , isAcyclic = isAcyclic rel
@@ -133,9 +140,11 @@ eye n =
     Rel <| Array.initialize n (\i -> Array.initialize n (\j -> i == j))
 
 
-offDiagnoalElements : Rel -> Set Pair
-offDiagnoalElements =
-    elements >> Set.fromList >> Set.filter (\( i, j ) -> i /= j)
+onAndOffDiagnoalElements : Rel -> ( Set Pair, Set Pair )
+onAndOffDiagnoalElements =
+    elements
+        >> Set.fromList
+        >> Set.partition (\( i, j ) -> i == j)
 
 
 {-| Change the size, while preserving as much as possible from the original.
@@ -324,19 +333,13 @@ explainReflexive info =
         , lines =
             [ "This relation is not reflexive."
             , definition
-            , "Explanation: Negating the condition from the definition above, "
-                ++ "we get the following condition satisfied by relations which "
-                ++ "are not reflexive: ∃ x ∈ X: (x, x) ∉ R."
+            , explanationPrefix "reflexive: ∃ x ∈ X: (x, x) ∉ R."
                 ++ (let
                         missingCount =
                             Set.size info.missingForReflexivity
 
                         ( isAre, elements_ ) =
-                            if missingCount == 1 then
-                                ( "is", "one element" )
-
-                            else
-                                ( "are", String.fromInt missingCount ++ " elements" )
+                            isAreElements missingCount
                     in
                     "There "
                         ++ isAre
@@ -349,6 +352,14 @@ explainReflexive info =
                    )
             ]
         }
+
+
+explanationPrefix : String -> String
+explanationPrefix negatedDefinition =
+    "Explanation: Negating the condition from the definition above, "
+        ++ "we get the following condition satisfied by relations which "
+        ++ "are not "
+        ++ negatedDefinition
 
 
 {-| ∀ x ∈ X: (x, x) ∉ R
@@ -396,19 +407,13 @@ explainIrreflexive info =
         , lines =
             [ "This relation is not irreflexive."
             , definition
-            , "Explanation: Negating the condition from the definition above, "
-                ++ "we get the following condition satisfied by relations which "
-                ++ "are not irreflexive: ∃ x ∈ X: (x, x) ∈ R."
+            , explanationPrefix "irreflexive: ∃ x ∈ X: (x, x) ∈ R."
                 ++ (let
                         extraneousCount =
                             Set.size info.superfluousForIrreflexivity
 
                         ( isAre, elements_ ) =
-                            if extraneousCount == 1 then
-                                ( "is", "one element" )
-
-                            else
-                                ( "are", String.fromInt extraneousCount ++ " elements" )
+                            isAreElements extraneousCount
                     in
                     "There "
                         ++ isAre
@@ -462,19 +467,13 @@ explainSymmetric info =
         , lines =
             [ "This relation is not symmetric."
             , definition
-            , "Explanation: Negating the condition from the definition above, "
-                ++ "we get the following condition satisfied by relations which "
-                ++ "are not symmetric: ∃ x, y ∈ X: (x, y) ∈ R ∧ (y, x) ∉ R."
+            , explanationPrefix "symmetric: ∃ x, y ∈ X: (x, y) ∈ R ∧ (y, x) ∉ R."
                 ++ (let
                         missingCount =
                             Set.size info.missingForSymmetry
 
                         ( isAre, elements_ ) =
-                            if missingCount == 1 then
-                                ( "is", "one element" )
-
-                            else
-                                ( "are", String.fromInt missingCount ++ " elements" )
+                            isAreElements missingCount
                     in
                     "There "
                         ++ isAre
@@ -547,26 +546,20 @@ explainAntisymmetric info =
         , lines =
             [ "This relation is not antisymmetric."
             , definition
-            , "Explanation: Negating the condition from the definition above, "
-                ++ "we get the following condition satisfied by relations which "
-                ++ "are not antisymmetric: ∃ x, y ∈ X: x ≠ y ∧ (x, y) ∈ R ∧ (y, x) ∈ R."
+            , explanationPrefix "antisymmetric: ∃ x, y ∈ X: x ≠ y ∧ (x, y) ∈ R ∧ (y, x) ∈ R."
                 ++ (let
                         problematicPairCount =
                             Set.size belowDiagonalProblematic
 
                         ( isAre, elements_ ) =
-                            if problematicPairCount == 1 then
-                                ( "is", "one element" )
-
-                            else
-                                ( "are", String.fromInt problematicPairCount ++ " elements" )
+                            isAreElements problematicPairCount
                     in
                     "There "
                         ++ isAre
                         ++ " "
                         ++ elements_
                         ++ " of the form (x, y) for which the corresponding \"mirror image\""
-                        ++ " (y, x) is also present, which breaks the antisymmetry:"
+                        ++ " (y, x) is also present:"
                    )
             ]
                 ++ List.map
@@ -581,11 +574,15 @@ explainAntisymmetric info =
         }
 
 
-{-| aRb ⇒ not bRa
+{-| ∀ x, y ∈ X: (x, y) ∈ R ⇒ (y, x) ∉ R
 -}
-isAsymmetric : Rel -> Bool
-isAsymmetric rel =
-    Set.isEmpty (superfluousForAntisymmetry rel) && Set.isEmpty (superfluousForIrreflexivity rel)
+isAsymmetric : DerivedInfo -> Bool
+isAsymmetric info =
+    let
+        ( onDiagSuperfluous, offDiagSuperfluous ) =
+            info.superfluousForAsymmetry
+    in
+    Set.isEmpty onDiagSuperfluous && Set.isEmpty offDiagSuperfluous
 
 
 superfluousForAsymmetry : Rel -> ( Set Pair, Set Pair )
@@ -594,6 +591,116 @@ superfluousForAsymmetry rel =
         |> elements
         |> Set.fromList
         |> Set.partition (\( i, j ) -> i == j)
+
+
+explainAsymmetric : DerivedInfo -> Explanation
+explainAsymmetric info =
+    let
+        ( superfluousDiagonal, superfluousOffDiagonal ) =
+            info.superfluousForAsymmetry
+
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is asymmetric if ∀ x, y ∈ X: (x, y) ∈ R ⇒ (y, x) ∉ R."
+    in
+    if Set.isEmpty superfluousDiagonal && Set.isEmpty superfluousOffDiagonal then
+        let
+            allDiagonalSquares =
+                Set.fromList <| List.map (\i -> ( i, i )) <| List.range 0 (info.relSize - 1)
+        in
+        { greenHighlight =
+            Set.union info.offDiagonalElements
+                -- Highlight that diagonal doesn't contain elements
+                allDiagonalSquares
+        , redHighlight = Set.empty
+        , lines =
+            [ "This relation is asymmetric."
+            , definition
+            , "Explanation: whenever there is an element (x, y), the element (y, x) must not be present."
+                ++ " Notice the subtle difference from asymmetry, which permits elements of the form (x, x),"
+                ++ " while asymmetry does not allow them."
+            ]
+                ++ List.map
+                    (\( x, y ) ->
+                        -- TODO these lists can get potentially long, so ellipsisize them somehow
+                        showPair ( x, y )
+                            ++ " is present, so "
+                            ++ showPair ( y, x )
+                            ++ " must not be present. ✓"
+                    )
+                    (Set.toList info.offDiagonalElements)
+                ++ List.map
+                    (\( x, y ) ->
+                        showPair ( x, y )
+                            ++ " is not present. ✓"
+                    )
+                    (Set.toList allDiagonalSquares)
+        }
+
+    else
+        { greenHighlight = Set.empty
+        , redHighlight = Set.union superfluousDiagonal superfluousOffDiagonal
+        , lines =
+            [ "This relation is not asymmetric."
+            , definition
+            , explanationPrefix "asymmetric: ∃ x, y ∈ X: (x, y) ∈ R ∧ (y, x) ∈ R. "
+                ++ "Note that this also applies to elements of the form (x, x), "
+                ++ "whose presence breaks asymmetry."
+            ]
+                ++ (let
+                        offDiagCount =
+                            Set.size superfluousOffDiagonal
+
+                        ( isAre, elements_ ) =
+                            isAreElements (offDiagCount // 2)
+                    in
+                    if offDiagCount > 0 then
+                        ("There "
+                            ++ isAre
+                            ++ " "
+                            ++ elements_
+                            ++ " of the form (x, y) for which the corresponding \"mirror image\""
+                            ++ " (y, x) is also present:"
+                        )
+                            :: List.map
+                                (\( x, y ) ->
+                                    "Both "
+                                        ++ showPair ( x, y )
+                                        ++ " and "
+                                        ++ showPair ( y, x )
+                                        ++ " are present. ✗"
+                                )
+                                (let
+                                    belowDiagonalProblematic =
+                                        Set.filter (\( x, y ) -> x > y) superfluousOffDiagonal
+                                 in
+                                 Set.toList belowDiagonalProblematic
+                                )
+
+                    else
+                        []
+                   )
+                ++ (let
+                        diagonalCount =
+                            Set.size superfluousDiagonal
+
+                        ( isAre, elements_ ) =
+                            isAreElements diagonalCount
+                    in
+                    if diagonalCount > 0 then
+                        ("There "
+                            ++ isAre
+                            ++ " "
+                            ++ elements_
+                            ++ " of the form (x, x):"
+                        )
+                            :: List.map
+                                (\( x, y ) -> showPair ( x, y ) ++ " is present. ✗")
+                                (Set.toList superfluousDiagonal)
+
+                    else
+                        []
+                   )
+        }
 
 
 isTransitive : Rel -> Bool
@@ -1006,6 +1113,15 @@ showPairList pairs =
 showPair : Pair -> String
 showPair ( i, j ) =
     "(" ++ String.fromInt i ++ "," ++ String.fromInt j ++ ")"
+
+
+isAreElements : Int -> ( String, String )
+isAreElements count =
+    if count == 1 then
+        ( "is", "one element" )
+
+    else
+        ( "are", String.fromInt count ++ " elements" )
 
 
 

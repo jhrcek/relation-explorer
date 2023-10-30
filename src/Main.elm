@@ -71,7 +71,7 @@ type Msg
     | ExplainIrreflexive
     | ExplainSymmetric
     | ExplainAntisymmetric
-    | ExplainWhyNotAsymmetric
+    | ExplainAsymmetric
     | ExplainWhyNotConnected
     | ExplainWhyNotPartialFunction
     | ExplainWhyNotFunction
@@ -150,28 +150,8 @@ update msg model =
         ExplainAntisymmetric ->
             pure { model | explanation = Just <| Rel.explainAntisymmetric model.derivedInfo }
 
-        ExplainWhyNotAsymmetric ->
-            let
-                ( diagonalPairs, offDiagonalPairs ) =
-                    Rel.superfluousForAsymmetry model.rel
-            in
-            pure
-                { model
-                    | explanation =
-                        Just
-                            { redHighlight = Set.union offDiagonalPairs diagonalPairs
-                            , greenHighlight = Set.empty
-                            , lines =
-                                [ "This relation is not asymmetric."
-                                , "To be asymmetric, the relation must not contain (b,a) when it contains (a,b)."
-
-                                -- TODO pluralize properly based on the number of pairs
-                                -- TODO also either of these could be empty, in which case the respective sentence should be omitted
-                                , "To make it asymmetric we would have to remove the following pairs of the form (a,a): " ++ Rel.showPairSet diagonalPairs
-                                , "Moreover we'd also have to remove at least of each of the following pairs: " ++ renderMirrorImagePairs offDiagonalPairs
-                                ]
-                            }
-                }
+        ExplainAsymmetric ->
+            pure { model | explanation = Just <| Rel.explainAsymmetric model.derivedInfo }
 
         ExplainWhyNotConnected ->
             let
@@ -426,10 +406,10 @@ propertyConfigs =
       }
     , { propertyName = "Asymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
-      , hasProperty = .isAsymmetric
+      , hasProperty = Rel.isAsymmetric
       , closureButton = Nothing
       , genRandom = Nothing
-      , onHoverExplanation = Just ExplainWhyNotAsymmetric
+      , onHoverExplanation = Just ExplainAsymmetric
       }
     , { propertyName = "Transitive"
       , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
