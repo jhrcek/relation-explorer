@@ -5,12 +5,12 @@ module Rel exposing
     , Pair
     , Rel
     , complement
-    , compose
     , converse
     , deriveInfo
     , empty
     , explainAntisymmetric
     , explainAsymmetric
+    , explainFunction
     , explainIrreflexive
     , explainReflexive
     , explainSymmetric
@@ -23,9 +23,9 @@ module Rel exposing
     , genRelation
     , isAntisymmetric
     , isAsymmetric
+    , isFunction
     , isIrreflexive
     , isReflexive
-    , isSubsetOf
     , isSymmetric
     , isTransitive
     , missingForConnectedness
@@ -36,7 +36,6 @@ module Rel exposing
     , showPairList
     , showPairSet
     , size
-    , superfluousAndMissingForFunction
     , superfluousForPartialFunction
     , symmetricClosure
     , toggle
@@ -87,10 +86,11 @@ type alias DerivedInfo =
     , superfuousForAntisymmetry : Set Pair
     , superfluousForAsymmetry : ( Set Pair, Set Pair )
     , missingForTransitivity : Set Pair
+    , superfluousForFunction : Set Pair
+    , emptyRowIndices : Set Int
     , isConnected : Bool
     , isAcyclic : Bool
     , isPartialFunction : Bool
-    , isFunction : Bool
     , isBijectiveFunction : Bool
     , isDerangement : Bool
     , isInvolution : Bool
@@ -102,6 +102,9 @@ deriveInfo rel =
     let
         ( onDiagonalElements, offDiagonalElements ) =
             onAndOffDiagnoalElements rel
+
+        ( superfluousForFunction, emptyRowIndices ) =
+            superfluousAndMissingForFunction rel
     in
     { relSize = size rel
     , onDiagonalElements = onDiagonalElements
@@ -115,7 +118,8 @@ deriveInfo rel =
     , isConnected = isConnected rel
     , isAcyclic = isAcyclic rel
     , isPartialFunction = isPartialFunction rel
-    , isFunction = isFunction rel
+    , superfluousForFunction = superfluousForFunction
+    , emptyRowIndices = emptyRowIndices
     , isBijectiveFunction = isBijectiveFunction rel
     , isDerangement = isDerangement rel
     , isInvolution = isInvolution rel
@@ -938,29 +942,13 @@ superfluousForPartialFunction (Rel rows) =
             Set.empty
 
 
-isFunction : Rel -> Bool
-isFunction (Rel rows) =
-    arrayAnd <|
-        Array.map
-            (\row ->
-                1
-                    -- There's exactly one element in each row
-                    == Array.foldl
-                        (\elem elemCount ->
-                            if elem then
-                                elemCount + 1
-
-                            else
-                                elemCount
-                        )
-                        0
-                        row
-            )
-            rows
+isFunction : DerivedInfo -> Bool
+isFunction info =
+    Set.isEmpty info.superfluousForFunction && Set.isEmpty info.emptyRowIndices
 
 
-superfluousAndMissingForFunction : Rel -> ( Set Pair, Set Pair )
-superfluousAndMissingForFunction ((Rel rows) as rel) =
+superfluousAndMissingForFunction : Rel -> ( Set Pair, Set Int )
+superfluousAndMissingForFunction (Rel rows) =
     Array.toIndexedList rows
         |> List.foldl
             (\( i, row ) ( sup, mis ) ->
@@ -968,10 +956,7 @@ superfluousAndMissingForFunction ((Rel rows) as rel) =
                     [] ->
                         -- mark whole row of pairs as missing
                         ( sup
-                        , List.range 0 (size rel)
-                            |> List.map (Tuple.pair i)
-                            |> Set.fromList
-                            |> Set.union mis
+                        , Set.insert i mis
                         )
 
                     [ _ ] ->
@@ -987,9 +972,74 @@ superfluousAndMissingForFunction ((Rel rows) as rel) =
             ( Set.empty, Set.empty )
 
 
+explainFunction : DerivedInfo -> Explanation
+explainFunction info =
+    let
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is a function if it is both: "
+                ++ "univalent (∀ x, y, z ∈ X: (x, y) ∈ R (x, z) ∈ R ⇒ y = z) and "
+                ++ "total (∀ x ∈ X: ∃ y ∈ X: (x, y) ∈ R)."
+    in
+    if Set.isEmpty info.superfluousForFunction && Set.isEmpty info.emptyRowIndices then
+        { greenHighlight = Set.empty
+        , redHighlight = Set.empty
+        , lines =
+            [ "This relation is a function."
+            , definition
+            , "In words this means that every x ∈ X needs to be in relation with exactly one y ∈ X, which is the case."
+            ]
+        }
+
+    else
+        { greenHighlight = Set.empty
+        , redHighlight =
+            Set.union info.superfluousForFunction
+                (Set.toList info.emptyRowIndices
+                    |> List.andThen
+                        (\i ->
+                            List.range 0 (info.relSize - 1)
+                                |> List.map (Tuple.pair i)
+                        )
+                    |> Set.fromList
+                )
+        , lines =
+            [ "This relation is not a function."
+            , definition
+            ]
+                ++ (if not (Set.isEmpty info.superfluousForFunction) then
+                        "It is not univalent, because there are some x ∈ X that map to more than one y ∈ X:"
+                            :: (Set.toList info.superfluousForFunction
+                                    |> List.gatherEqualsBy Tuple.first
+                                    |> List.map (\( ( x, y ), rest ) -> String.fromInt x ++ " is in relation with " ++ String.fromInt (1 + List.length rest) ++ " elements: " ++ showPairList (( x, y ) :: rest))
+                               )
+
+                    else
+                        []
+                   )
+                ++ (if not (Set.isEmpty info.emptyRowIndices) then
+                        "It is not total, because there are some x ∈ X that are not in relation with any y ∈ X:"
+                            :: (Set.toList info.emptyRowIndices
+                                    |> List.map (\i -> String.fromInt i ++ " is not in relation with any element.")
+                               )
+
+                    else
+                        []
+                   )
+        }
+
+
+isFunctionRel : Rel -> Bool
+isFunctionRel r =
+    let
+        ( sup, mis ) =
+            superfluousAndMissingForFunction r
+    in
+    Set.isEmpty sup && Set.isEmpty mis
+
+
 isBijectiveFunction : Rel -> Bool
 isBijectiveFunction rel =
-    isFunction rel && isFunction (converse rel)
+    isFunctionRel rel && isFunctionRel (converse rel)
 
 
 isDerangement : Rel -> Bool
@@ -999,7 +1049,7 @@ isDerangement rel =
 
 isInvolution : Rel -> Bool
 isInvolution rel =
-    isFunction rel && rel == converse rel
+    isFunctionRel rel && rel == converse rel
 
 
 

@@ -75,7 +75,7 @@ type Msg
     | ExplainTransitive
     | ExplainWhyNotConnected
     | ExplainWhyNotPartialFunction
-    | ExplainWhyNotFunction
+    | ExplainFunction
     | ExplainWhyNotAcyclic
     | NoOp
 
@@ -204,44 +204,8 @@ update msg model =
                             }
                 }
 
-        ExplainWhyNotFunction ->
-            let
-                -- TODO candidate for color distinction between superfluous and missing
-                ( superfluous, missing ) =
-                    Rel.superfluousAndMissingForFunction model.rel
-            in
-            pure
-                { model
-                    | explanation =
-                        Just
-                            { redHighlight = Set.union superfluous missing
-                            , greenHighlight = Set.empty
-                            , lines =
-                                [ "This relation is not a function."
-                                , "To be a function there should be exactly one pair (a,b) for each a ∈ X."
-
-                                -- TODO pluralize properly
-                                , if Set.size superfluous > 0 then
-                                    "But in some rows there's multipe pairs for one a: " ++ Rel.showPairSet superfluous
-
-                                  else
-                                    ""
-                                , let
-                                    rowIndicesWithMissingPairs =
-                                        Set.map Tuple.first missing
-                                  in
-                                  if Set.size rowIndicesWithMissingPairs > 0 then
-                                    "In some rows there's no pair, namely for a ∈ {"
-                                        ++ String.join ", "
-                                            (List.map String.fromInt <| Set.toList rowIndicesWithMissingPairs)
-                                        ++ "}"
-
-                                  else
-                                    ""
-                                , "We would have to remove some of these so that each row has at most one pair."
-                                ]
-                            }
-                }
+        ExplainFunction ->
+            pure { model | explanation = Just <| Rel.explainFunction model.derivedInfo }
 
         ExplainWhyNotAcyclic ->
             let
@@ -445,10 +409,10 @@ propertyConfigs =
       }
     , { propertyName = "Function"
       , wikiLink = "https://en.wikipedia.org/wiki/Function_(mathematics)"
-      , hasProperty = .isFunction
+      , hasProperty = Rel.isFunction
       , closureButton = Nothing
       , genRandom = Just GenFunction
-      , onHoverExplanation = Just ExplainWhyNotFunction
+      , onHoverExplanation = Just ExplainFunction
       }
     , { propertyName = "Bijection (Permutation)"
       , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
