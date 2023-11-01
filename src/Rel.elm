@@ -5,6 +5,7 @@ module Rel exposing
     , Pair
     , Rel
     , complement
+    , compose
     , converse
     , deriveInfo
     , empty
@@ -13,6 +14,7 @@ module Rel exposing
     , explainIrreflexive
     , explainReflexive
     , explainSymmetric
+    , explainTransitive
     , findCycle
     , genBijectiveFunction
     , genFunction
@@ -23,7 +25,9 @@ module Rel exposing
     , isAsymmetric
     , isIrreflexive
     , isReflexive
+    , isSubsetOf
     , isSymmetric
+    , isTransitive
     , missingForConnectedness
     , reflexiveClosure
     , resize
@@ -82,7 +86,7 @@ type alias DerivedInfo =
     , missingForSymmetry : Set Pair
     , superfuousForAntisymmetry : Set Pair
     , superfluousForAsymmetry : ( Set Pair, Set Pair )
-    , isTransitive : Bool
+    , missingForTransitivity : Set Pair
     , isConnected : Bool
     , isAcyclic : Bool
     , isPartialFunction : Bool
@@ -107,7 +111,7 @@ deriveInfo rel =
     , missingForSymmetry = missingForSymmetry rel
     , superfuousForAntisymmetry = superfluousForAntisymmetry rel
     , superfluousForAsymmetry = superfluousForAsymmetry rel
-    , isTransitive = isTransitive rel
+    , missingForTransitivity = missingForTransitivity rel
     , isConnected = isConnected rel
     , isAcyclic = isAcyclic rel
     , isPartialFunction = isPartialFunction rel
@@ -258,19 +262,19 @@ compose (Rel rows) rel2 =
 {-| Is the first relation subset of the 2nd?
 -}
 isSubsetOf : Rel -> Rel -> Bool
-isSubsetOf (Rel relA) (Rel relB) =
-    listAnd <|
-        List.map2
+isSubsetOf (Rel rowsA) (Rel rowsB) =
+    arrayAnd <|
+        Array.map2
             (\rowA rowB ->
-                listAnd <|
-                    List.map2
+                arrayAnd <|
+                    Array.map2
                         -- Implication: whenever A is true, B must be as well
                         (\cellA cellB -> not cellA || cellB)
-                        (Array.toList rowA)
-                        (Array.toList rowB)
+                        rowA
+                        rowB
             )
-            (Array.toList relA)
-            (Array.toList relB)
+            rowsA
+            rowsB
 
 
 toggle : Int -> Int -> Rel -> Rel
@@ -703,9 +707,95 @@ explainAsymmetric info =
         }
 
 
-isTransitive : Rel -> Bool
-isTransitive rel =
-    isSubsetOf (compose rel rel) rel
+{-| ∀ x, y, z ∈ X: (x, y) ∈ R ∧ (y, z) ∈ R ⇒ (x, z) ∈ R
+-}
+isTransitive : DerivedInfo -> Bool
+isTransitive info =
+    Set.isEmpty info.missingForTransitivity
+
+
+missingForTransitivity : Rel -> Set Pair
+missingForTransitivity rel =
+    let
+        trClosure =
+            transitiveClosure rel
+    in
+    difference trClosure rel
+        |> elements
+        |> Set.fromList
+
+
+explainTransitive : DerivedInfo -> Explanation
+explainTransitive info =
+    let
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is transitive if ∀ x, y, z ∈ X: (x, y) ∈ R ∧ (y, z) ∈ R ⇒ (x, z) ∈ R."
+    in
+    if Set.isEmpty info.missingForTransitivity then
+        { greenHighlight =
+            -- TODO what to highlight? Everything, or only those whose absence could break transitivity
+            -- (e.g. elems that would be removed by tr. reduction)
+            Set.empty
+        , redHighlight = Set.empty
+        , lines =
+            [ "This relation is transitive."
+            , definition
+
+            -- TODO explanation
+            ]
+        }
+
+    else
+        { greenHighlight = Set.empty
+        , redHighlight = info.missingForTransitivity
+        , lines =
+            [ "This relation is not transitive."
+            , definition
+            , explanationPrefix "transitive: ∃ x, y, z ∈ X: (x, y) ∈ R ∧ (y, z) ∈ R ∧ (x, z) ∉ R."
+            , "Here are some example pairs whose absence breaks transitivity"
+            ]
+                ++ (let
+                        allElems =
+                            Set.union info.onDiagonalElements info.offDiagonalElements
+
+                        problematicTriples =
+                            List.range 0 (info.relSize - 1)
+                                |> List.andThen
+                                    (\x ->
+                                        List.range 0 (info.relSize - 1)
+                                            |> List.andThen
+                                                (\y ->
+                                                    List.range 0 (info.relSize - 1)
+                                                        |> List.filterMap
+                                                            (\z ->
+                                                                if
+                                                                    Set.member ( x, y ) allElems
+                                                                        && Set.member ( y, z ) allElems
+                                                                        && not (Set.member ( x, z ) allElems)
+                                                                then
+                                                                    Just ( x, y, z )
+
+                                                                else
+                                                                    Nothing
+                                                            )
+                                                )
+                                    )
+                    in
+                    -- TODO this explanation is incomplete, because it doesn't take
+                    -- triples into account that need to be added after other missing triples are added
+                    List.map
+                        (\( x, y, z ) ->
+                            "Both "
+                                ++ showPair ( x, y )
+                                ++ " and "
+                                ++ showPair ( y, z )
+                                ++ " are in R, but "
+                                ++ showPair ( x, z )
+                                ++ " is missing. ✗"
+                        )
+                        problematicTriples
+                   )
+        }
 
 
 {-| a/=b ⇒ aRb or bRa
@@ -733,11 +823,7 @@ Equivalently, its transitive closure is antisymmetric.
 -}
 isAcyclic : Rel -> Bool
 isAcyclic rel =
-    let
-        ( relTran, _ ) =
-            transitiveClosure rel
-    in
-    Set.isEmpty <| superfluousForAntisymmetry relTran
+    Set.isEmpty <| superfluousForAntisymmetry <| transitiveClosure rel
 
 
 findCycle : Rel -> Maybe (List Int)
@@ -949,23 +1035,31 @@ symmetricClosure rel =
 
 {-| <https://en.wikipedia.org/wiki/Transitive_closure>
 
-Returns a non-empty list of relations.
-The last one is the input, each successive one is the composition of the previous relation with the original relation.
-The first one is the transitive closure.
+This uses modified version of Floyd-Warshell algorithm
 
 -}
-transitiveClosure : Rel -> ( Rel, List Rel )
-transitiveClosure rel =
+transitiveClosure : Rel -> Rel
+transitiveClosure (Rel rows) =
     let
-        -- TODO this is brute force. See if there's more efficient way
-        transitiveHelp ( r, history ) =
-            if isTransitive r then
-                ( r, history )
-
-            else
-                transitiveHelp ( union r (compose r rel), r :: history )
+        n =
+            Array.length rows
     in
-    transitiveHelp ( rel, [] )
+    Rel <|
+        List.foldl
+            (\k reachable ->
+                Array.initialize n
+                    (\i ->
+                        Array.initialize n
+                            (\j ->
+                                -- j was already reachable from i
+                                unsafeGet i j reachable
+                                    || -- or there is a path from i to j and from k to j
+                                       (unsafeGet i k reachable && unsafeGet k j reachable)
+                            )
+                    )
+            )
+            rows
+            (List.range 0 (n - 1))
 
 
 
@@ -1138,11 +1232,6 @@ unsafeGet i j rows =
     Array.get i rows
         |> Maybe.andThen (Array.get j)
         |> Maybe.withDefault False
-
-
-listAnd : List Bool -> Bool
-listAnd =
-    List.all identity
 
 
 arrayAnd : Array Bool -> Bool

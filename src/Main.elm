@@ -72,6 +72,7 @@ type Msg
     | ExplainSymmetric
     | ExplainAntisymmetric
     | ExplainAsymmetric
+    | ExplainTransitive
     | ExplainWhyNotConnected
     | ExplainWhyNotPartialFunction
     | ExplainWhyNotFunction
@@ -106,7 +107,7 @@ update msg model =
             updateRel Rel.symmetricClosure model
 
         DoTransitiveClosure ->
-            updateRel (Tuple.first << Rel.transitiveClosure) model
+            updateRel Rel.transitiveClosure model
 
         DoComplement ->
             updateRel Rel.complement model
@@ -152,6 +153,9 @@ update msg model =
 
         ExplainAsymmetric ->
             pure { model | explanation = Just <| Rel.explainAsymmetric model.derivedInfo }
+
+        ExplainTransitive ->
+            pure { model | explanation = Just <| Rel.explainTransitive model.derivedInfo }
 
         ExplainWhyNotConnected ->
             let
@@ -262,7 +266,7 @@ update msg model =
                                 , greenHighlight = Set.empty
                                 , lines =
                                     [ "This relation is not acyclic."
-                                    , "These the following pairs form a cycle: " ++ Rel.showPairList cyclePairs
+                                    , "The following pairs form a cycle: " ++ Rel.showPairList cyclePairs
                                     , "so the cycle consists of these elements: {"
                                         ++ String.join ", "
                                             (List.map String.fromInt cycleElems)
@@ -413,12 +417,10 @@ propertyConfigs =
       }
     , { propertyName = "Transitive"
       , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
-      , hasProperty = .isTransitive
+      , hasProperty = Rel.isTransitive
       , closureButton = Just DoTransitiveClosure
       , genRandom = Nothing
-
-      -- TODO explain why not transitive
-      , onHoverExplanation = Nothing
+      , onHoverExplanation = Just ExplainTransitive
       }
     , { propertyName = "Connected"
       , wikiLink = "https://en.wikipedia.org/wiki/Connected_relation"
