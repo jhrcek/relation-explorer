@@ -342,22 +342,21 @@ explainReflexive info =
             [ "This relation is not reflexive."
             , definition
             , explanationPrefix "reflexive: ∃ x ∈ X: (x, x) ∉ R."
-                ++ (let
-                        missingCount =
-                            Set.size info.missingForReflexivity
+            , let
+                missingCount =
+                    Set.size info.missingForReflexivity
 
-                        ( isAre, elements_ ) =
-                            isAreElements missingCount
-                    in
-                    "There "
-                        ++ isAre
-                        ++ " "
-                        ++ elements_
-                        ++ " of the form (x, x) which "
-                        ++ isAre
-                        ++ " not in the relation: "
-                        ++ showPairSet info.missingForReflexivity
-                   )
+                ( isAre, elements_ ) =
+                    isAreElements missingCount
+              in
+              "There "
+                ++ isAre
+                ++ " "
+                ++ elements_
+                ++ " of the form (x, x) which "
+                ++ isAre
+                ++ " not in the relation: "
+                ++ showPairSet info.missingForReflexivity
             ]
         }
 
@@ -416,22 +415,21 @@ explainIrreflexive info =
             [ "This relation is not irreflexive."
             , definition
             , explanationPrefix "irreflexive: ∃ x ∈ X: (x, x) ∈ R."
-                ++ (let
-                        extraneousCount =
-                            Set.size info.superfluousForIrreflexivity
+            , let
+                extraneousCount =
+                    Set.size info.superfluousForIrreflexivity
 
-                        ( isAre, elements_ ) =
-                            isAreElements extraneousCount
-                    in
-                    "There "
-                        ++ isAre
-                        ++ " "
-                        ++ elements_
-                        ++ " of the form (x, x) which "
-                        ++ isAre
-                        ++ " in the relation: "
-                        ++ showPairSet info.superfluousForIrreflexivity
-                   )
+                ( isAre, elements_ ) =
+                    isAreElements extraneousCount
+              in
+              "There "
+                ++ isAre
+                ++ " "
+                ++ elements_
+                ++ " of the form (x, x) which "
+                ++ isAre
+                ++ " in the relation: "
+                ++ showPairSet info.superfluousForIrreflexivity
             ]
         }
 
