@@ -775,7 +775,7 @@ explainTransitive info =
                                         "We need to add the following missing pairs:"
 
                                     ( _, True ) ->
-                                        "After adding those, we get another pairs of the form (x, y) and (y, z) for which (x, z) is missing:"
+                                        "After adding those, we get another pair of the form (x, y) and (y, z) for which (x, z) is missing:"
 
                                     ( _, False ) ->
                                         "After adding those, we get new pairs of the form (x, y) and (y, z) for which (x, z) is missing:"

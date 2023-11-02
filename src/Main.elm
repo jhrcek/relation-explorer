@@ -21,6 +21,7 @@ main =
 
 type alias Model =
     { rel : Rel
+    , history : List Rel
     , derivedInfo : DerivedInfo
     , explanation : Maybe Explanation
 
@@ -40,6 +41,7 @@ init _ =
             Rel.empty initSize
     in
     ( { rel = initRel
+      , history = []
       , derivedInfo = Rel.deriveInfo initRel
       , explanation = Nothing
       , trueProb = 0.2
@@ -77,6 +79,7 @@ type Msg
     | ExplainWhyNotPartialFunction
     | ExplainFunction
     | ExplainWhyNotAcyclic
+    | UndoHistory
     | NoOp
 
 
@@ -242,6 +245,9 @@ update msg model =
                             Rel.findCycle model.rel
                 }
 
+        UndoHistory ->
+            pure <| undoHistory model
+
         NoOp ->
             pure model
 
@@ -254,10 +260,25 @@ updateRel f model =
     in
     ( { model
         | rel = newRel
+        , history = model.rel :: model.history
         , derivedInfo = Rel.deriveInfo newRel
       }
     , Cmd.none
     )
+
+
+undoHistory : Model -> Model
+undoHistory model =
+    case model.history of
+        [] ->
+            model
+
+        prevRel :: rest ->
+            { model
+                | rel = prevRel
+                , history = rest
+                , derivedInfo = Rel.deriveInfo prevRel
+            }
 
 
 generateRel : (Int -> Generator Rel) -> Model -> ( Model, Cmd Msg )
@@ -552,6 +573,7 @@ miscControls : Float -> Html Msg
 miscControls trueProb =
     Html.div []
         [ Html.h4 [] [ Html.text "Operations" ]
+        , Html.button [ E.onClick UndoHistory, A.title "Undo previous edits" ] [ Html.text "Undo" ]
         , -- TODO think about how to decompose this hodpodge of controls
           Html.button [ E.onClick MakeEmpty, A.title "Empty relation" ] [ Html.text "∅" ]
         , Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ]

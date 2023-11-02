@@ -4,7 +4,7 @@
 - [x] Show a relation editor that allows user to select
     - [x] A number n from (0?) 1 to 10
     - [x] A rectangular matrix with checkboxes that allows specifying arbitraty relation on a set with n elements
-    - [ ] Support for undo / redo history of modifications
+    - [x] Basic history support - ability to undo relation edits
     - [ ] Show a graph (as in graph theory) of the relation
 
 - [ ] Multiple ways to initialize relation
