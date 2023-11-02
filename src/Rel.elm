@@ -85,7 +85,7 @@ type alias DerivedInfo =
     , missingForSymmetry : Set Pair
     , superfuousForAntisymmetry : Set Pair
     , superfluousForAsymmetry : ( Set Pair, Set Pair )
-    , missingForTransitivity : Set Pair
+    , missingForTransitivity : ( Set Pair, List TransitiveClosureStep )
     , superfluousForFunction : Set Pair
     , emptyRowIndices : Set Int
     , isConnected : Bool
@@ -715,18 +715,20 @@ explainAsymmetric info =
 -}
 isTransitive : DerivedInfo -> Bool
 isTransitive info =
-    Set.isEmpty info.missingForTransitivity
+    Set.isEmpty <| Tuple.first info.missingForTransitivity
 
 
-missingForTransitivity : Rel -> Set Pair
+missingForTransitivity : Rel -> ( Set Pair, List TransitiveClosureStep )
 missingForTransitivity rel =
     let
-        trClosure =
-            transitiveClosure rel
+        ( trClosure, closureSteps ) =
+            transitiveClosureWithSteps rel
     in
-    difference trClosure rel
+    ( difference trClosure rel
         |> elements
         |> Set.fromList
+    , closureSteps
+    )
 
 
 explainTransitive : DerivedInfo -> Explanation
@@ -734,8 +736,11 @@ explainTransitive info =
     let
         definition =
             "Definition: a relation R ⊆ X ⨯ X is transitive if ∀ x, y, z ∈ X: (x, y) ∈ R ∧ (y, z) ∈ R ⇒ (x, z) ∈ R."
+
+        ( missingPairs, closureSteps ) =
+            info.missingForTransitivity
     in
-    if Set.isEmpty info.missingForTransitivity then
+    if Set.isEmpty missingPairs then
         { greenHighlight =
             -- TODO what to highlight? Everything, or only those whose absence could break transitivity
             -- (e.g. elems that would be removed by tr. reduction)
@@ -751,53 +756,45 @@ explainTransitive info =
 
     else
         { greenHighlight = Set.empty
-        , redHighlight = info.missingForTransitivity
+        , redHighlight = missingPairs
         , lines =
             [ "This relation is not transitive."
             , definition
             , explanationPrefix "transitive: ∃ x, y, z ∈ X: (x, y) ∈ R ∧ (y, z) ∈ R ∧ (x, z) ∉ R."
-            , "Here are some example pairs whose absence breaks transitivity"
+            , "Here is what we need to do to make the relation transitive."
             ]
-                ++ (let
-                        allElems =
-                            Set.union info.onDiagonalElements info.offDiagonalElements
+                ++ (closureSteps
+                        |> List.groupWhile (\a b -> a.distance == b.distance)
+                        |> List.andThen
+                            (\( first, others ) ->
+                                (case ( first.distance, List.isEmpty others ) of
+                                    ( 2, True ) ->
+                                        "We need to add the following missing pair:"
 
-                        problematicTriples =
-                            List.range 0 (info.relSize - 1)
-                                |> List.andThen
-                                    (\x ->
-                                        List.range 0 (info.relSize - 1)
-                                            |> List.andThen
-                                                (\y ->
-                                                    List.range 0 (info.relSize - 1)
-                                                        |> List.filterMap
-                                                            (\z ->
-                                                                if
-                                                                    Set.member ( x, y ) allElems
-                                                                        && Set.member ( y, z ) allElems
-                                                                        && not (Set.member ( x, z ) allElems)
-                                                                then
-                                                                    Just ( x, y, z )
+                                    ( 2, False ) ->
+                                        "We need to add the following missing pairs:"
 
-                                                                else
-                                                                    Nothing
-                                                            )
-                                                )
-                                    )
-                    in
-                    -- TODO this explanation is incomplete, because it doesn't take
-                    -- triples into account that need to be added after other missing triples are added
-                    List.map
-                        (\( x, y, z ) ->
-                            "Both "
-                                ++ showPair ( x, y )
-                                ++ " and "
-                                ++ showPair ( y, z )
-                                ++ " are in R, but "
-                                ++ showPair ( x, z )
-                                ++ " is missing. ✗"
-                        )
-                        problematicTriples
+                                    ( _, True ) ->
+                                        "After adding those, we get another pairs of the form (x, y) and (y, z) for which (x, z) is missing:"
+
+                                    ( _, False ) ->
+                                        "After adding those, we get new pairs of the form (x, y) and (y, z) for which (x, z) is missing:"
+                                )
+                                    :: List.map
+                                        (\{ from, through, to } ->
+                                            showPair ( from, through )
+                                                ++ " and "
+                                                ++ showPair ( through, to )
+                                                ++ " are present, but "
+                                                ++ showPair ( from, to )
+                                                ++ " is missing. ✗"
+                                        )
+                                        (first :: others)
+                            )
+                        |> (\explanationRows ->
+                                explanationRows
+                                    ++ [ "After adding those, the relation becomes transitive." ]
+                           )
                    )
         }
 
@@ -1110,6 +1107,122 @@ transitiveClosure (Rel rows) =
             )
             rows
             (List.range 0 (n - 1))
+
+
+type Distance
+    = Infinite
+    | Finite Int
+
+
+type alias TransitiveClosureStep =
+    { from : Int
+    , through : Int
+    , to : Int
+    , -- Number of pairs of the original relation
+      -- that need to be traversed to go from "from" to "to"
+      distance : Int
+    }
+
+
+addDist : Distance -> Distance -> Distance
+addDist d1 d2 =
+    case d1 of
+        Infinite ->
+            Infinite
+
+        Finite n ->
+            case d2 of
+                Infinite ->
+                    Infinite
+
+                Finite m ->
+                    Finite (n + m)
+
+
+{-| Uses modified Floyd-Warshall algorithm.
+-}
+transitiveClosureWithSteps : Rel -> ( Rel, List TransitiveClosureStep )
+transitiveClosureWithSteps (Rel rows) =
+    let
+        n =
+            Array.length rows
+
+        toDistance : Bool -> Distance
+        toDistance b =
+            if b then
+                Finite 1
+
+            else
+                Infinite
+
+        isFinite : Distance -> Bool
+        isFinite d =
+            case d of
+                Infinite ->
+                    False
+
+                Finite _ ->
+                    True
+
+        initDistances : Array (Array Distance)
+        initDistances =
+            Array.map (Array.map toDistance) rows
+
+        lookup : Int -> Int -> Array (Array Distance) -> Distance
+        lookup i j arr =
+            Array.get i arr
+                |> Maybe.andThen (Array.get j)
+                |> Maybe.withDefault Infinite
+    in
+    List.foldl
+        (\k ( distances, added ) ->
+            let
+                ( newDistances, newAdded ) =
+                    Array.unzip <|
+                        Array.map Array.unzip <|
+                            Array.initialize n
+                                (\i ->
+                                    Array.initialize n
+                                        (\j ->
+                                            case
+                                                ( lookup i j distances
+                                                , addDist (lookup i k distances) (lookup k j distances)
+                                                )
+                                            of
+                                                ( Infinite, Finite x ) ->
+                                                    -- going through k gives us new edge  that wasn't in the original rel
+                                                    ( Finite x, Just { from = i, through = k, to = j, distance = x } )
+
+                                                ( Finite x, Finite y ) ->
+                                                    if y < x then
+                                                        -- going through k gives us shorter path than paths going through elements < k
+                                                        ( Finite y, Just { from = i, through = k, to = j, distance = x } )
+
+                                                    else
+                                                        ( Finite x, Nothing )
+
+                                                ( Infinite, Infinite ) ->
+                                                    ( Infinite, Nothing )
+
+                                                ( Finite x, Infinite ) ->
+                                                    ( Finite x, Nothing )
+                                        )
+                                )
+
+                newAdded2 =
+                    Array.toList newAdded
+                        |> List.andThen
+                            (\row ->
+                                Array.toList row |> List.filterMap identity
+                            )
+            in
+            ( newDistances, newAdded2 ++ added )
+        )
+        ( initDistances, [] )
+        (List.range 0 (n - 1))
+        |> Tuple.mapBoth
+            (Array.map (Array.map isFinite) >> Rel)
+            (List.sortBy (\trStep -> ( trStep.distance, trStep.from, trStep.to )))
 
 
 
