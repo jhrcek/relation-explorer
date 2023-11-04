@@ -60,11 +60,11 @@
 
 - [ ] Provides operations like
     - [x] reflexive closure
+    - [ ] reflexive reduction
     - [x] symmetric closure
     - [x] transitive closure
-        - [ ] make it possible to show how transitive closure can be constructed by repeatedly composing with the original relation
-    - [ ] equivalence closure
     - [ ] transitive reduction
+    - [ ] equivalence closure
     - [x] composition (with itself)
     - [x] converse
     - [x] complement

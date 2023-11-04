@@ -311,8 +311,7 @@ renderMirrorImagePairs pairs =
 view : Model -> Html Msg
 view model =
     Html.div []
-        [ Html.node "style" [] [ Html.text style ]
-        , Html.div [ A.id "top-container" ]
+        [ Html.div [ A.id "top-container" ]
             [ Html.div [ A.id "rel-and-controls" ]
                 [ sizeInputView model.rel
                 , Rel.view relConfig model.rel model.explanation
@@ -580,60 +579,3 @@ miscControls trueProb =
         , Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ]
         , setTrueProbView trueProb
         ]
-
-
-style : String
-style =
-    """
-table {
-    border-collapse: collapse;
-}
-
-th, td {
-    border: 1px solid black;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    line-height: 20px; /* This ensures the text is vertically centered */
-    text-align: center;
-}
-
-thead th {
-    background-color: #f2f2f2;
-}
-
-a {
-    text-decoration: none;
-    color: sienna;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-a:visited {
-    color: sienna;
-}
-
-#size-label {
-    display: inline-block;
-    width: 60px;
-    text-align: right;
-}
-
-#top-container {
-    display: flex;
-    gap: 20px;
-    padding: 20px;
-
-    #explanation {
-        max-width: 40%;
-    }
-}
-
-#rel {
-    padding-top: 20px;
-    height: 250px;
-    width: 250px;
-}
-"""
