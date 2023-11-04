@@ -2,7 +2,7 @@
 
 ## (Ideas for) features
 - [x] Show a relation editor that allows user to select
-    - [x] A number n from (0?) 1 to 10
+    - [x] A number n from 1 to 10
     - [x] A rectangular matrix with checkboxes that allows specifying arbitraty relation on a set with n elements
     - [x] Basic history support - ability to undo relation edits
     - [ ] Show a graph (as in graph theory) of the relation
@@ -36,8 +36,20 @@
                 - [x] derangement
                 - [x] involution
 
-- [ ] When property is not satisfied add "why?" tooltip that will explain why
-    - [ ] Also visually highlight missing/extra elements that are breaking the property
+- [ ] Add an explanation for each property, showing why given relation satisfied given property (or not). Highlight relevant elements in explanation
+    - [x] reflexive
+    - [x] irreflexive
+    - [x] symmetric
+    - [x] antisymmetric
+    - [x] asymmetric
+    - [x] transitive
+    - [x] connected
+    - [x] acyclic
+    - [x] partial function
+    - [x] function
+    - [ ] bijection
+    - [ ] derangement
+    - [ ] involution
 
 - [ ] Given the properties that it satisfies show whether it is one of well know structures:
     - [ ] Equivalence relation
@@ -47,6 +59,8 @@
     - [ ] Poset
         - [ ] show hasse diagram
         - [ ] show [covering relation](https://en.wikipedia.org/wiki/Covering_relation)
+        - [ ] width (size of the largest antichain) - https://en.wikipedia.org/wiki/Dilworth%27s_theorem
+        - [ ] height (size of the longest chain) - https://en.wikipedia.org/wiki/Mirsky%27s_theorem
     - [ ] Total order
         - [ ] highlight incomparable elements if not
     - [ ] Lattice
@@ -76,7 +90,6 @@
 
 Various interesting facts that could be shown in UI:
 - [ ] We can reconstruct the order relation from the lattice operation infimum and supremum by x ≤ y <=> x = x ⋀ y <=> x ⋁ y = y
-
 - Number of labeled and unlabeled lattices: https://oeis.org/A055512 and https://www.researchgate.net/publication/225384356_Counting_Finite_Lattices
 - Show various powers of the relation (what happens if we keep composing relation with itself?)
 - Identify (lattice) antichain within given lattice
