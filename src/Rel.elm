@@ -7,6 +7,7 @@ module Rel exposing
     , complement
     , converse
     , deriveInfo
+    , domain
     , empty
     , explainAntisymmetric
     , explainAsymmetric
@@ -31,7 +32,9 @@ module Rel exposing
     , missingForConnectedness
     , reflexiveClosure
     , resize
+    , scc
     , showElements
+    , showIntList
     , showPair
     , showPairList
     , showPairSet
@@ -78,6 +81,7 @@ type alias Explanation =
 
 type alias DerivedInfo =
     { relSize : Int
+    , domain : List Int
     , offDiagonalElements : Set Pair
     , onDiagonalElements : Set Pair
     , missingForReflexivity : Set Pair
@@ -107,6 +111,7 @@ deriveInfo rel =
             superfluousAndMissingForFunction rel
     in
     { relSize = size rel
+    , domain = domain rel
     , onDiagonalElements = onDiagonalElements
     , offDiagonalElements = offDiagonalElements
     , missingForReflexivity = missingForReflexivity rel
@@ -188,6 +193,11 @@ elements (Rel rows) =
             )
         |> List.concat
         |> List.filterMap identity
+
+
+domain : Rel -> List Int
+domain (Rel rows) =
+    List.range 0 (Array.length rows - 1)
 
 
 {-| The relation that occurs when the order of the elements is switched in the relation.
@@ -326,7 +336,7 @@ explainReflexive info =
             "Definition: a relation R ⊆ X ⨯ X is reflexive if ∀ x ∈ X: (x, x) ∈ R."
     in
     if Set.isEmpty info.missingForReflexivity then
-        { greenHighlight = Set.fromList <| List.map (\i -> ( i, i )) <| List.range 0 (info.relSize - 1)
+        { greenHighlight = Set.fromList <| List.map (\i -> ( i, i )) info.domain
         , redHighlight = Set.empty
         , lines =
             [ "This relation is reflexive."
@@ -399,7 +409,7 @@ explainIrreflexive info =
             "Definition: a relation R ⊆ X ⨯ X is irreflexive if ∀ x ∈ X: (x, x) ∉ R."
     in
     if Set.isEmpty info.superfluousForIrreflexivity then
-        { greenHighlight = Set.fromList <| List.map (\i -> ( i, i )) <| List.range 0 (info.relSize - 1)
+        { greenHighlight = Set.fromList <| List.map (\i -> ( i, i )) info.domain
         , redHighlight = Set.empty
         , lines =
             [ "This relation is irreflexive."
@@ -611,7 +621,7 @@ explainAsymmetric info =
     if Set.isEmpty superfluousDiagonal && Set.isEmpty superfluousOffDiagonal then
         let
             allDiagonalSquares =
-                Set.fromList <| List.map (\i -> ( i, i )) <| List.range 0 (info.relSize - 1)
+                Set.fromList <| List.map (\i -> ( i, i )) info.domain
         in
         { greenHighlight =
             Set.union info.offDiagonalElements
@@ -802,13 +812,13 @@ explainTransitive info =
 isConnected : Rel -> Bool
 isConnected (Rel rows) =
     let
-        maxIdx =
+        maxIndex =
             Array.length rows - 1
     in
     arrayAnd <|
         Array.indexedMap
             (\i row ->
-                List.range (i + 1) maxIdx
+                List.range (i + 1) maxIndex
                     |> List.all
                         (\j ->
                             Maybe.withDefault False (Array.get j row) || unsafeGet j i rows
@@ -991,10 +1001,7 @@ explainFunction info =
             Set.union info.superfluousForFunction
                 (Set.toList info.emptyRowIndices
                     |> List.andThen
-                        (\i ->
-                            List.range 0 (info.relSize - 1)
-                                |> List.map (Tuple.pair i)
-                        )
+                        (\i -> List.map (Tuple.pair i) info.domain)
                     |> Set.fromList
                 )
         , lines =
@@ -1084,7 +1091,7 @@ This uses modified version of Floyd-Warshell algorithm
 
 -}
 transitiveClosure : Rel -> Rel
-transitiveClosure (Rel rows) =
+transitiveClosure ((Rel rows) as rel) =
     let
         n =
             Array.length rows
@@ -1104,7 +1111,7 @@ transitiveClosure (Rel rows) =
                     )
             )
             rows
-            (List.range 0 (n - 1))
+            (domain rel)
 
 
 type Distance
@@ -1140,7 +1147,7 @@ addDist d1 d2 =
 {-| Uses modified Floyd-Warshall algorithm.
 -}
 transitiveClosureWithSteps : Rel -> ( Rel, List TransitiveClosureStep )
-transitiveClosureWithSteps (Rel rows) =
+transitiveClosureWithSteps ((Rel rows) as rel) =
     let
         n =
             Array.length rows
@@ -1217,10 +1224,116 @@ transitiveClosureWithSteps (Rel rows) =
             ( newDistances, newAdded2 ++ added )
         )
         ( initDistances, [] )
-        (List.range 0 (n - 1))
+        (domain rel)
         |> Tuple.mapBoth
             (Array.map (Array.map isFinite) >> Rel)
             (List.sortBy (\trStep -> ( trStep.distance, trStep.from, trStep.to )))
+
+
+{-| Strongly Connected Components.
+Algorithm adapted from <https://hackage.haskell.org/package/containers-0.7/docs/src/Data.Graph.html#scc>
+-}
+scc : Rel -> List (List Int)
+scc rel =
+    List.map treeToList <| dfsFromNodes rel <| List.reverse <| postorder <| converse rel
+
+
+type Tree a
+    = Tree a (List (Tree a))
+
+
+postorderTree : Tree a -> List a -> List a
+postorderTree (Tree a ts) =
+    postorderForest ts << (::) a
+
+
+postorderForest : List (Tree a) -> List a -> List a
+postorderForest ts =
+    List.foldr (<<) identity <| List.map postorderTree ts
+
+
+postorder : Rel -> List Int
+postorder rel =
+    postorderForest (spanningForest rel) []
+
+
+treeToList : Tree a -> List a
+treeToList tree =
+    treeToListAcc [ tree ] []
+
+
+treeToListAcc : List (Tree a) -> List a -> List a
+treeToListAcc stack accumulator =
+    case stack of
+        [] ->
+            List.reverse accumulator
+
+        (Tree a ts) :: rest ->
+            treeToListAcc (List.append ts rest) (a :: accumulator)
+
+
+spanningForest : Rel -> List (Tree Int)
+spanningForest ((Rel rows) as rel) =
+    dfsFromNodes (Rel rows) (domain rel)
+
+
+dfsFromNodes : Rel -> List Int -> List (Tree Int)
+dfsFromNodes (Rel rows) startNodes =
+    let
+        maxIndex =
+            Array.length rows - 1
+
+        adjacentNodes : Int -> List Int
+        adjacentNodes i =
+            Array.get i rows
+                |> Maybe.withDefault Array.empty
+                |> (\row ->
+                        let
+                            ( _, adjacent ) =
+                                Array.foldr
+                                    (\bool ( j, acc ) ->
+                                        ( j - 1
+                                        , if bool && i /= j then
+                                            j :: acc
+
+                                          else
+                                            acc
+                                        )
+                                    )
+                                    ( maxIndex, [] )
+                                    row
+                        in
+                        adjacent
+                   )
+
+        go : List Int -> Set Int -> ( List (Tree Int), Set Int )
+        go toVisit visited =
+            -- elm-review: IGNORE TCO
+            case toVisit of
+                [] ->
+                    ( [], visited )
+
+                v :: vs ->
+                    if Set.member v visited then
+                        go vs visited
+
+                    else
+                        let
+                            visited1 =
+                                Set.insert v visited
+
+                            ( trees2, visited2 ) =
+                                go (adjacentNodes v) visited1
+
+                            ( trees3, visited3 ) =
+                                go vs visited2
+                        in
+                        ( Tree v trees2 :: trees3, visited3 )
+
+        ( trees, _ ) =
+            go startNodes Set.empty
+    in
+    trees
 
 
 
@@ -1282,11 +1395,8 @@ genBijectiveFunction n =
 
 
 view : Config msg -> Rel -> Maybe Explanation -> Html msg
-view config (Rel rows) mExplanation =
+view config ((Rel rows) as rel) mExplanation =
     let
-        maxIndex =
-            Array.length rows - 1
-
         addBgColor : Int -> Int -> List (Attribute msg) -> List (Attribute msg)
         addBgColor i j =
             case mExplanation of
@@ -1313,7 +1423,7 @@ view config (Rel rows) mExplanation =
             [ Html.thead []
                 [ Html.tr [] <|
                     Html.th [] [{- empty top-left corner -}]
-                        :: List.map headerCell (List.range 0 maxIndex)
+                        :: List.map headerCell (domain rel)
                 ]
             , Html.tbody [] <|
                 Array.toList <|
@@ -1359,8 +1469,14 @@ showPairSet pairs =
 
 showPairList : List Pair -> String
 showPairList pairs =
-    pairs
-        |> List.map showPair
+    List.map showPair pairs
+        |> String.join ", "
+        |> (\s -> "{" ++ s ++ "}")
+
+
+showIntList : List Int -> String
+showIntList list =
+    List.map String.fromInt list
         |> String.join ", "
         |> (\s -> "{" ++ s ++ "}")
 

@@ -234,10 +234,7 @@ update msg model =
                                 , lines =
                                     [ "This relation is not acyclic."
                                     , "The following pairs form a cycle: " ++ Rel.showPairList cyclePairs
-                                    , "so the cycle consists of these elements: {"
-                                        ++ String.join ", "
-                                            (List.map String.fromInt cycleElems)
-                                        ++ "}"
+                                    , "so the cycle consists of these elements: " ++ Rel.showIntList cycleElems
                                     ]
                                 }
                             )
@@ -284,7 +281,7 @@ undoHistory model =
 generateRel : (Int -> Generator Rel) -> Model -> ( Model, Cmd Msg )
 generateRel gen model =
     ( model
-    , Random.generate GotRandom <| gen <| Rel.size model.rel
+    , Random.generate GotRandom <| gen model.derivedInfo.relSize
     )
 
 
@@ -313,7 +310,7 @@ view model =
     Html.div []
         [ Html.div [ A.id "top-container" ]
             [ Html.div [ A.id "rel-and-controls" ]
-                [ sizeInputView model.rel
+                [ sizeInputView model.derivedInfo.relSize
                 , Rel.view relConfig model.rel model.explanation
                 , elementaryPropertiesView model.derivedInfo
                 , miscControls model.trueProb
@@ -321,15 +318,18 @@ view model =
             , Html.div [ A.id "explanation" ]
                 [ Html.div []
                     [ Html.div []
-                        [ Html.text <|
-                            "X = {"
-                                ++ (String.join ", " <| List.map String.fromInt <| List.range 0 (Rel.size model.rel - 1))
-                                ++ "}"
+                        [ Html.text <| "X = " ++ Rel.showIntList (Rel.domain model.rel)
+                        ]
+                    , Html.div []
+                        [ Html.text <| "R ⊆ X ⨯ X, R = " ++ Rel.showElements model.rel
                         ]
                     , Html.div []
                         [ Html.text <|
-                            "R ⊆ X ⨯ X, R = "
-                                ++ Rel.showElements model.rel
+                            "Strongly connected components: "
+                                ++ String.join ", "
+                                    (List.map Rel.showIntList <|
+                                        Rel.scc model.rel
+                                    )
                         ]
                     , case model.explanation of
                         Just exp ->
@@ -527,12 +527,8 @@ yesNo onHover b =
         ]
 
 
-sizeInputView : Rel -> Html Msg
-sizeInputView rel =
-    let
-        relSize =
-            Rel.size rel
-    in
+sizeInputView : Int -> Html Msg
+sizeInputView relSize =
     Html.div []
         [ Html.label []
             [ Html.span [ A.id "size-label" ]
