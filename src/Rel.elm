@@ -41,6 +41,7 @@ module Rel exposing
     , size
     , superfluousForPartialFunction
     , symmetricClosure
+    , toDotSource
     , toggle
     , transitiveClosure
     , view
@@ -1493,6 +1494,22 @@ isAreElements count =
 
     else
         ( "are", String.fromInt count ++ " elements" )
+
+
+toDotSource : Rel -> String
+toDotSource rel =
+    let
+        nodeLines =
+            domain rel
+                |> List.map String.fromInt
+
+        edgesLines =
+            elements rel
+                |> List.map (\( i, j ) -> String.fromInt i ++ "->" ++ String.fromInt j)
+    in
+    "digraph G {"
+        ++ String.join ";" (nodeLines ++ edgesLines)
+        ++ "}"
 
 
 

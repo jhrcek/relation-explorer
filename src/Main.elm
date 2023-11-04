@@ -4,6 +4,7 @@ import Browser
 import Html exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
+import Ports
 import Random exposing (Generator)
 import Rel exposing (DerivedInfo, Explanation, Rel)
 import Set exposing (Set)
@@ -46,8 +47,13 @@ init _ =
       , explanation = Nothing
       , trueProb = 0.2
       }
-    , Cmd.none
+    , renderGraph initRel
     )
+
+
+renderGraph : Rel -> Cmd msg
+renderGraph =
+    Rel.toDotSource >> Ports.renderDot
 
 
 type Msg
@@ -243,7 +249,7 @@ update msg model =
                 }
 
         UndoHistory ->
-            pure <| undoHistory model
+            undoHistory model
 
         NoOp ->
             pure model
@@ -260,22 +266,24 @@ updateRel f model =
         , history = model.rel :: model.history
         , derivedInfo = Rel.deriveInfo newRel
       }
-    , Cmd.none
+    , renderGraph newRel
     )
 
 
-undoHistory : Model -> Model
+undoHistory : Model -> ( Model, Cmd Msg )
 undoHistory model =
     case model.history of
         [] ->
-            model
+            ( model, Cmd.none )
 
         prevRel :: rest ->
-            { model
+            ( { model
                 | rel = prevRel
                 , history = rest
                 , derivedInfo = Rel.deriveInfo prevRel
-            }
+              }
+            , renderGraph prevRel
+            )
 
 
 generateRel : (Int -> Generator Rel) -> Model -> ( Model, Cmd Msg )
@@ -339,6 +347,8 @@ view model =
                             Html.text ""
                     ]
                 ]
+            , Html.div [ A.id "graph" ]
+                [{- This is where viz.js renders svg graph -}]
             ]
         ]
 

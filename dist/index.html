@@ -6,6 +6,7 @@
   <meta charset="utf-8">
   <link rel="stylesheet" type="text/css" href="css/style.css">
   <script src="js/elm.js"></script>
+  <script src="https://unpkg.com/@viz-js/viz@3.2.3/lib/viz-standalone.js"></script>
 </head>
 
 <body>
@@ -14,6 +15,27 @@
     var app = Elm.Main.init({
       node: document.querySelector('main')
     })
+
+    const vizRenderOptions = {
+      engine: 'neato',
+      graphAttributes: {
+        splines: 'polyline'
+      },
+      nodeAttributes: {
+        shape: 'circle',
+        width: 0.3,
+        fixedsize: true
+      },
+    };
+
+    app.ports.renderDot.subscribe(dotSource => {
+      Viz.instance().then(viz => {
+        const graph = document.getElementById('graph');
+        graph.innerHTML = '';
+        const svg = viz.renderSVGElement(dotSource, vizRenderOptions);
+        graph.appendChild(svg);
+      });
+    });
   </script>
 </body>
 

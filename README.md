@@ -5,7 +5,7 @@
     - [x] A number n from 1 to 10
     - [x] A rectangular matrix with checkboxes that allows specifying arbitraty relation on a set with n elements
     - [x] Basic history support - ability to undo relation edits
-    - [ ] Show a graph (as in graph theory) of the relation
+    - [x] Show a graph (as in graph theory) of the relation
 
 - [ ] Multiple ways to initialize relation
     - [x] Initialize as empty
