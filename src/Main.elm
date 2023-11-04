@@ -75,6 +75,7 @@ type Msg
     | GotRandom Rel
       -- Explanations
     | HideExplanations
+    | ExplainRelation
     | ExplainReflexive
     | ExplainIrreflexive
     | ExplainSymmetric
@@ -147,6 +148,9 @@ update msg model =
 
         HideExplanations ->
             pure { model | explanation = Nothing }
+
+        ExplainRelation ->
+            pure { model | explanation = Just <| Rel.explainRelation model.derivedInfo }
 
         ExplainReflexive ->
             pure { model | explanation = Just <| Rel.explainReflexive model.derivedInfo }
@@ -370,9 +374,7 @@ propertyConfigs =
       , hasProperty = always True
       , closureButton = Nothing
       , genRandom = Just GenRel
-
-      -- TODO explain that any subset of cartesian product is a relation
-      , onHoverExplanation = Nothing
+      , onHoverExplanation = Just ExplainRelation
       }
     , { propertyName = "Reflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation"

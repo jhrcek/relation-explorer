@@ -14,6 +14,7 @@ module Rel exposing
     , explainFunction
     , explainIrreflexive
     , explainReflexive
+    , explainRelation
     , explainSymmetric
     , explainTransitive
     , findCycle
@@ -305,6 +306,22 @@ toggle i j ((Rel rows) as rel) =
 
         Nothing ->
             rel
+
+
+explainRelation : DerivedInfo -> Explanation
+explainRelation info =
+    let
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is any subset of cartesian product X ⨯ X."
+    in
+    { greenHighlight = Set.union info.offDiagonalElements info.onDiagonalElements
+    , redHighlight = Set.empty
+    , lines =
+        [ "This is a relation on X."
+        , definition
+        , "There are no special properties that relation must satisfy. It's just a set of pairs ☺."
+        ]
+    }
 
 
 {-| ∀ x ∈ X: (x, x) ∈ R
