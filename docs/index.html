@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Relation Explorer</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="css/style.css">
+  <script src="js/elm.js"></script>
+  <script src="https://unpkg.com/@viz-js/viz@3.2.3/lib/viz-standalone.js"></script>
+</head>
+
+<body>
+  <main></main>
+  <script>
+    var app = Elm.Main.init({
+      node: document.querySelector('main')
+    })
+
+    const vizRenderOptions = {
+      engine: 'neato',
+      graphAttributes: {
+        splines: true,
+        overlap: false
+      },
+      edgeAttributes: {
+        arrowsize: 0.5
+      },
+      nodeAttributes: {
+        shape: 'circle',
+        width: 0.3,
+        fixedsize: true
+      },
+    };
+
+    app.ports.renderDot.subscribe(dotSource => {
+      Viz.instance().then(viz => {
+        const graph = document.getElementById('graph');
+        graph.innerHTML = '';
+        const svg = viz.renderSVGElement(dotSource, vizRenderOptions);
+        graph.appendChild(svg);
+      });
+    });
+  </script>
+</body>
+
+</html>
