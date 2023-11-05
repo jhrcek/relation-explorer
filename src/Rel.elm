@@ -21,6 +21,7 @@ module Rel exposing
     , findCycle
     , genBijectiveFunction
     , genFunction
+    , genIrreflexiveRelation
     , genPartialFunction
     , genReflexiveRelation
     , genRelation
@@ -48,7 +49,7 @@ module Rel exposing
     , toggle
     , topologicalSort
     , transitiveClosure
-    , view, genIrreflexiveRelation
+    , view
     )
 
 import Array exposing (Array)
@@ -60,6 +61,7 @@ import List
 import List.Extra as List
 import Random exposing (Generator)
 import Random.Array as Array
+import Random.Extra as Random
 import Set exposing (Set)
 
 
@@ -1408,19 +1410,32 @@ genRelation trueProb n =
 
 
 genReflexiveRelation : Float -> Int -> Random.Generator Rel
-genReflexiveRelation trueProb n =
-    genRelation trueProb n
-        -- TODO this way doesn't generate all reflexive relations with equal probability.
-        -- We should set all diagonal entries to True and only generate the rest.
-        |> Random.map reflexiveClosure
+genReflexiveRelation =
+    genWithDiagonal True
 
 
 genIrreflexiveRelation : Float -> Int -> Random.Generator Rel
-genIrreflexiveRelation trueProb n =
-    genRelation trueProb n
-        -- TODO this way doesn't generate all reflexive relations with equal probability.
-        -- We should set all diagonal entries to True and only generate the rest.
-        |> Random.map reflexiveReduction
+genIrreflexiveRelation =
+    genWithDiagonal False
+
+
+genWithDiagonal : Bool -> Float -> Int -> Random.Generator Rel
+genWithDiagonal diag trueProb n =
+    List.range 0 (n - 1)
+        |> Random.traverse
+            (\i ->
+                List.range 0 (n - 1)
+                    |> Random.traverse
+                        (\j ->
+                            if j == i then
+                                Random.constant diag
+
+                            else
+                                genBool trueProb
+                        )
+                    |> Random.map Array.fromList
+            )
+        |> Random.map (Array.fromList >> Rel)
 
 
 genPartialFunction : Int -> Generator Rel

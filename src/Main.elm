@@ -141,6 +141,7 @@ update msg model =
 
         GenReflexive ->
             generateRel (Rel.genReflexiveRelation model.trueProb) model
+
         GenIrreflexive ->
             generateRel (Rel.genIrreflexiveRelation model.trueProb) model
 
