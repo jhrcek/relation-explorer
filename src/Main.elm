@@ -73,6 +73,7 @@ type Msg
     | GenIrreflexive
     | GenSymmetric
     | GenAntisymmetric
+    | GenAsymmetric
     | GenPartialFunction
     | GenFunction
     | GenBijectiveFunction
@@ -152,6 +153,9 @@ update msg model =
 
         GenAntisymmetric ->
             generateRel (Rel.genAntisymmetricRelation model.trueProb) model
+
+        GenAsymmetric ->
+            generateRel (Rel.genAsymmetricRelation model.trueProb) model
 
         GenPartialFunction ->
             generateRel Rel.genPartialFunction model
@@ -444,7 +448,7 @@ propertyConfigs =
       , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
       , hasProperty = Rel.isAsymmetric
       , buttons = []
-      , genRandom = Nothing
+      , genRandom = Just GenAsymmetric
       , onHoverExplanation = Just ExplainAsymmetric
       }
     , { propertyName = "Transitive"

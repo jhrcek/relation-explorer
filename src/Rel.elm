@@ -20,6 +20,7 @@ module Rel exposing
     , explainTransitive
     , findCycle
     , genAntisymmetricRelation
+    , genAsymmetricRelation
     , genBijectiveFunction
     , genFunction
     , genIrreflexiveRelation
@@ -295,7 +296,7 @@ compose (Rel rows) rel2 =
                         Maybe.map2
                             (\rowi colj ->
                                 -- composition of relations corresponds to matrix multiplication in boolean semiring
-                                --  (+ corresponds to OR, * corresponds to AND)
+                                -- (+ corresponds to OR, * corresponds to AND)
                                 arrayOr <| Array.map2 (&&) rowi colj
                             )
                             (Array.get i rows)
@@ -342,14 +343,14 @@ explainRelation : DerivedInfo -> Explanation
 explainRelation info =
     let
         definition =
-            "Definition: a relation R ⊆ X ⨯ X is any subset of cartesian product X ⨯ X."
+            "Definition: a relation R is a subset of cartesian product X ⨯ X."
     in
     { greenHighlight = Set.union info.offDiagonalElements info.onDiagonalElements
     , redHighlight = Set.empty
     , lines =
         [ "This is a relation on X."
         , definition
-        , "There are no special properties that relation must satisfy. It's just a set of pairs ☺."
+        , "There are no special properties that relation must satisfy. It's just a set of pairs of elements from X ☺."
         ]
     }
 
@@ -1462,21 +1463,41 @@ genSymmetricRelation trueProb n =
 
 genAntisymmetricRelation : Float -> Int -> Random.Generator Rel
 genAntisymmetricRelation trueProb n =
-    -- 1. Generate indices of all pairs within upper triangle, including diagonal
+    -- Generate indices of all pairs within upper triangle, including diagonal
     List.range 0 (n - 1)
         |> List.andThen
             (\i ->
                 List.range i (n - 1)
                     |> List.map (\j -> ( i, j ))
             )
+        |> genAsymAntisymHelp trueProb n
+
+
+genAsymmetricRelation : Float -> Int -> Random.Generator Rel
+genAsymmetricRelation trueProb n =
+    -- Generate indices of all pairs within upper triangle, excluding diagonal
+    List.range 0 (n - 2)
+        |> List.andThen
+            (\i ->
+                List.range (i + 1) (n - 1)
+                    |> List.map (\j -> ( i, j ))
+            )
+        |> genAsymAntisymHelp trueProb n
+
+
+{-| Logic shared by asymmetric and antisymmetric rel. generators
+-}
+genAsymAntisymHelp : Float -> Int -> List Pair -> Generator Rel
+genAsymAntisymHelp trueProb n pairs =
+    pairs
         |> Random.traverse
             (\( i, j ) ->
-                -- 2. Pick some of the pairs for inclusion in rel with trueProb
+                -- Pick some of the pairs for inclusion in rel with trueProb
                 genBool trueProb
                     |> Random.andThen
                         (\include ->
                             if include then
-                                -- 3. Go through picked ones and swap them with 50% probability
+                                -- Go through picked ones and swap them with 50% probability
                                 genBool 0.5
                                     |> Random.map
                                         (\swap ->
