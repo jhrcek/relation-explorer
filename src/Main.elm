@@ -343,6 +343,20 @@ view model =
                                         Rel.scc model.rel
                                     )
                         ]
+                    , case model.derivedInfo.acyclic of
+                        Just acyclic ->
+                            Html.div []
+                                [ Html.text "This relation is acyclic"
+                                , Html.div [ A.class "indent" ]
+                                    [ Html.text <|
+                                        "Topological sort: ["
+                                            ++ String.join ", " (List.map String.fromInt <| Rel.topologicalSort acyclic)
+                                            ++ "]"
+                                    ]
+                                ]
+
+                        Nothing ->
+                            Html.text ""
                     , case model.explanation of
                         Just exp ->
                             Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.lines

@@ -1,5 +1,6 @@
 module Rel exposing
-    ( Config
+    ( Acyclic
+    , Config
     , DerivedInfo
     , Explanation
     , Pair
@@ -44,6 +45,7 @@ module Rel exposing
     , symmetricClosure
     , toDotSource
     , toggle
+    , topologicalSort
     , transitiveClosure
     , view
     )
@@ -64,6 +66,18 @@ import Set exposing (Set)
 -}
 type Rel
     = Rel (Array (Array Bool))
+
+
+{-| This wrapper is intended to sort as a proof that given Rel is acyclic.
+
+Being acyclic makes the following operations possible:
+
+  - topological sorting
+  - transitive reduction (being unique)
+
+-}
+type Acyclic
+    = Acyclic Rel
 
 
 {-| An element of a relation.
@@ -100,6 +114,7 @@ type alias DerivedInfo =
     , isBijectiveFunction : Bool
     , isDerangement : Bool
     , isInvolution : Bool
+    , acyclic : Maybe Acyclic
     }
 
 
@@ -111,6 +126,9 @@ deriveInfo rel =
 
         ( superfluousForFunction, emptyRowIndices ) =
             superfluousAndMissingForFunction rel
+
+        maybeAcyclic =
+            mkAcyclic rel
     in
     { relSize = size rel
     , domain = domain rel
@@ -123,13 +141,20 @@ deriveInfo rel =
     , superfluousForAsymmetry = superfluousForAsymmetry rel
     , missingForTransitivity = missingForTransitivity rel
     , isConnected = isConnected rel
-    , isAcyclic = isAcyclic rel
     , isPartialFunction = isPartialFunction rel
     , superfluousForFunction = superfluousForFunction
     , emptyRowIndices = emptyRowIndices
     , isBijectiveFunction = isBijectiveFunction rel
     , isDerangement = isDerangement rel
     , isInvolution = isInvolution rel
+    , acyclic = maybeAcyclic
+    , isAcyclic =
+        case maybeAcyclic of
+            Just _ ->
+                True
+
+            Nothing ->
+                False
     }
 
 
@@ -853,6 +878,15 @@ isAcyclic rel =
     Set.isEmpty <| superfluousForAntisymmetry <| transitiveClosure rel
 
 
+mkAcyclic : Rel -> Maybe Acyclic
+mkAcyclic rel =
+    if isAcyclic rel then
+        Just (Acyclic rel)
+
+    else
+        Nothing
+
+
 findCycle : Rel -> Maybe (List Int)
 findCycle (Rel rows) =
     let
@@ -1273,6 +1307,11 @@ postorderForest ts =
 postorder : Rel -> List Int
 postorder rel =
     postorderForest (spanningForest rel) []
+
+
+topologicalSort : Acyclic -> List Int
+topologicalSort (Acyclic rel) =
+    List.reverse <| postorder rel
 
 
 treeToList : Tree a -> List a

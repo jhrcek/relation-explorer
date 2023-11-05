@@ -2,12 +2,14 @@ table {
     border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
     border: 1px solid black;
     width: 20px;
     height: 20px;
     padding: 0;
-    line-height: 20px; /* This ensures the text is vertically centered */
+    line-height: 20px;
+    /* This ensures the text is vertically centered */
     text-align: center;
 }
 
@@ -40,7 +42,7 @@ a:visited {
     padding: 20px;
 
     #explanation {
-        max-width: 40%;
+        width: 40%;
     }
 }
 
@@ -48,4 +50,8 @@ a:visited {
     padding-top: 20px;
     height: 250px;
     width: 250px;
+}
+
+.indent {
+    padding-left: 20px;
 }
