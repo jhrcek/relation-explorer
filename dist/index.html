@@ -19,7 +19,11 @@
     const vizRenderOptions = {
       engine: 'neato',
       graphAttributes: {
-        splines: 'polyline'
+        splines: true,
+        overlap: false
+      },
+      edgeAttributes: {
+        arrowsize: 0.5
       },
       nodeAttributes: {
         shape: 'circle',
