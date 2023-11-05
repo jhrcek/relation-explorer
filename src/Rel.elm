@@ -25,6 +25,7 @@ module Rel exposing
     , genPartialFunction
     , genReflexiveRelation
     , genRelation
+    , genSymmetricRelation
     , isAntisymmetric
     , isAsymmetric
     , isFunction
@@ -1436,6 +1437,26 @@ genWithDiagonal diag trueProb n =
                     |> Random.map Array.fromList
             )
         |> Random.map (Array.fromList >> Rel)
+
+
+genSymmetricRelation : Float -> Int -> Random.Generator Rel
+genSymmetricRelation trueProb n =
+    List.range 0 (n - 1)
+        |> Random.traverse
+            (\i ->
+                List.range 0 (n - 1)
+                    |> Random.traverse
+                        (\j ->
+                            -- Generate only upper triangle and do symmetric closure
+                            if j >= i then
+                                genBool trueProb
+
+                            else
+                                Random.constant False
+                        )
+                    |> Random.map Array.fromList
+            )
+        |> Random.map (Array.fromList >> Rel >> symmetricClosure)
 
 
 genPartialFunction : Int -> Generator Rel

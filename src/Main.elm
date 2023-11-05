@@ -71,6 +71,7 @@ type Msg
     | GenRel
     | GenReflexive
     | GenIrreflexive
+    | GenSymmetric
     | GenPartialFunction
     | GenFunction
     | GenBijectiveFunction
@@ -144,6 +145,9 @@ update msg model =
 
         GenIrreflexive ->
             generateRel (Rel.genIrreflexiveRelation model.trueProb) model
+
+        GenSymmetric ->
+            generateRel (Rel.genSymmetricRelation model.trueProb) model
 
         GenPartialFunction ->
             generateRel Rel.genPartialFunction model
@@ -422,7 +426,7 @@ propertyConfigs =
       , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
       , hasProperty = Rel.isSymmetric
       , buttons = [ ButtonConfig "Closure" DoSymmetricClosure ]
-      , genRandom = Nothing
+      , genRandom = Just GenSymmetric
       , onHoverExplanation = Just ExplainSymmetric
       }
     , { propertyName = "Antisymmetric"
