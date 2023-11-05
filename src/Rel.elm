@@ -33,6 +33,7 @@ module Rel exposing
     , isTransitive
     , missingForConnectedness
     , reflexiveClosure
+    , reflexiveReduction
     , resize
     , scc
     , showElements
@@ -47,7 +48,7 @@ module Rel exposing
     , toggle
     , topologicalSort
     , transitiveClosure
-    , view
+    , view, genIrreflexiveRelation
     )
 
 import Array exposing (Array)
@@ -410,6 +411,8 @@ explainReflexive info =
                 ++ isAre
                 ++ " not in the relation: "
                 ++ showPairSet info.missingForReflexivity
+            , "By adding these missing pairs, we get a Reflexive Closure of this relation, "
+                ++ "which is the smallest (with respect to ⊆) reflexive relation on X that is the superset of R."
             ]
         }
 
@@ -483,6 +486,8 @@ explainIrreflexive info =
                 ++ isAre
                 ++ " in the relation: "
                 ++ showPairSet info.superfluousForIrreflexivity
+            , "By removing these extraneous pairs, we get a Reflexive Reduction (also called Irreflexive Kernel) of this relation,"
+                ++ " which is the smallest (with respect to ⊆) relation on X that has the same reflexive closure as R."
             ]
         }
 
@@ -1113,21 +1118,13 @@ isInvolution rel =
 {-| <https://en.wikipedia.org/wiki/Reflexive_closure>
 -}
 reflexiveClosure : Rel -> Rel
-reflexiveClosure (Rel rows) =
-    Rel <|
-        Array.indexedMap
-            (\i row ->
-                Array.indexedMap
-                    (\j cell ->
-                        if i == j then
-                            True
+reflexiveClosure rel =
+    union rel (eye (size rel))
 
-                        else
-                            cell
-                    )
-                    row
-            )
-            rows
+
+reflexiveReduction : Rel -> Rel
+reflexiveReduction rel =
+    difference rel (eye (size rel))
 
 
 {-| <https://en.wikipedia.org/wiki/Symmetric_closure>
@@ -1418,6 +1415,14 @@ genReflexiveRelation trueProb n =
         |> Random.map reflexiveClosure
 
 
+genIrreflexiveRelation : Float -> Int -> Random.Generator Rel
+genIrreflexiveRelation trueProb n =
+    genRelation trueProb n
+        -- TODO this way doesn't generate all reflexive relations with equal probability.
+        -- We should set all diagonal entries to True and only generate the rest.
+        |> Random.map reflexiveReduction
+
+
 genPartialFunction : Int -> Generator Rel
 genPartialFunction n =
     -- Like genFunction except we geneerate 1 extra element (n) which
@@ -1595,4 +1600,4 @@ arrayOr =
 
 
 
-{- Unicode corner: ⇒ ∈ ∉ ∀ ∃ ∧ ∨ ≠ -}
+{- Unicode corner: ⇒ ∈ ∉ ⊆ ∀ ∃ ∧ ∨ ≠ -}

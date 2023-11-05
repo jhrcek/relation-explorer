@@ -74,7 +74,7 @@
 
 - [ ] Provides operations like
     - [x] reflexive closure
-    - [ ] reflexive reduction
+    - [x] reflexive reduction
     - [x] symmetric closure
     - [x] transitive closure
     - [ ] transitive reduction

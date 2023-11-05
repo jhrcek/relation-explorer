@@ -61,6 +61,7 @@ type Msg
     | SetTrueProb Float
     | ToggleRel Int Int
     | DoReflexiveClosure
+    | DoReflexiveReduction
     | DoSymmetricClosure
     | DoTransitiveClosure
     | DoComplement
@@ -69,6 +70,7 @@ type Msg
       -- Random generation
     | GenRel
     | GenReflexive
+    | GenIrreflexive
     | GenPartialFunction
     | GenFunction
     | GenBijectiveFunction
@@ -113,6 +115,9 @@ update msg model =
         DoReflexiveClosure ->
             updateRel Rel.reflexiveClosure model
 
+        DoReflexiveReduction ->
+            updateRel Rel.reflexiveReduction model
+
         DoSymmetricClosure ->
             updateRel Rel.symmetricClosure model
 
@@ -136,6 +141,8 @@ update msg model =
 
         GenReflexive ->
             generateRel (Rel.genReflexiveRelation model.trueProb) model
+        GenIrreflexive ->
+            generateRel (Rel.genIrreflexiveRelation model.trueProb) model
 
         GenPartialFunction ->
             generateRel Rel.genPartialFunction model
@@ -375,9 +382,15 @@ type alias PropertyConfig msg =
     { propertyName : String
     , wikiLink : String
     , hasProperty : DerivedInfo -> Bool
-    , closureButton : Maybe msg
+    , buttons : List (ButtonConfig msg)
     , genRandom : Maybe msg
     , onHoverExplanation : Maybe msg
+    }
+
+
+type alias ButtonConfig msg =
+    { label : String
+    , message : msg
     }
 
 
@@ -386,84 +399,84 @@ propertyConfigs =
     [ { propertyName = "Relation"
       , wikiLink = "https://en.wikipedia.org/wiki/Relation_(mathematics)"
       , hasProperty = always True
-      , closureButton = Nothing
+      , buttons = []
       , genRandom = Just GenRel
       , onHoverExplanation = Just ExplainRelation
       }
     , { propertyName = "Reflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation"
       , hasProperty = Rel.isReflexive
-      , closureButton = Just DoReflexiveClosure
+      , buttons = [ ButtonConfig "Closure" DoReflexiveClosure ]
       , genRandom = Just GenReflexive
       , onHoverExplanation = Just ExplainReflexive
       }
     , { propertyName = "Irreflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity"
       , hasProperty = Rel.isIrreflexive
-      , closureButton = Nothing
-      , genRandom = Nothing
+      , buttons = [ ButtonConfig "Reduction" DoReflexiveReduction ]
+      , genRandom = Just GenIrreflexive
       , onHoverExplanation = Just ExplainIrreflexive
       }
     , { propertyName = "Symmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
       , hasProperty = Rel.isSymmetric
-      , closureButton = Just DoSymmetricClosure
+      , buttons = [ ButtonConfig "Closure" DoSymmetricClosure ]
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainSymmetric
       }
     , { propertyName = "Antisymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Antisymmetric_relation"
       , hasProperty = Rel.isAntisymmetric
-      , closureButton = Nothing
+      , buttons = []
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainAntisymmetric
       }
     , { propertyName = "Asymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
       , hasProperty = Rel.isAsymmetric
-      , closureButton = Nothing
+      , buttons = []
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainAsymmetric
       }
     , { propertyName = "Transitive"
       , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
       , hasProperty = Rel.isTransitive
-      , closureButton = Just DoTransitiveClosure
+      , buttons = [ ButtonConfig "Closure" DoTransitiveClosure ]
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainTransitive
       }
     , { propertyName = "Connected"
       , wikiLink = "https://en.wikipedia.org/wiki/Connected_relation"
       , hasProperty = .isConnected
-      , closureButton = Nothing
+      , buttons = []
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotConnected
       }
     , { propertyName = "Acyclic"
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"
       , hasProperty = .isAcyclic
-      , closureButton = Nothing
+      , buttons = []
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotAcyclic
       }
     , { propertyName = "Partial function"
       , wikiLink = "https://en.wikipedia.org/wiki/Partial_function"
       , hasProperty = .isPartialFunction
-      , closureButton = Nothing
+      , buttons = []
       , genRandom = Just GenPartialFunction
       , onHoverExplanation = Just ExplainWhyNotPartialFunction
       }
     , { propertyName = "Function"
       , wikiLink = "https://en.wikipedia.org/wiki/Function_(mathematics)"
       , hasProperty = Rel.isFunction
-      , closureButton = Nothing
+      , buttons = []
       , genRandom = Just GenFunction
       , onHoverExplanation = Just ExplainFunction
       }
     , { propertyName = "Bijection (Permutation)"
       , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
       , hasProperty = .isBijectiveFunction
-      , closureButton = Nothing
+      , buttons = []
       , genRandom = Just GenBijectiveFunction
 
       -- TODO explain why not bijective function
@@ -472,7 +485,7 @@ propertyConfigs =
     , { propertyName = "Derangement"
       , wikiLink = "https://en.wikipedia.org/wiki/Derangement"
       , hasProperty = .isDerangement
-      , closureButton = Nothing
+      , buttons = []
       , genRandom = Nothing
 
       -- TODO explain why not Derangement
@@ -481,7 +494,7 @@ propertyConfigs =
     , { propertyName = "Involution"
       , wikiLink = "https://en.wikipedia.org/wiki/Involution_(mathematics)"
       , hasProperty = .isInvolution
-      , closureButton = Nothing
+      , buttons = []
       , genRandom = Nothing
 
       -- TODO explain why not involution
@@ -494,7 +507,7 @@ elementaryPropertiesView : DerivedInfo -> Html Msg
 elementaryPropertiesView derivedInfo =
     let
         row : PropertyConfig Msg -> Html Msg
-        row { propertyName, wikiLink, hasProperty, closureButton, genRandom, onHoverExplanation } =
+        row { propertyName, wikiLink, hasProperty, buttons, genRandom, onHoverExplanation } =
             let
                 hasProp =
                     hasProperty derivedInfo
@@ -503,12 +516,12 @@ elementaryPropertiesView derivedInfo =
                 [ Html.td [] [ blankLink wikiLink propertyName ]
                 , Html.td [] [ yesNo (Maybe.withDefault NoOp onHoverExplanation) hasProp ]
                 , Html.td [] <|
-                    case closureButton of
-                        Just closureMsg ->
-                            [ Html.button [ E.onClick closureMsg, A.disabled hasProp ] [ Html.text "Closure" ] ]
-
-                        Nothing ->
-                            []
+                    List.map
+                        (\butCfg ->
+                            Html.button [ E.onClick butCfg.message, A.disabled hasProp ]
+                                [ Html.text butCfg.label ]
+                        )
+                        buttons
                 , Html.td [] <|
                     case genRandom of
                         Just genMsg ->
@@ -523,7 +536,7 @@ elementaryPropertiesView derivedInfo =
             [ Html.tr []
                 [ Html.th [] [ Html.text "Property name" ]
                 , Html.th [] [ Html.text "Does R have this property?" ]
-                , Html.th [] [ Html.text "Closure" ]
+                , Html.th [] [ Html.text "Operations" ]
                 , Html.th [] [ Html.text "Generate" ]
                 ]
             ]
