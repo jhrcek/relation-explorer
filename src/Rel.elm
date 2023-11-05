@@ -19,6 +19,7 @@ module Rel exposing
     , explainSymmetric
     , explainTransitive
     , findCycle
+    , genAntisymmetricRelation
     , genBijectiveFunction
     , genFunction
     , genIrreflexiveRelation
@@ -1457,6 +1458,44 @@ genSymmetricRelation trueProb n =
                     |> Random.map Array.fromList
             )
         |> Random.map (Array.fromList >> Rel >> symmetricClosure)
+
+
+genAntisymmetricRelation : Float -> Int -> Random.Generator Rel
+genAntisymmetricRelation trueProb n =
+    -- 1. Generate indices of all pairs within upper triangle, including diagonal
+    List.range 0 (n - 1)
+        |> List.andThen
+            (\i ->
+                List.range i (n - 1)
+                    |> List.map (\j -> ( i, j ))
+            )
+        |> Random.traverse
+            (\( i, j ) ->
+                -- 2. Pick some of the pairs for inclusion in rel with trueProb
+                genBool trueProb
+                    |> Random.andThen
+                        (\include ->
+                            if include then
+                                -- 3. Go through picked ones and swap them with 50% probability
+                                genBool 0.5
+                                    |> Random.map
+                                        (\swap ->
+                                            Just <|
+                                                if swap then
+                                                    ( i, j )
+
+                                                else
+                                                    ( j, i )
+                                        )
+
+                            else
+                                Random.constant Nothing
+                        )
+            )
+        |> Random.map
+            (List.filterMap identity
+                >> List.foldl (\( i, j ) -> toggle i j) (empty n)
+            )
 
 
 genPartialFunction : Int -> Generator Rel
