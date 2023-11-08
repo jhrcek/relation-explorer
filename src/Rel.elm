@@ -1332,8 +1332,8 @@ treeToListAcc stack accumulator =
 
 
 spanningForest : Rel -> List (Tree Int)
-spanningForest ((Rel rows) as rel) =
-    dfsFromNodes (Rel rows) (domain rel)
+spanningForest rel =
+    dfsFromNodes rel (domain rel)
 
 
 dfsFromNodes : Rel -> List Int -> List (Tree Int)
