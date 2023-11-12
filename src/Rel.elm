@@ -14,6 +14,7 @@ module Rel exposing
     , explainAntisymmetric
     , explainAsymmetric
     , explainFunction
+    , explainFunctional
     , explainIrreflexive
     , explainReflexive
     , explainRelation
@@ -23,8 +24,8 @@ module Rel exposing
     , genAsymmetricRelation
     , genBijectiveFunction
     , genFunction
+    , genFunctionalRelation
     , genIrreflexiveRelation
-    , genPartialFunction
     , genReflexiveRelation
     , genRelation
     , genSymmetricRelation
@@ -32,6 +33,7 @@ module Rel exposing
     , isAntisymmetric
     , isAsymmetric
     , isFunction
+    , isFunctional
     , isIrreflexive
     , isReflexive
     , isSymmetric
@@ -44,9 +46,7 @@ module Rel exposing
     , showElements
     , showIntListAsSet
     , showPair
-    , showPairSet
     , size
-    , superfluousForPartialFunction
     , symmetricClosure
     , toDotSource
     , toggle
@@ -57,6 +57,7 @@ module Rel exposing
 
 import Array exposing (Array)
 import Array.Extra as Array
+import Dict
 import Html exposing (Attribute, Html)
 import Html.Attributes as A
 import Html.Events as E
@@ -112,10 +113,10 @@ type alias DerivedInfo =
     , superfuousForAntisymmetry : Set Pair
     , superfluousForAsymmetry : ( Set Pair, Set Pair )
     , missingForTransitivity : ( Set Pair, List TransitiveClosureStep )
+    , superfluousForFunctional : Set Pair
     , superfluousForFunction : Set Pair
     , emptyRowIndices : Set Int
     , isConnected : Bool
-    , isPartialFunction : Bool
     , isBijectiveFunction : Bool
     , isDerangement : Bool
     , isInvolution : Bool
@@ -143,8 +144,8 @@ deriveInfo rel =
     , superfuousForAntisymmetry = superfluousForAntisymmetry rel
     , superfluousForAsymmetry = superfluousForAsymmetry rel
     , missingForTransitivity = missingForTransitivity rel
+    , superfluousForFunctional = superfluousForFunctional rel
     , isConnected = isConnected rel
-    , isPartialFunction = isPartialFunction rel
     , superfluousForFunction = superfluousForFunction
     , emptyRowIndices = emptyRowIndices
     , isBijectiveFunction = isBijectiveFunction rel
@@ -527,24 +528,29 @@ explainSymmetric info =
             [ "This relation is not symmetric."
             , definition
             , explanationPrefix "symmetric: ∃ x, y ∈ X: (x, y) ∈ R ∧ (y, x) ∉ R."
-                ++ (let
-                        missingCount =
-                            Set.size info.missingForSymmetry
+            , let
+                missingCount =
+                    Set.size info.missingForSymmetry
 
-                        ( isAre, elements_ ) =
-                            isAreElements missingCount
-                    in
-                    "There "
-                        ++ isAre
-                        ++ " "
-                        ++ elements_
-                        ++ " of the form (x, y) (highlighted in green), for which the corresponding "
-                        ++ "\"mirror image\" (y, x) (highlighted in red) "
-                        ++ isAre
-                        ++ " missing:"
-                   )
+                ( isAre, elements_ ) =
+                    isAreElements missingCount
+              in
+              "There "
+                ++ isAre
+                ++ " "
+                ++ elements_
+                ++ " of the form (x, y) (highlighted in green), for which the corresponding "
+                ++ "\"mirror image\" (y, x) (highlighted in red) "
+                ++ isAre
+                ++ " missing:"
             ]
-                ++ List.map (\( x, y ) -> showPair ( y, x ) ++ " is present, but " ++ showPair ( x, y ) ++ " is missing.")
+                ++ List.map
+                    (\( x, y ) ->
+                        showPair ( y, x )
+                            ++ " is present, but "
+                            ++ showPair ( x, y )
+                            ++ " is missing."
+                    )
                     (Set.toList info.missingForSymmetry)
         }
 
@@ -956,15 +962,21 @@ findCycle (Rel rows) =
 
 explainAcyclic : DerivedInfo -> Explanation
 explainAcyclic info =
+    let
+        definition =
+            "Definition: relation is acyclic if it contains no cycles."
+                ++ " Cycle is a sequence of at least 2 elements x1, x2, ..., xn ∈ X: (x1, x2) ∈ R ∧ (x2, x3) ∈ R ∧ ... ∧ (xn, x1) ∈ R."
+    in
     case info.acyclic of
         Ok acyclic ->
             { greenHighlight = Set.empty
             , redHighlight = Set.empty
             , lines =
                 [ "This relation is acyclic."
+                , definition
+                , "Explanation: this relation doesn't contain any cycles, so it is acyclic."
 
-                -- TODO this leaves something to be desired
-                , "Explanation: the transitive closure of this relation is antisymmetric, so it is acyclic."
+                -- TODO these are further "features" of acyclic relations, so probably explain them elsewhere
                 , "Acyclic relations can be sorted topologically. Example top. sort: "
                     ++ showIntListAsList (topologicalSort acyclic)
                 ]
@@ -987,6 +999,8 @@ explainAcyclic info =
             , greenHighlight = Set.empty
             , lines =
                 [ "This relation is not acyclic."
+                , definition
+                , explanationPrefix "acyclic: ∃ x1, x2, ..., xn ∈ X: (x1, x2) ∈ R ∧ (x2, x3) ∈ R ∧ ... ∧ (xn, x1) ∈ R."
                 , "The following pairs form a cycle: " ++ showPairListAsSet cyclePairs
                 , "so the cycle consists of this sequence of elements: " ++ showIntListAsList cycle
                 ]
@@ -1000,34 +1014,15 @@ missingForConnectedness rel =
         |> Set.fromList
 
 
-isPartialFunction : Rel -> Bool
-isPartialFunction (Rel rows) =
-    arrayAnd <|
-        Array.map
-            (\row ->
-                let
-                    trueCountInRow =
-                        Array.foldl
-                            (\elem elemCount ->
-                                if elem then
-                                    elemCount + 1
-
-                                else
-                                    elemCount
-                            )
-                            0
-                            row
-                in
-                trueCountInRow == 0 || trueCountInRow == 1
-            )
-            rows
+isFunctional : DerivedInfo -> Bool
+isFunctional info =
+    Set.isEmpty info.superfluousForFunctional
 
 
 {-| Return all pairs that live within rows with more than one True element
 -}
-superfluousForPartialFunction : Rel -> Set Pair
-superfluousForPartialFunction (Rel rows) =
-    -- TODO ugly. It would be great to have indexed fold on arrays
+superfluousForFunctional : Rel -> Set Pair
+superfluousForFunctional (Rel rows) =
     Array.toIndexedList rows
         |> List.foldl
             (\( i, row ) acc ->
@@ -1042,6 +1037,68 @@ superfluousForPartialFunction (Rel rows) =
                         List.map (\j -> ( i, j )) more |> Set.fromList |> Set.union acc
             )
             Set.empty
+
+
+explainFunctional : DerivedInfo -> Explanation
+explainFunctional info =
+    let
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is functional (also called right-unique or univalent) if "
+                ++ "∀ x, y, z ∈ X: (x, y) ∈ R ∧ (x, z) ∈ R ⇒ y = z"
+    in
+    if Set.isEmpty info.superfluousForFunctional then
+        { redHighlight = Set.empty
+        , greenHighlight = Set.empty
+        , lines =
+            [ "This relation is functional."
+            , definition
+            , "Intuitively, this means that each x ∈ X is in relation with at most one y ∈ X."
+            ]
+        }
+
+    else
+        let
+            xsWithMoreThanOneY =
+                Set.map Tuple.first info.superfluousForFunctional
+
+            ( isAre, elements_ ) =
+                isAreElements <| Set.size xsWithMoreThanOneY
+
+            xsToYs =
+                Dict.toList <|
+                    Set.foldl
+                        (\( x, y ) ->
+                            Dict.update x
+                                (\maybeYs ->
+                                    case maybeYs of
+                                        Just ys ->
+                                            Just (ys ++ [ y ])
+
+                                        Nothing ->
+                                            Just [ y ]
+                                )
+                        )
+                        Dict.empty
+                        info.superfluousForFunctional
+        in
+        { redHighlight = info.superfluousForFunctional
+        , greenHighlight = Set.empty
+        , lines =
+            [ "This relation is not functional."
+            , definition
+            , explanationPrefix "functional: ∃ x, y, z ∈ X: (x, y) ∈ R ∧ (x, z) ∈ R ∧ y ≠ z."
+            , "There " ++ isAre ++ " " ++ elements_ ++ " which " ++ isAre ++ " in relation with more than one y ∈ X:"
+            ]
+                ++ List.map
+                    (\( x, ys ) ->
+                        String.fromInt x
+                            ++ " is in relation with "
+                            ++ String.fromInt (List.length ys)
+                            ++ " elements: "
+                            ++ showIntListAsSet ys
+                    )
+                    xsToYs
+        }
 
 
 isFunction : DerivedInfo -> Bool
@@ -1079,7 +1136,7 @@ explainFunction info =
     let
         definition =
             "Definition: a relation R ⊆ X ⨯ X is a function if it is both: "
-                ++ "univalent (∀ x, y, z ∈ X: (x, y) ∈ R (x, z) ∈ R ⇒ y = z) and "
+                ++ "univalent (∀ x, y, z ∈ X: (x, y) ∈ R ∧ (x, z) ∈ R ⇒ y = z) and "
                 ++ "total (∀ x ∈ X: ∃ y ∈ X: (x, y) ∈ R)."
     in
     if Set.isEmpty info.superfluousForFunction && Set.isEmpty info.emptyRowIndices then
@@ -1572,8 +1629,8 @@ genAsymAntisymHelp trueProb n pairs =
             )
 
 
-genPartialFunction : Int -> Generator Rel
-genPartialFunction n =
+genFunctionalRelation : Int -> Generator Rel
+genFunctionalRelation n =
     -- Like genFunction except we geneerate 1 extra element (n) which
     -- leads to Array.initialize not setting any element in given row to True
     Random.int 0 n

@@ -12,7 +12,7 @@
     - [x] Resize existing relation without changing its elements
     - [ ] Generate random relation
         - [x] any
-        - [x] partial function
+        - [x] functional (also called right-unique or univalent)
             - [x] function
                 - [x] bijective
                     - [ ] involution
@@ -28,7 +28,7 @@
     - [x] asymmetric (<=> antisymmetric and irreflexive)
     - [x] connected
     - [x] acyclic
-    - [x] partial function
+    - [x] functional
         - [x] total function
             - [ ] surjective
             - [ ] injective
@@ -45,8 +45,8 @@
     - [x] transitive
     - [x] connected
     - [x] acyclic
-    - [x] partial function
-    - [x] function
+    - [x] functional (also called right-unique or univalent)
+    - [x] function (total) -- TODO replace this with left-total and treat functions as both functional and left-total
     - [ ] bijection
     - [ ] derangement
     - [ ] involution

@@ -86,7 +86,7 @@ type Msg
     | GenSymmetric
     | GenAntisymmetric
     | GenAsymmetric
-    | GenPartialFunction
+    | GenFunctional
     | GenFunction
     | GenBijectiveFunction
     | GotRandom Rel
@@ -101,7 +101,7 @@ type Msg
     | ExplainTransitive
     | ExplainAcyclic
     | ExplainWhyNotConnected
-    | ExplainWhyNotPartialFunction
+    | ExplainFunctional
     | ExplainFunction
     | UndoHistory
     | NoOp
@@ -177,8 +177,8 @@ update msg model =
         GenAsymmetric ->
             generateRel (Rel.genAsymmetricRelation model.trueProb) model
 
-        GenPartialFunction ->
-            generateRel Rel.genPartialFunction model
+        GenFunctional ->
+            generateRel Rel.genFunctionalRelation model
 
         GenFunction ->
             generateRel Rel.genFunction model
@@ -213,6 +213,9 @@ update msg model =
         ExplainAcyclic ->
             pure { model | explanation = Just <| Rel.explainAcyclic model.derivedInfo }
 
+        ExplainFunctional ->
+            pure { model | explanation = Just <| Rel.explainFunctional model.derivedInfo }
+
         ExplainWhyNotConnected ->
             let
                 missing =
@@ -234,28 +237,6 @@ update msg model =
                                 -- TODO pluralize properly based on the number of pairs
                                 , "These are the problematic pair(s): " ++ problematicPairs
                                 , "We would have to add at least one of each such pair to make the relation connected."
-                                ]
-                            }
-                }
-
-        ExplainWhyNotPartialFunction ->
-            let
-                superfluous =
-                    Rel.superfluousForPartialFunction model.rel
-            in
-            pure
-                { model
-                    | explanation =
-                        Just
-                            { redHighlight = superfluous
-                            , greenHighlight = Set.empty
-                            , lines =
-                                [ "This relation is not a partial function."
-                                , "To be partial function there should be at most one pair (a,b) for each a ∈ X."
-
-                                -- TODO pluralize properly
-                                , "But some a's we have multiple pairs(s): " ++ Rel.showPairSet superfluous
-                                , "We would have to remove some of these so that each row has at most one pair."
                                 ]
                             }
                 }
@@ -455,12 +436,12 @@ propertyConfigs =
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainAcyclic
       }
-    , { propertyName = "Partial function"
-      , wikiLink = "https://en.wikipedia.org/wiki/Partial_function"
-      , hasProperty = .isPartialFunction
+    , { propertyName = "Functional"
+      , wikiLink = "https://en.wikipedia.org/wiki/Binary_relation#Special_types_of_binary_relations"
+      , hasProperty = Rel.isFunctional
       , buttons = []
-      , genRandom = Just GenPartialFunction
-      , onHoverExplanation = Just ExplainWhyNotPartialFunction
+      , genRandom = Just GenFunctional
+      , onHoverExplanation = Just ExplainFunctional
       }
     , { propertyName = "Function"
       , wikiLink = "https://en.wikipedia.org/wiki/Function_(mathematics)"
