@@ -40,20 +40,31 @@ init _ =
 
         initRel =
             Rel.empty initSize
+
+        initDerivedInfo =
+            Rel.deriveInfo initRel
     in
     ( { rel = initRel
       , history = []
-      , derivedInfo = Rel.deriveInfo initRel
+      , derivedInfo = initDerivedInfo
       , explanation = Nothing
       , trueProb = 0.2
       }
-    , renderGraph initRel
+    , renderGraph initRel (Rel.isAcyclic initDerivedInfo)
     )
 
 
-renderGraph : Rel -> Cmd msg
-renderGraph =
-    Rel.toDotSource >> Ports.renderDot
+renderGraph : Rel -> Bool -> Cmd msg
+renderGraph rel isAcyclic =
+    Ports.renderDot
+        { engine =
+            if isAcyclic then
+                "dot"
+
+            else
+                "neato"
+        , dotSource = Rel.toDotSource rel
+        }
 
 
 type Msg
@@ -264,13 +275,16 @@ updateRel f model =
     let
         newRel =
             f model.rel
+
+        newDerivedInfo =
+            Rel.deriveInfo newRel
     in
     ( { model
         | rel = newRel
+        , derivedInfo = newDerivedInfo
         , history = model.rel :: model.history
-        , derivedInfo = Rel.deriveInfo newRel
       }
-    , renderGraph newRel
+    , renderGraph newRel (Rel.isAcyclic newDerivedInfo)
     )
 
 
@@ -281,12 +295,16 @@ undoHistory model =
             ( model, Cmd.none )
 
         prevRel :: rest ->
+            let
+                prevDerivedInfo =
+                    Rel.deriveInfo prevRel
+            in
             ( { model
                 | rel = prevRel
+                , derivedInfo = prevDerivedInfo
                 , history = rest
-                , derivedInfo = Rel.deriveInfo prevRel
               }
-            , renderGraph prevRel
+            , renderGraph prevRel (Rel.isAcyclic prevDerivedInfo)
             )
 
 

@@ -1,4 +1,4 @@
 port module Ports exposing (renderDot)
 
 
-port renderDot : String -> Cmd msg
+port renderDot : { engine : String, dotSource : String } -> Cmd msg
