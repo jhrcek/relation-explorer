@@ -16,27 +16,30 @@
       node: document.querySelector('main')
     })
 
-    const vizRenderOptions = {
-      engine: 'neato',
-      graphAttributes: {
-        splines: true,
-        overlap: false
-      },
-      edgeAttributes: {
-        arrowsize: 0.5
-      },
-      nodeAttributes: {
-        shape: 'circle',
-        width: 0.3,
-        fixedsize: true
-      },
+    const vizRenderOptions = function (engine) {
+      return {
+        engine: engine,
+        graphAttributes: {
+          splines: true,
+          overlap: false,
+          rankdir: 'BT'
+        },
+        edgeAttributes: {
+          arrowsize: 0.5
+        },
+        nodeAttributes: {
+          shape: 'circle',
+          width: 0.3,
+          fixedsize: true
+        },
+      }
     };
 
-    app.ports.renderDot.subscribe(dotSource => {
+    app.ports.renderDot.subscribe(args => {
       Viz.instance().then(viz => {
         const graph = document.getElementById('graph');
         graph.innerHTML = '';
-        const svg = viz.renderSVGElement(dotSource, vizRenderOptions);
+        const svg = viz.renderSVGElement(args.dotSource, vizRenderOptions(args.engine));
         graph.appendChild(svg);
       });
     });
