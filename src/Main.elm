@@ -88,6 +88,7 @@ type Msg
     | GenFunctional
     | GenLeftTotal
     | GenBijectiveFunction
+    | GenInvolution
     | GotRandom Rel
       -- Explanations
     | HideExplanations
@@ -184,6 +185,9 @@ update msg model =
 
         GenBijectiveFunction ->
             generateRel Rel.genBijectiveFunction model
+
+        GenInvolution ->
+            generateRel Rel.genInvolution model
 
         HideExplanations ->
             pure { model | explanation = Nothing }
@@ -442,7 +446,7 @@ propertyConfigs =
       , wikiLink = "https://en.wikipedia.org/wiki/Involution_(mathematics)"
       , hasProperty = .isInvolution
       , buttons = []
-      , genRandom = Nothing
+      , genRandom = Just GenInvolution
 
       -- TODO explain why not involution
       , onHoverExplanation = Nothing

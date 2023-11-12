@@ -12,11 +12,11 @@
     - [x] Resize existing relation without changing its elements
     - [ ] Generate random relation
         - [x] any
+        - [x] (left-)total
         - [x] functional (also called right-unique or univalent)
-            - [x] function
-                - [x] bijective
-                    - [ ] involution
-                    - [ ] derangement
+            - [x] bijective
+                - [x] involution
+                - [ ] derangement
         - [ ] random relation that is any of the well defined types (equivalence, function, reflexive, lattice etc.)
 
 - [ ] Show whether the specified relation satisfies well-known properties:

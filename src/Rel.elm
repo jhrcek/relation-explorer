@@ -25,6 +25,7 @@ module Rel exposing
     , genAsymmetricRelation
     , genBijectiveFunction
     , genFunctionalRelation
+    , genInvolution
     , genIrreflexiveRelation
     , genLeftTotal
     , genReflexiveRelation
@@ -66,6 +67,7 @@ import List.Extra as List
 import Random exposing (Generator)
 import Random.Array
 import Random.Extra as Random
+import Random.List
 import Set exposing (Set)
 
 
@@ -1676,6 +1678,51 @@ genBijectiveFunction n =
                 Array.map (\indexOfTrue -> Array.initialize n (\i -> i == indexOfTrue)) shuffledArr
                     |> Rel
             )
+
+
+genInvolution : Int -> Generator Rel
+genInvolution n =
+    let
+        go : List Int -> Int -> List ( Int, Int ) -> Generator (List ( Int, Int ))
+        go choices x generatedPairs =
+            -- elm-review: IGNORE TCO
+            Random.List.choose choices
+                |> Random.andThen
+                    (\( my, restChoices ) ->
+                        case my of
+                            Just y ->
+                                let
+                                    newChoices =
+                                        List.filter (\c -> c /= x && c /= y) restChoices
+
+                                    nextX =
+                                        List.minimum newChoices |> Maybe.withDefault 0
+
+                                    newGeneratedPairs =
+                                        if x == y then
+                                            -- fixed point
+                                            ( x, y ) :: generatedPairs
+
+                                        else
+                                            -- cycle of length 2
+                                            ( x, y ) :: ( y, x ) :: generatedPairs
+                                in
+                                go newChoices nextX newGeneratedPairs
+
+                            Nothing ->
+                                Random.constant generatedPairs
+                    )
+
+        mkRel : List ( Int, Int ) -> Rel
+        mkRel pairs =
+            Rel <|
+                Array.initialize n <|
+                    \i ->
+                        Array.initialize n <|
+                            \j -> List.member ( i, j ) pairs
+    in
+    go (List.range 0 (n - 1)) 0 []
+        |> Random.map mkRel
 
 
 
