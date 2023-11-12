@@ -177,7 +177,7 @@ update msg model =
             generateRel (Rel.genAsymmetricRelation model.trueProb) model
 
         GenFunctional ->
-            generateRel Rel.genFunctionalRelation model
+            generateRel (Rel.genFunctionalRelation model.trueProb) model
 
         GenLeftTotal ->
             generateRel (Rel.genLeftTotal model.trueProb) model
@@ -399,7 +399,10 @@ propertyConfigs =
     , { propertyName = "Acyclic"
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"
       , hasProperty = Rel.isAcyclic
-      , buttons = [ ButtonConfig "Transitive Reduction" DoTransitiveReduction (not << Rel.isAcyclic) ]
+      , buttons =
+            [ -- TODO disable this button if TR wouldn't remove any more edges
+              ButtonConfig "Transitive Reduction" DoTransitiveReduction (not << Rel.isAcyclic)
+            ]
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainAcyclic
       }

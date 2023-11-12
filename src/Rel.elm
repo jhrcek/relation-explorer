@@ -1639,12 +1639,18 @@ genAsymAntisymHelp trueProb n pairs =
             )
 
 
-genFunctionalRelation : Int -> Generator Rel
-genFunctionalRelation n =
-    -- Like genFunction except we geneerate 1 extra element (n) which
-    -- leads to Array.initialize not setting any element in given row to True
-    Random.int 0 n
-        |> Random.map (\i -> Array.initialize n (\j -> j == i))
+genFunctionalRelation : Float -> Int -> Generator Rel
+genFunctionalRelation trueProb n =
+    -- trueProb determines how likely we are to generate single element in row i
+    genBool trueProb
+        |> Random.andThen
+            (\includei ->
+                if includei then
+                    Random.map (\i -> Array.initialize n (\j -> j == i)) <| Random.int 0 (n - 1)
+
+                else
+                    Random.constant <| Array.repeat n False
+            )
         |> Random.list n
         |> Random.map (Array.fromList >> Rel)
 
