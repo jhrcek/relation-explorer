@@ -7,7 +7,6 @@ import Html.Events as E
 import Ports
 import Random exposing (Generator)
 import Rel exposing (DerivedInfo, Explanation, Rel)
-import Set exposing (Set)
 
 
 main : Program () Model Msg
@@ -100,7 +99,7 @@ type Msg
     | ExplainAsymmetric
     | ExplainTransitive
     | ExplainAcyclic
-    | ExplainWhyNotConnected
+    | ExplainConnected
     | ExplainFunctional
     | ExplainLeftTotal
     | UndoHistory
@@ -216,30 +215,8 @@ update msg model =
         ExplainFunctional ->
             pure { model | explanation = Just <| Rel.explainFunctional model.derivedInfo }
 
-        ExplainWhyNotConnected ->
-            let
-                missing =
-                    Rel.missingForConnectedness model.rel
-
-                problematicPairs =
-                    renderMirrorImagePairs missing
-            in
-            pure
-                { model
-                    | explanation =
-                        Just
-                            { redHighlight = missing
-                            , greenHighlight = Set.empty
-                            , lines =
-                                [ "This relation is not connected."
-                                , "To be connected, it would have to contain at least one of the elements (a,b) or (b,a), for each a ≠ b."
-
-                                -- TODO pluralize properly based on the number of pairs
-                                , "These are the problematic pair(s): " ++ problematicPairs
-                                , "We would have to add at least one of each such pair to make the relation connected."
-                                ]
-                            }
-                }
+        ExplainConnected ->
+            pure { model | explanation = Just <| Rel.explainConnected model.derivedInfo }
 
         ExplainLeftTotal ->
             pure { model | explanation = Just <| Rel.explainLeftTotal model.derivedInfo }
@@ -304,16 +281,6 @@ pure a =
 relConfig : Rel.Config Msg
 relConfig =
     { toggle = ToggleRel }
-
-
-{-| select subset of pairs above diagonal and render them as pairs of pairs connected by "<->"
--}
-renderMirrorImagePairs : Set Rel.Pair -> String
-renderMirrorImagePairs pairs =
-    Set.toList pairs
-        |> List.filter (\( a, b ) -> a > b)
-        |> List.map (\( a, b ) -> Rel.showPair ( a, b ) ++ " <-> " ++ Rel.showPair ( b, a ))
-        |> String.join ", "
 
 
 view : Model -> Html Msg
@@ -424,10 +391,10 @@ propertyConfigs =
       }
     , { propertyName = "Connected"
       , wikiLink = "https://en.wikipedia.org/wiki/Connected_relation"
-      , hasProperty = .isConnected
+      , hasProperty = Rel.isConnected
       , buttons = []
       , genRandom = Nothing
-      , onHoverExplanation = Just ExplainWhyNotConnected
+      , onHoverExplanation = Just ExplainConnected
       }
     , { propertyName = "Acyclic"
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"

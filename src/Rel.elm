@@ -13,6 +13,7 @@ module Rel exposing
     , explainAcyclic
     , explainAntisymmetric
     , explainAsymmetric
+    , explainConnected
     , explainFunctional
     , explainIrreflexive
     , explainLeftTotal
@@ -32,20 +33,19 @@ module Rel exposing
     , isAcyclic
     , isAntisymmetric
     , isAsymmetric
+    , isConnected
     , isFunctional
     , isIrreflexive
     , isLeftTotal
     , isReflexive
     , isSymmetric
     , isTransitive
-    , missingForConnectedness
     , reflexiveClosure
     , reflexiveReduction
     , resize
     , scc
     , showElements
     , showIntListAsSet
-    , showPair
     , size
     , symmetricClosure
     , toDotSource
@@ -115,8 +115,8 @@ type alias DerivedInfo =
     , missingForTransitivity : ( Set Pair, List TransitiveClosureStep )
     , superfluousForFunctional : Set Pair
     , superfluousForFunction : Set Pair
+    , missingForConnectedness : Set Pair
     , emptyRowIndices : Set Int
-    , isConnected : Bool
     , isBijectiveFunction : Bool
     , isDerangement : Bool
     , isInvolution : Bool
@@ -145,7 +145,7 @@ deriveInfo rel =
     , superfluousForAsymmetry = superfluousForAsymmetry rel
     , missingForTransitivity = missingForTransitivity rel
     , superfluousForFunctional = superfluousForFunctional rel
-    , isConnected = isConnected rel
+    , missingForConnectedness = missingForConnectedness rel
     , superfluousForFunction = superfluousForFunction
     , emptyRowIndices = emptyRowIndices
     , isBijectiveFunction = isBijectiveFunction rel
@@ -856,24 +856,43 @@ explainTransitive info =
         }
 
 
-{-| a/=b ⇒ aRb or bRa
+{-| ∀ x, y ∈ X: x ≠ y ⇒ (x, y) ∈ R ∨ (y, x) ∈ R
 -}
-isConnected : Rel -> Bool
-isConnected (Rel rows) =
+isConnected : DerivedInfo -> Bool
+isConnected info =
+    Set.isEmpty info.missingForConnectedness
+
+
+explainConnected : DerivedInfo -> Explanation
+explainConnected info =
     let
-        maxIndex =
-            Array.length rows - 1
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is connected if ∀ x, y ∈ X: x ≠ y ⇒ (x, y) ∈ R ∨ (y, x) ∈ R."
     in
-    arrayAnd <|
-        Array.indexedMap
-            (\i row ->
-                List.range (i + 1) maxIndex
-                    |> List.all
-                        (\j ->
-                            Maybe.withDefault False (Array.get j row) || unsafeGet j i rows
-                        )
-            )
-            rows
+    if Set.isEmpty info.missingForConnectedness then
+        { greenHighlight = Set.empty
+        , redHighlight = Set.empty
+        , lines =
+            [ "This relation is connected."
+            , definition
+            ]
+        }
+
+    else
+        { greenHighlight = Set.empty
+        , redHighlight = info.missingForConnectedness
+        , lines =
+            [ "This relation is not connected."
+            , definition
+            , explanationPrefix "connected: ∃ x, y ∈ X: x ≠ y ∧ (x, y) ∉ R ∧ (y, x) ∉ R."
+            , "These pairs of elements are problematic: "
+            ]
+                ++ (Set.toList info.missingForConnectedness
+                        |> List.filter (\( a, b ) -> a > b)
+                        |> List.map (\( x, y ) -> "Both " ++ showPair ( x, y ) ++ " and " ++ showPair ( y, x ) ++ " are missing. ✗")
+                   )
+                ++ [ "We would have to add at least one of each to make the relation connected." ]
+        }
 
 
 {-| A binary relation is acyclic if it contains no cycles.
