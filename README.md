@@ -29,12 +29,12 @@
     - [x] connected
     - [x] acyclic
     - [x] functional
-        - [x] total function
-            - [ ] surjective
-            - [ ] injective
-            - [x] bijective
-                - [x] derangement
-                - [x] involution
+    - [x] (left-)total
+        - [ ] surjective
+        - [ ] injective
+        - [x] bijective
+            - [x] derangement
+            - [x] involution
 
 - [ ] Add an explanation for each property, showing why given relation satisfied given property (or not). Highlight relevant elements in explanation
     - [x] reflexive
@@ -46,7 +46,7 @@
     - [x] connected
     - [x] acyclic
     - [x] functional (also called right-unique or univalent)
-    - [x] function (total) -- TODO replace this with left-total and treat functions as both functional and left-total
+    - [x] (left-)total
     - [ ] bijection
     - [ ] derangement
     - [ ] involution

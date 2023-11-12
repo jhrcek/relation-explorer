@@ -13,9 +13,9 @@ module Rel exposing
     , explainAcyclic
     , explainAntisymmetric
     , explainAsymmetric
-    , explainFunction
     , explainFunctional
     , explainIrreflexive
+    , explainLeftTotal
     , explainReflexive
     , explainRelation
     , explainSymmetric
@@ -23,18 +23,18 @@ module Rel exposing
     , genAntisymmetricRelation
     , genAsymmetricRelation
     , genBijectiveFunction
-    , genFunction
     , genFunctionalRelation
     , genIrreflexiveRelation
+    , genLeftTotal
     , genReflexiveRelation
     , genRelation
     , genSymmetricRelation
     , isAcyclic
     , isAntisymmetric
     , isAsymmetric
-    , isFunction
     , isFunctional
     , isIrreflexive
+    , isLeftTotal
     , isReflexive
     , isSymmetric
     , isTransitive
@@ -64,7 +64,7 @@ import Html.Events as E
 import List
 import List.Extra as List
 import Random exposing (Generator)
-import Random.Array as Array
+import Random.Array
 import Random.Extra as Random
 import Set exposing (Set)
 
@@ -1101,9 +1101,9 @@ explainFunctional info =
         }
 
 
-isFunction : DerivedInfo -> Bool
-isFunction info =
-    Set.isEmpty info.superfluousForFunction && Set.isEmpty info.emptyRowIndices
+isLeftTotal : DerivedInfo -> Bool
+isLeftTotal info =
+    Set.isEmpty info.emptyRowIndices
 
 
 superfluousAndMissingForFunction : Rel -> ( Set Pair, Set Int )
@@ -1131,55 +1131,46 @@ superfluousAndMissingForFunction (Rel rows) =
             ( Set.empty, Set.empty )
 
 
-explainFunction : DerivedInfo -> Explanation
-explainFunction info =
+explainLeftTotal : DerivedInfo -> Explanation
+explainLeftTotal info =
     let
         definition =
-            "Definition: a relation R ⊆ X ⨯ X is a function if it is both: "
-                ++ "univalent (∀ x, y, z ∈ X: (x, y) ∈ R ∧ (x, z) ∈ R ⇒ y = z) and "
-                ++ "total (∀ x ∈ X: ∃ y ∈ X: (x, y) ∈ R)."
+            "Definition: a relation R ⊆ X ⨯ X is left-total if ∀ x ∈ X: ∃ y ∈ X: (x, y) ∈ R."
     in
-    if Set.isEmpty info.superfluousForFunction && Set.isEmpty info.emptyRowIndices then
+    if Set.isEmpty info.emptyRowIndices then
         { greenHighlight = Set.empty
         , redHighlight = Set.empty
         , lines =
-            [ "This relation is a function."
+            [ "This relation is left-total."
             , definition
-            , "In words this means that every x ∈ X needs to be in relation with exactly one y ∈ X, which is the case."
+            , "Intuitively, this means that every x ∈ X needs to be in relation with at least y ∈ X, which is the case."
             ]
         }
 
     else
         { greenHighlight = Set.empty
         , redHighlight =
-            Set.union info.superfluousForFunction
-                (Set.toList info.emptyRowIndices
-                    |> List.andThen
-                        (\i -> List.map (Tuple.pair i) info.domain)
-                    |> Set.fromList
-                )
+            Set.toList info.emptyRowIndices
+                |> List.andThen (\i -> List.map (Tuple.pair i) info.domain)
+                |> Set.fromList
         , lines =
-            [ "This relation is not a function."
+            [ "This relation is not left-total."
             , definition
+            , explanationPrefix "left-total: ∃ x ∈ X: ∀ y ∈ X: (x, y) ∉ R."
             ]
-                ++ (if not (Set.isEmpty info.superfluousForFunction) then
-                        "It is not univalent, because there are some x ∈ X that map to more than one y ∈ X:"
-                            :: (Set.toList info.superfluousForFunction
-                                    |> List.gatherEqualsBy Tuple.first
-                                    |> List.map (\( ( x, y ), rest ) -> String.fromInt x ++ " is in relation with " ++ String.fromInt (1 + List.length rest) ++ " elements: " ++ showPairListAsSet (( x, y ) :: rest))
-                               )
-
-                    else
-                        []
-                   )
-                ++ (if not (Set.isEmpty info.emptyRowIndices) then
-                        "It is not total, because there are some x ∈ X that are not in relation with any y ∈ X:"
-                            :: (Set.toList info.emptyRowIndices
-                                    |> List.map (\i -> String.fromInt i ++ " is not in relation with any element.")
-                               )
-
-                    else
-                        []
+                ++ (let
+                        ( isAre, elements_ ) =
+                            isAreElements <| Set.size info.emptyRowIndices
+                    in
+                    [ "There "
+                        ++ isAre
+                        ++ " "
+                        ++ elements_
+                        ++ " which "
+                        ++ isAre
+                        ++ " not in relation with any elements y ∈ X:"
+                        ++ showIntListAsSet (Set.toList info.emptyRowIndices)
+                    ]
                    )
         }
 
@@ -1639,10 +1630,14 @@ genFunctionalRelation n =
         |> Random.map (Array.fromList >> Rel)
 
 
-genFunction : Int -> Generator Rel
-genFunction n =
-    Random.int 0 (n - 1)
-        |> Random.map (\i -> Array.initialize n (\j -> j == i))
+genLeftTotal : Float -> Int -> Generator Rel
+genLeftTotal trueProb n =
+    -- One element has to be there for totality
+    Random.map ((::) True)
+        -- Plus remaining n-1 elements with trueProb
+        (Random.sequence (List.repeat (n - 1) (genBool trueProb)))
+        |> Random.map Array.fromList
+        |> Random.andThen Random.Array.shuffle
         |> Random.list n
         |> Random.map (Array.fromList >> Rel)
 
@@ -1650,7 +1645,7 @@ genFunction n =
 genBijectiveFunction : Int -> Generator Rel
 genBijectiveFunction n =
     Array.initialize n identity
-        |> Array.shuffle
+        |> Random.Array.shuffle
         |> Random.map
             (\shuffledArr ->
                 Array.map (\indexOfTrue -> Array.initialize n (\i -> i == indexOfTrue)) shuffledArr

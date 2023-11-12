@@ -87,7 +87,7 @@ type Msg
     | GenAntisymmetric
     | GenAsymmetric
     | GenFunctional
-    | GenFunction
+    | GenLeftTotal
     | GenBijectiveFunction
     | GotRandom Rel
       -- Explanations
@@ -102,7 +102,7 @@ type Msg
     | ExplainAcyclic
     | ExplainWhyNotConnected
     | ExplainFunctional
-    | ExplainFunction
+    | ExplainLeftTotal
     | UndoHistory
     | NoOp
 
@@ -180,8 +180,8 @@ update msg model =
         GenFunctional ->
             generateRel Rel.genFunctionalRelation model
 
-        GenFunction ->
-            generateRel Rel.genFunction model
+        GenLeftTotal ->
+            generateRel (Rel.genLeftTotal model.trueProb) model
 
         GenBijectiveFunction ->
             generateRel Rel.genBijectiveFunction model
@@ -241,8 +241,8 @@ update msg model =
                             }
                 }
 
-        ExplainFunction ->
-            pure { model | explanation = Just <| Rel.explainFunction model.derivedInfo }
+        ExplainLeftTotal ->
+            pure { model | explanation = Just <| Rel.explainLeftTotal model.derivedInfo }
 
         UndoHistory ->
             undoHistory model
@@ -443,12 +443,12 @@ propertyConfigs =
       , genRandom = Just GenFunctional
       , onHoverExplanation = Just ExplainFunctional
       }
-    , { propertyName = "Function"
-      , wikiLink = "https://en.wikipedia.org/wiki/Function_(mathematics)"
-      , hasProperty = Rel.isFunction
+    , { propertyName = "(Left-)Total"
+      , wikiLink = "https://en.wikipedia.org/wiki/Total_relation"
+      , hasProperty = Rel.isLeftTotal
       , buttons = []
-      , genRandom = Just GenFunction
-      , onHoverExplanation = Just ExplainFunction
+      , genRandom = Just GenLeftTotal
+      , onHoverExplanation = Just ExplainLeftTotal
       }
     , { propertyName = "Bijection (Permutation)"
       , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
