@@ -64,6 +64,7 @@ type Msg
     | DoReflexiveReduction
     | DoSymmetricClosure
     | DoTransitiveClosure
+    | DoTransitiveReduction
     | DoComplement
     | DoConverse
     | MakeEmpty
@@ -87,10 +88,10 @@ type Msg
     | ExplainAntisymmetric
     | ExplainAsymmetric
     | ExplainTransitive
+    | ExplainAcyclic
     | ExplainWhyNotConnected
     | ExplainWhyNotPartialFunction
     | ExplainFunction
-    | ExplainWhyNotAcyclic
     | UndoHistory
     | NoOp
 
@@ -126,6 +127,14 @@ update msg model =
 
         DoTransitiveClosure ->
             updateRel Rel.transitiveClosure model
+
+        DoTransitiveReduction ->
+            case model.derivedInfo.acyclic of
+                Ok acyclic ->
+                    updateRel (\_ -> Rel.transitiveReduction acyclic) model
+
+                Err _ ->
+                    pure model
 
         DoComplement ->
             updateRel Rel.complement model
@@ -190,6 +199,9 @@ update msg model =
         ExplainTransitive ->
             pure { model | explanation = Just <| Rel.explainTransitive model.derivedInfo }
 
+        ExplainAcyclic ->
+            pure { model | explanation = Just <| Rel.explainAcyclic model.derivedInfo }
+
         ExplainWhyNotConnected ->
             let
                 missing =
@@ -239,38 +251,6 @@ update msg model =
 
         ExplainFunction ->
             pure { model | explanation = Just <| Rel.explainFunction model.derivedInfo }
-
-        ExplainWhyNotAcyclic ->
-            let
-                elemsToPairs xs =
-                    case xs of
-                        [] ->
-                            []
-
-                        fst :: rest ->
-                            List.map2 Tuple.pair xs (rest ++ [ fst ])
-            in
-            pure
-                { model
-                    | explanation =
-                        Maybe.map
-                            (\cycleElems ->
-                                let
-                                    cyclePairs =
-                                        elemsToPairs cycleElems
-                                in
-                                { redHighlight = Set.fromList cyclePairs
-                                , greenHighlight = Set.empty
-                                , lines =
-                                    [ "This relation is not acyclic."
-                                    , "The following pairs form a cycle: " ++ Rel.showPairList cyclePairs
-                                    , "so the cycle consists of these elements: " ++ Rel.showIntList cycleElems
-                                    ]
-                                }
-                            )
-                        <|
-                            Rel.findCycle model.rel
-                }
 
         UndoHistory ->
             undoHistory model
@@ -327,11 +307,6 @@ relConfig =
     { toggle = ToggleRel }
 
 
-readOnlyConfig : Rel.Config Msg
-readOnlyConfig =
-    { toggle = \_ _ -> NoOp }
-
-
 {-| select subset of pairs above diagonal and render them as pairs of pairs connected by "<->"
 -}
 renderMirrorImagePairs : Set Rel.Pair -> String
@@ -355,43 +330,17 @@ view model =
             , Html.div [ A.id "explanation" ]
                 [ Html.div []
                     [ Html.div []
-                        [ Html.text <| "X = " ++ Rel.showIntList (Rel.domain model.rel)
-                        ]
+                        [ Html.text <| "X = " ++ Rel.showIntListAsSet (Rel.domain model.rel) ]
                     , Html.div []
-                        [ Html.text <| "R ⊆ X ⨯ X, R = " ++ Rel.showElements model.rel
-                        ]
+                        [ Html.text <| "R ⊆ X ⨯ X, R = " ++ Rel.showElements model.rel ]
                     , Html.div []
                         [ Html.text <|
                             "Strongly connected components: "
                                 ++ String.join ", "
-                                    (List.map Rel.showIntList <|
+                                    (List.map Rel.showIntListAsSet <|
                                         Rel.scc model.rel
                                     )
                         ]
-                    , case model.derivedInfo.acyclic of
-                        Ok acyclic ->
-                            Html.div []
-                                [ Html.text "This relation is acyclic"
-                                , Html.div [ A.class "indent" ]
-                                    [ Html.text <|
-                                        "Topological sort: ["
-                                            ++ String.join ", " (List.map String.fromInt <| Rel.topologicalSort acyclic)
-                                            ++ "]"
-                                    , Html.div [] [ Html.text "Transitive reduction: " ]
-                                    , Html.div [] [ Rel.view readOnlyConfig (Rel.transitiveReduction acyclic) Nothing ]
-                                    ]
-                                ]
-
-                        Err cycle ->
-                            Html.div []
-                                [ Html.text "This relation is not acyclic"
-                                , Html.div [ A.class "indent" ]
-                                    [ Html.text <|
-                                        "It contains a cycle: ["
-                                            ++ String.join ", " (List.map String.fromInt cycle)
-                                            ++ "]"
-                                    ]
-                                ]
                     , case model.explanation of
                         Just exp ->
                             Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.lines
@@ -419,6 +368,7 @@ type alias PropertyConfig msg =
 type alias ButtonConfig msg =
     { label : String
     , message : msg
+    , disabled : DerivedInfo -> Bool
     }
 
 
@@ -434,21 +384,21 @@ propertyConfigs =
     , { propertyName = "Reflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation"
       , hasProperty = Rel.isReflexive
-      , buttons = [ ButtonConfig "Closure" DoReflexiveClosure ]
+      , buttons = [ ButtonConfig "Closure" DoReflexiveClosure Rel.isReflexive ]
       , genRandom = Just GenReflexive
       , onHoverExplanation = Just ExplainReflexive
       }
     , { propertyName = "Irreflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity"
       , hasProperty = Rel.isIrreflexive
-      , buttons = [ ButtonConfig "Reduction" DoReflexiveReduction ]
+      , buttons = [ ButtonConfig "Reduction" DoReflexiveReduction Rel.isIrreflexive ]
       , genRandom = Just GenIrreflexive
       , onHoverExplanation = Just ExplainIrreflexive
       }
     , { propertyName = "Symmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
       , hasProperty = Rel.isSymmetric
-      , buttons = [ ButtonConfig "Closure" DoSymmetricClosure ]
+      , buttons = [ ButtonConfig "Closure" DoSymmetricClosure Rel.isSymmetric ]
       , genRandom = Just GenSymmetric
       , onHoverExplanation = Just ExplainSymmetric
       }
@@ -469,7 +419,7 @@ propertyConfigs =
     , { propertyName = "Transitive"
       , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
       , hasProperty = Rel.isTransitive
-      , buttons = [ ButtonConfig "Closure" DoTransitiveClosure ]
+      , buttons = [ ButtonConfig "Closure" DoTransitiveClosure Rel.isTransitive ]
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainTransitive
       }
@@ -483,9 +433,9 @@ propertyConfigs =
     , { propertyName = "Acyclic"
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"
       , hasProperty = Rel.isAcyclic
-      , buttons = []
+      , buttons = [ ButtonConfig "Transitive Reduction" DoTransitiveReduction (not << Rel.isAcyclic) ]
       , genRandom = Nothing
-      , onHoverExplanation = Just ExplainWhyNotAcyclic
+      , onHoverExplanation = Just ExplainAcyclic
       }
     , { propertyName = "Partial function"
       , wikiLink = "https://en.wikipedia.org/wiki/Partial_function"
@@ -546,7 +496,10 @@ elementaryPropertiesView derivedInfo =
                 , Html.td [] <|
                     List.map
                         (\butCfg ->
-                            Html.button [ E.onClick butCfg.message, A.disabled hasProp ]
+                            Html.button
+                                [ E.onClick butCfg.message
+                                , A.disabled <| butCfg.disabled derivedInfo
+                                ]
                                 [ Html.text butCfg.label ]
                         )
                         buttons

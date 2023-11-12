@@ -78,12 +78,13 @@
     - [x] reflexive reduction
     - [x] symmetric closure
     - [x] transitive closure
-    - [x] transitive reduction
+    - [x] transitive reduction (only on acyclic graphs)
     - [ ] equivalence closure
     - [x] composition (with itself)
     - [x] converse
     - [x] complement
     - [x] strongly connected components (of relation viewed as a graph)
+    - [x] topological sort (only on acyclic graphs)
     - [ ] calculate concept lattice (Binary relations have been described through their induced concept lattices)
 
 - [ ] mention properties of various operations (E.g. The union of two transitive relations need not be transitive, but intersection always is; converse and complement preserve symmetry etc.)

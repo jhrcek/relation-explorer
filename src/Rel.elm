@@ -10,6 +10,7 @@ module Rel exposing
     , deriveInfo
     , domain
     , empty
+    , explainAcyclic
     , explainAntisymmetric
     , explainAsymmetric
     , explainFunction
@@ -18,7 +19,6 @@ module Rel exposing
     , explainRelation
     , explainSymmetric
     , explainTransitive
-    , findCycle
     , genAntisymmetricRelation
     , genAsymmetricRelation
     , genBijectiveFunction
@@ -42,16 +42,14 @@ module Rel exposing
     , resize
     , scc
     , showElements
-    , showIntList
+    , showIntListAsSet
     , showPair
-    , showPairList
     , showPairSet
     , size
     , superfluousForPartialFunction
     , symmetricClosure
     , toDotSource
     , toggle
-    , topologicalSort
     , transitiveClosure
     , transitiveReduction
     , view
@@ -956,6 +954,45 @@ findCycle (Rel rows) =
         |> List.findMap dfs
 
 
+explainAcyclic : DerivedInfo -> Explanation
+explainAcyclic info =
+    case info.acyclic of
+        Ok acyclic ->
+            { greenHighlight = Set.empty
+            , redHighlight = Set.empty
+            , lines =
+                [ "This relation is acyclic."
+
+                -- TODO this leaves something to be desired
+                , "Explanation: the transitive closure of this relation is antisymmetric, so it is acyclic."
+                , "Acyclic relations can be sorted topologically. Example top. sort: "
+                    ++ showIntListAsList (topologicalSort acyclic)
+                ]
+            }
+
+        Err cycle ->
+            let
+                elemsToPairs xs =
+                    case xs of
+                        [] ->
+                            []
+
+                        fst :: rest ->
+                            List.map2 Tuple.pair xs (rest ++ [ fst ])
+
+                cyclePairs =
+                    elemsToPairs cycle
+            in
+            { redHighlight = Set.fromList cyclePairs
+            , greenHighlight = Set.empty
+            , lines =
+                [ "This relation is not acyclic."
+                , "The following pairs form a cycle: " ++ showPairListAsSet cyclePairs
+                , "so the cycle consists of this sequence of elements: " ++ showIntListAsList cycle
+                ]
+            }
+
+
 missingForConnectedness : Rel -> Set Pair
 missingForConnectedness rel =
     difference (complement (union rel (converse rel))) (eye (size rel))
@@ -1072,7 +1109,7 @@ explainFunction info =
                         "It is not univalent, because there are some x ∈ X that map to more than one y ∈ X:"
                             :: (Set.toList info.superfluousForFunction
                                     |> List.gatherEqualsBy Tuple.first
-                                    |> List.map (\( ( x, y ), rest ) -> String.fromInt x ++ " is in relation with " ++ String.fromInt (1 + List.length rest) ++ " elements: " ++ showPairList (( x, y ) :: rest))
+                                    |> List.map (\( ( x, y ), rest ) -> String.fromInt x ++ " is in relation with " ++ String.fromInt (1 + List.length rest) ++ " elements: " ++ showPairListAsSet (( x, y ) :: rest))
                                )
 
                     else
@@ -1633,26 +1670,33 @@ headerCell i =
 
 showElements : Rel -> String
 showElements =
-    elements >> showPairList
+    elements >> showPairListAsSet
 
 
 showPairSet : Set Pair -> String
 showPairSet pairs =
-    Set.toList pairs |> List.sort |> showPairList
+    Set.toList pairs |> List.sort |> showPairListAsSet
 
 
-showPairList : List Pair -> String
-showPairList pairs =
+showPairListAsSet : List Pair -> String
+showPairListAsSet pairs =
     List.map showPair pairs
         |> String.join ", "
         |> (\s -> "{" ++ s ++ "}")
 
 
-showIntList : List Int -> String
-showIntList list =
+showIntListAsSet : List Int -> String
+showIntListAsSet list =
     List.map String.fromInt list
         |> String.join ", "
         |> (\s -> "{" ++ s ++ "}")
+
+
+showIntListAsList : List Int -> String
+showIntListAsList list =
+    List.map String.fromInt list
+        |> String.join ", "
+        |> (\s -> "[" ++ s ++ "]")
 
 
 showPair : Pair -> String
