@@ -78,7 +78,7 @@
     - [x] reflexive reduction
     - [x] symmetric closure
     - [x] transitive closure
-    - [ ] transitive reduction
+    - [x] transitive reduction
     - [ ] equivalence closure
     - [x] composition (with itself)
     - [x] converse

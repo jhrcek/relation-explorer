@@ -327,6 +327,11 @@ relConfig =
     { toggle = ToggleRel }
 
 
+readOnlyConfig : Rel.Config Msg
+readOnlyConfig =
+    { toggle = \_ _ -> NoOp }
+
+
 {-| select subset of pairs above diagonal and render them as pairs of pairs connected by "<->"
 -}
 renderMirrorImagePairs : Set Rel.Pair -> String
@@ -364,7 +369,7 @@ view model =
                                     )
                         ]
                     , case model.derivedInfo.acyclic of
-                        Just acyclic ->
+                        Ok acyclic ->
                             Html.div []
                                 [ Html.text "This relation is acyclic"
                                 , Html.div [ A.class "indent" ]
@@ -372,11 +377,21 @@ view model =
                                         "Topological sort: ["
                                             ++ String.join ", " (List.map String.fromInt <| Rel.topologicalSort acyclic)
                                             ++ "]"
+                                    , Html.div [] [ Html.text "Transitive reduction: " ]
+                                    , Html.div [] [ Rel.view readOnlyConfig (Rel.transitiveReduction acyclic) Nothing ]
                                     ]
                                 ]
 
-                        Nothing ->
-                            Html.text ""
+                        Err cycle ->
+                            Html.div []
+                                [ Html.text "This relation is not acyclic"
+                                , Html.div [ A.class "indent" ]
+                                    [ Html.text <|
+                                        "It contains a cycle: ["
+                                            ++ String.join ", " (List.map String.fromInt cycle)
+                                            ++ "]"
+                                    ]
+                                ]
                     , case model.explanation of
                         Just exp ->
                             Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.lines
@@ -467,7 +482,7 @@ propertyConfigs =
       }
     , { propertyName = "Acyclic"
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"
-      , hasProperty = .isAcyclic
+      , hasProperty = Rel.isAcyclic
       , buttons = []
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainWhyNotAcyclic

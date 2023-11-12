@@ -28,6 +28,7 @@ module Rel exposing
     , genReflexiveRelation
     , genRelation
     , genSymmetricRelation
+    , isAcyclic
     , isAntisymmetric
     , isAsymmetric
     , isFunction
@@ -52,6 +53,7 @@ module Rel exposing
     , toggle
     , topologicalSort
     , transitiveClosure
+    , transitiveReduction
     , view
     )
 
@@ -115,12 +117,12 @@ type alias DerivedInfo =
     , superfluousForFunction : Set Pair
     , emptyRowIndices : Set Int
     , isConnected : Bool
-    , isAcyclic : Bool
     , isPartialFunction : Bool
     , isBijectiveFunction : Bool
     , isDerangement : Bool
     , isInvolution : Bool
-    , acyclic : Maybe Acyclic
+    , -- Either cycle or proof that it's acyclic
+      acyclic : Result (List Int) Acyclic
     }
 
 
@@ -132,9 +134,6 @@ deriveInfo rel =
 
         ( superfluousForFunction, emptyRowIndices ) =
             superfluousAndMissingForFunction rel
-
-        maybeAcyclic =
-            mkAcyclic rel
     in
     { relSize = size rel
     , domain = domain rel
@@ -153,14 +152,7 @@ deriveInfo rel =
     , isBijectiveFunction = isBijectiveFunction rel
     , isDerangement = isDerangement rel
     , isInvolution = isInvolution rel
-    , acyclic = maybeAcyclic
-    , isAcyclic =
-        case maybeAcyclic of
-            Just _ ->
-                True
-
-            Nothing ->
-                False
+    , acyclic = mkAcyclic rel
     }
 
 
@@ -883,18 +875,24 @@ isConnected (Rel rows) =
 {-| A binary relation is acyclic if it contains no cycles.
 Equivalently, its transitive closure is antisymmetric.
 -}
-isAcyclic : Rel -> Bool
-isAcyclic rel =
-    Set.isEmpty <| superfluousForAntisymmetry <| transitiveClosure rel
-
-
-mkAcyclic : Rel -> Maybe Acyclic
+mkAcyclic : Rel -> Result (List Int) Acyclic
 mkAcyclic rel =
-    if isAcyclic rel then
-        Just (Acyclic rel)
+    case findCycle rel of
+        Just cycle ->
+            Err cycle
 
-    else
-        Nothing
+        Nothing ->
+            Ok (Acyclic rel)
+
+
+isAcyclic : DerivedInfo -> Bool
+isAcyclic info =
+    case info.acyclic of
+        Ok _ ->
+            True
+
+        Err _ ->
+            False
 
 
 findCycle : Rel -> Maybe (List Int)
@@ -1166,6 +1164,24 @@ transitiveClosure ((Rel rows) as rel) =
             )
             rows
             (domain rel)
+
+
+{-| Based on Theorem 3 from <https://www.cs.tufts.edu/comp/150FP/archive/al-aho/transitive-reduction.pdf>
+TODO the paper also has a way to generate canonical TR of graphs with cycles
+-}
+transitiveReduction : Acyclic -> Rel
+transitiveReduction (Acyclic rel) =
+    let
+        relNoLoops =
+            reflexiveReduction rel
+
+        relNoLoopsTC =
+            transitiveClosure relNoLoops
+
+        composed =
+            compose relNoLoops relNoLoopsTC
+    in
+    difference rel composed
 
 
 type Distance
