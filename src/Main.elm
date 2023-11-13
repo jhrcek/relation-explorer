@@ -7,6 +7,7 @@ import Html.Events as E
 import Ports
 import Random exposing (Generator)
 import Rel exposing (DerivedInfo, Explanation, Rel)
+import Set
 
 
 main : Program () Model Msg
@@ -140,9 +141,9 @@ update msg model =
             updateRel Rel.transitiveClosure model
 
         DoTransitiveReduction ->
-            case model.derivedInfo.acyclic of
-                Ok acyclic ->
-                    updateRel (\_ -> Rel.transitiveReduction acyclic) model
+            case model.derivedInfo.acyclicInfo of
+                Ok acyclicInfo ->
+                    updateRel (\_ -> acyclicInfo.transitivelyReduced) model
 
                 Err _ ->
                     pure model
@@ -404,8 +405,18 @@ propertyConfigs =
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"
       , hasProperty = Rel.isAcyclic
       , buttons =
-            [ -- TODO disable this button if TR wouldn't remove any more edges
-              ButtonConfig "Transitive Reduction" DoTransitiveReduction (not << Rel.isAcyclic)
+            [ ButtonConfig "Transitive Reduction"
+                DoTransitiveReduction
+                (\info ->
+                    case info.acyclicInfo of
+                        Ok acyclicInfo ->
+                            -- Disable when TR wouldn't remove any edges
+                            Set.isEmpty acyclicInfo.redundantTransitiveEdges
+
+                        Err _ ->
+                            -- Disable for rels with cycles, for which there's no unique TR
+                            True
+                )
             ]
       , genRandom = Nothing
       , onHoverExplanation = Just ExplainAcyclic

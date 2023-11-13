@@ -52,7 +52,6 @@ module Rel exposing
     , toDotSource
     , toggle
     , transitiveClosure
-    , transitiveReduction
     , view
     )
 
@@ -123,7 +122,15 @@ type alias DerivedInfo =
     , isDerangement : Bool
     , isInvolution : Bool
     , -- Either cycle or proof that it's acyclic
-      acyclic : Result (List Int) Acyclic
+      acyclicInfo : Result (List Int) AcyclicInfo
+    }
+
+
+type alias AcyclicInfo =
+    { acyclic : Acyclic
+    , -- Edges that would be removed by transitive reduction
+      redundantTransitiveEdges : Set Pair
+    , transitivelyReduced : Rel
     }
 
 
@@ -153,7 +160,22 @@ deriveInfo rel =
     , isBijectiveFunction = isBijectiveFunction rel
     , isDerangement = isDerangement rel
     , isInvolution = isInvolution rel
-    , acyclic = mkAcyclic rel
+    , acyclicInfo =
+        mkAcyclic rel
+            |> Result.map
+                (\acyclic ->
+                    let
+                        tred =
+                            transitiveReduction acyclic
+                    in
+                    { acyclic = acyclic
+                    , transitivelyReduced = tred
+                    , redundantTransitiveEdges =
+                        difference rel tred
+                            |> elements
+                            |> Set.fromList
+                    }
+                )
     }
 
 
@@ -808,8 +830,6 @@ explainTransitive info =
         , lines =
             [ "This relation is transitive."
             , definition
-
-            -- TODO explanation
             ]
         }
 
@@ -912,7 +932,7 @@ mkAcyclic rel =
 
 isAcyclic : DerivedInfo -> Bool
 isAcyclic info =
-    case info.acyclic of
+    case info.acyclicInfo of
         Ok _ ->
             True
 
@@ -988,8 +1008,8 @@ explainAcyclic info =
             "Definition: relation is acyclic if it contains no cycles."
                 ++ " Cycle is a sequence of at least 2 elements x1, x2, ..., xn ∈ X: (x1, x2) ∈ R ∧ (x2, x3) ∈ R ∧ ... ∧ (xn, x1) ∈ R."
     in
-    case info.acyclic of
-        Ok acyclic ->
+    case info.acyclicInfo of
+        Ok acInfo ->
             { greenHighlight = Set.empty
             , redHighlight = Set.empty
             , lines =
@@ -999,7 +1019,7 @@ explainAcyclic info =
 
                 -- TODO these are further "features" of acyclic relations, so probably explain them elsewhere
                 , "Acyclic relations can be sorted topologically. Example top. sort: "
-                    ++ showIntListAsList (topologicalSort acyclic)
+                    ++ showIntListAsList (topologicalSort acInfo.acyclic)
                 ]
             }
 
