@@ -1857,12 +1857,44 @@ isAreElements count =
         ( "are", String.fromInt count ++ " elements" )
 
 
-toDotSource : Rel -> String
-toDotSource rel =
+toDotSource : Rel -> Bool -> String
+toDotSource rel highlightSccs =
     let
+        -- Compute SCCs even when not highlighting them.
+        -- We need to keep the same node order in both highlighted/unhighlighted case
+        -- to prevent graph layout changes when switching between them
+        ( individualNodes, multiNodeComponents ) =
+            scc rel
+                |> List.partition (\component -> List.length component == 1)
+                |> Tuple.mapFirst List.concat
+
+        needsHighlight =
+            highlightSccs && not (List.isEmpty multiNodeComponents)
+
         nodeLines =
-            domain rel
-                |> List.map String.fromInt
+            if needsHighlight then
+                let
+                    colors =
+                        -- TODO this short list of colors should be enough for now, as 10 element set can have at most 5 SCCs
+                        [ "lightgreen", "lightblue", "orange", "orchid", "khaki", "tan", "tomato" ]
+                in
+                List.map String.fromInt individualNodes
+                    ++ ("node[style=filled]"
+                            :: List.concat
+                                (List.map2
+                                    (\color nodes ->
+                                        ("node[fillcolor=" ++ color ++ "]")
+                                            :: List.map String.fromInt nodes
+                                    )
+                                    colors
+                                    multiNodeComponents
+                                )
+                       )
+
+            else
+                individualNodes
+                    ++ List.concat multiNodeComponents
+                    |> List.map String.fromInt
 
         edgesLines =
             elements rel

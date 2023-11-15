@@ -25,6 +25,7 @@ type alias Model =
     , history : List Rel
     , derivedInfo : DerivedInfo
     , explanation : Maybe Explanation
+    , highlightSccs : Bool
 
     -- Number between 0 and 1, indicating how likely it is that random generators
     -- will produce a True value (and thus generate an element of a relation)
@@ -43,19 +44,23 @@ init _ =
 
         initDerivedInfo =
             Rel.deriveInfo initRel
+
+        highlightSccs =
+            True
     in
     ( { rel = initRel
       , history = []
       , derivedInfo = initDerivedInfo
       , explanation = Nothing
+      , highlightSccs = highlightSccs
       , trueProb = 0.2
       }
-    , renderGraph initRel (Rel.isAcyclic initDerivedInfo)
+    , renderGraph initRel (Rel.isAcyclic initDerivedInfo) highlightSccs
     )
 
 
-renderGraph : Rel -> Bool -> Cmd msg
-renderGraph rel isAcyclic =
+renderGraph : Rel -> Bool -> Bool -> Cmd msg
+renderGraph rel isAcyclic highlightSccs =
     Ports.renderDot
         { engine =
             if isAcyclic then
@@ -63,7 +68,7 @@ renderGraph rel isAcyclic =
 
             else
                 "neato"
-        , dotSource = Rel.toDotSource rel
+        , dotSource = Rel.toDotSource rel highlightSccs
         }
 
 
@@ -71,6 +76,7 @@ type Msg
     = SetRelSize Int
     | SetTrueProb Float
     | ToggleRel Int Int
+    | ToggleHighlightSccs
     | DoReflexiveClosure
     | DoReflexiveReduction
     | DoSymmetricClosure
@@ -127,6 +133,15 @@ update msg model =
 
         ToggleRel i j ->
             updateRel (Rel.toggle i j) model
+
+        ToggleHighlightSccs ->
+            let
+                newHighlightSccs =
+                    not model.highlightSccs
+            in
+            ( { model | highlightSccs = newHighlightSccs }
+            , renderGraph model.rel (Rel.isAcyclic model.derivedInfo) newHighlightSccs
+            )
 
         DoReflexiveClosure ->
             updateRel Rel.reflexiveClosure model
@@ -247,7 +262,7 @@ updateRel f model =
         , derivedInfo = newDerivedInfo
         , history = model.rel :: model.history
       }
-    , renderGraph newRel (Rel.isAcyclic newDerivedInfo)
+    , renderGraph newRel (Rel.isAcyclic newDerivedInfo) model.highlightSccs
     )
 
 
@@ -267,7 +282,7 @@ undoHistory model =
                 , derivedInfo = prevDerivedInfo
                 , history = rest
               }
-            , renderGraph prevRel (Rel.isAcyclic prevDerivedInfo)
+            , renderGraph prevRel (Rel.isAcyclic prevDerivedInfo) model.highlightSccs
             )
 
 
@@ -296,7 +311,7 @@ view model =
                 [ sizeInputView model.derivedInfo.relSize
                 , Rel.view relConfig model.rel model.explanation
                 , elementaryPropertiesView model.derivedInfo
-                , miscControls model.trueProb
+                , miscControls model.trueProb model.highlightSccs
                 ]
             , Html.div [ A.id "explanation" ]
                 [ Html.div []
@@ -568,8 +583,8 @@ setTrueProbView trueProb =
         ]
 
 
-miscControls : Float -> Html Msg
-miscControls trueProb =
+miscControls : Float -> Bool -> Html Msg
+miscControls trueProb highlightSccs =
     Html.div []
         [ Html.h4 [] [ Html.text "Operations" ]
         , Html.button [ E.onClick UndoHistory, A.title "Undo previous edits" ] [ Html.text "Undo" ]
@@ -578,4 +593,14 @@ miscControls trueProb =
         , Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ]
         , Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ]
         , setTrueProbView trueProb
+        , Html.label []
+            [ Html.input
+                [ A.type_ "checkbox"
+                , A.checked highlightSccs
+                , E.onClick ToggleHighlightSccs
+                ]
+                []
+            , Html.text "Highlight SCCs "
+            , Html.span [ A.title "Strongly Connected Components" ] [ Html.text "ⓘ" ]
+            ]
         ]
