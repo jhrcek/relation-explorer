@@ -31,6 +31,7 @@ module Rel exposing
     , genReflexiveRelation
     , genRelation
     , genSymmetricRelation
+    , genTotalOrder
     , isAcyclic
     , isAntisymmetric
     , isAsymmetric
@@ -40,6 +41,7 @@ module Rel exposing
     , isLeftTotal
     , isReflexive
     , isSymmetric
+    , isTotalOrder
     , isTransitive
     , reflexiveClosure
     , reflexiveReduction
@@ -192,6 +194,11 @@ size (Rel rows) =
 empty : Int -> Rel
 empty n =
     Rel <| Array.repeat n <| Array.repeat n False
+
+
+fromElements : Int -> List Pair -> Rel
+fromElements n elems =
+    List.foldl (\( i, j ) -> toggle i j) (empty n) elems
 
 
 {-| Identity relation
@@ -1240,6 +1247,16 @@ isInvolution rel =
     isFunctionRel rel && rel == converse rel
 
 
+isPartialOrder : DerivedInfo -> Bool
+isPartialOrder info =
+    isReflexive info && isAntisymmetric info && isTransitive info
+
+
+isTotalOrder : DerivedInfo -> Bool
+isTotalOrder info =
+    isPartialOrder info && isConnected info
+
+
 
 -- CLOSURES
 
@@ -1743,6 +1760,19 @@ genInvolution n =
     in
     go (List.range 0 (n - 1)) 0 []
         |> Random.map mkRel
+
+
+genTotalOrder : Int -> Generator Rel
+genTotalOrder n =
+    List.range 0 (n - 1)
+        |> Random.List.shuffle
+        |> Random.map
+            (\xs ->
+                List.zip xs (List.drop 1 xs)
+                    |> fromElements n
+                    |> reflexiveClosure
+                    |> transitiveClosure
+            )
 
 
 

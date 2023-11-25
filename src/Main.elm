@@ -96,6 +96,7 @@ type Msg
     | GenLeftTotal
     | GenBijectiveFunction
     | GenInvolution
+    | GenTotalOrder
     | GotRandom Rel
       -- Explanations
     | HideExplanations
@@ -204,6 +205,9 @@ update msg model =
 
         GenInvolution ->
             generateRel Rel.genInvolution model
+
+        GenTotalOrder ->
+            generateRel Rel.genTotalOrder model
 
         HideExplanations ->
             pure { model | explanation = Nothing }
@@ -463,6 +467,8 @@ propertyConfigs =
       , wikiLink = "https://en.wikipedia.org/wiki/Derangement"
       , hasProperty = .isDerangement
       , buttons = []
+
+      -- Get some inspiration from this paper https://epubs.siam.org/doi/pdf/10.1137/1.9781611972986.7
       , genRandom = Nothing
 
       -- TODO explain why not Derangement
@@ -475,6 +481,17 @@ propertyConfigs =
       , genRandom = Just GenInvolution
 
       -- TODO explain why not involution
+      , onHoverExplanation = Nothing
+      }
+
+    -- TODO have separate section for "composite" concepts
+    , { propertyName = "Total Order"
+      , wikiLink = "https://en.wikipedia.org/wiki/Total_order"
+      , hasProperty = Rel.isTotalOrder
+      , buttons = []
+      , genRandom = Just GenTotalOrder
+
+      -- TODO explain why not total oder
       , onHoverExplanation = Nothing
       }
     ]
