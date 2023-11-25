@@ -39,6 +39,7 @@ module Rel exposing
     , isFunctional
     , isIrreflexive
     , isLeftTotal
+    , isPartialOrder
     , isReflexive
     , isSymmetric
     , isTotalOrder

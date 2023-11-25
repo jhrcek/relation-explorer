@@ -321,6 +321,7 @@ view model =
                         [ Html.text <| "R ⊆ X ⨯ X, R = " ++ Rel.showElements model.rel ]
                     , Html.div []
                         [ Html.text <|
+                            -- TODO highlight SCCs with the same  color as in the graph
                             "Strongly connected components: "
                                 ++ String.join ", "
                                     (List.map Rel.showIntListAsSet <|
@@ -477,6 +478,17 @@ propertyConfigs =
       , genRandom = Just GenInvolution
 
       -- TODO explain why not involution
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Partial Order"
+      , wikiLink = "https://en.wikipedia.org/wiki/Partially_ordered_set"
+      , hasProperty = Rel.isPartialOrder
+      , buttons = []
+
+      -- TODO generate partial order
+      , genRandom = Nothing
+
+      -- TODO explain why not total oder
       , onHoverExplanation = Nothing
       }
 
