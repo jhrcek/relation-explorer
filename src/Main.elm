@@ -112,7 +112,6 @@ type Msg
     | ExplainFunctional
     | ExplainLeftTotal
     | UndoHistory
-    | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -247,9 +246,6 @@ update msg model =
 
         UndoHistory ->
             undoHistory model
-
-        NoOp ->
-            pure model
 
 
 updateRel : (Rel -> Rel) -> Model -> ( Model, Cmd Msg )
@@ -508,7 +504,7 @@ elementaryPropertiesView derivedInfo =
             in
             Html.tr []
                 [ Html.td [] [ blankLink wikiLink propertyName ]
-                , Html.td [] [ yesNo (Maybe.withDefault NoOp onHoverExplanation) hasProp ]
+                , Html.td [] [ yesNo onHoverExplanation hasProp ]
                 , Html.td [] <|
                     List.map
                         (\butCfg ->
@@ -546,20 +542,28 @@ blankLink href text =
     Html.a [ A.href href, A.target "_blank" ] [ Html.text text ]
 
 
-yesNo : Msg -> Bool -> Html Msg
-yesNo onHover b =
-    Html.span
-        [ E.onMouseEnter onHover
-        , E.onMouseLeave HideExplanations
-        ]
-        [ Html.text <|
-            (if b then
-                "Yes"
+yesNo : Maybe Msg -> Bool -> Html Msg
+yesNo maybeOnHover b =
+    let
+        ( addOnHover, appendInfoSymbol ) =
+            case maybeOnHover of
+                Nothing ->
+                    ( identity, identity )
 
-             else
-                "No"
-            )
-                ++ " - ⓘ"
+                Just onHover ->
+                    ( \attrs -> E.onMouseEnter onHover :: attrs
+                    , \btnText -> btnText ++ " - ⓘ"
+                    )
+    in
+    Html.span
+        (addOnHover [ E.onMouseLeave HideExplanations ])
+        [ Html.text <|
+            appendInfoSymbol <|
+                if b then
+                    "Yes"
+
+                else
+                    "No"
         ]
 
 
