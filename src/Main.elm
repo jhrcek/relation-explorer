@@ -328,6 +328,20 @@ view model =
                                         Rel.scc model.rel
                                     )
                         ]
+                    , Html.div []
+                        [ Html.text "FCA"
+                        , Html.div [ A.class "indent" ]
+                            [ Html.text <|
+                                let
+                                    closures =
+                                        model.derivedInfo.attributeSetClosures
+                                in
+                                "attribute closures (total "
+                                    ++ String.fromInt (List.length closures)
+                                    ++ "): "
+                                    ++ String.join ", " (List.map Rel.showIntSet closures)
+                            ]
+                        ]
                     , case model.explanation of
                         Just exp ->
                             Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.lines

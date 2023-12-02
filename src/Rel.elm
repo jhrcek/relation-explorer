@@ -50,6 +50,7 @@ module Rel exposing
     , scc
     , showElements
     , showIntListAsSet
+    , showIntSet
     , size
     , symmetricClosure
     , toDotSource
@@ -120,6 +121,7 @@ type alias DerivedInfo =
     , superfluousForFunctional : Set Pair
     , superfluousForFunction : Set Pair
     , missingForConnectedness : Set Pair
+    , attributeSetClosures : List (Set Int) -- In lectic order
     , emptyRowIndices : Set Int
     , isBijectiveFunction : Bool
     , isDerangement : Bool
@@ -163,6 +165,7 @@ deriveInfo rel =
     , isBijectiveFunction = isBijectiveFunction rel
     , isDerangement = isDerangement rel
     , isInvolution = isInvolution rel
+    , attributeSetClosures = listAttributeClosures rel
     , acyclicInfo =
         mkAcyclic rel
             |> Result.map
@@ -1777,6 +1780,157 @@ genTotalOrder n =
 
 
 
+-- FCA - Formal Concept Analysis
+-- Here we consider `Rel` as a special-case representation of a formal context,
+-- with first element of each pair representing objects and second representing attributes.
+
+
+{-| First derivation operator, based on:
+A′ = {m ∈ M | (g,m) ∈ I for all g ∈ A}
+
+Input: set representing objects
+Output: set representing attributes shared by all input objects
+
+-}
+attributesSharedByAllObjects : Rel -> Set Int -> Set Int
+attributesSharedByAllObjects (Rel rows) objects =
+    let
+        -- TODO try if elm/core Bitwise would make this more efficient
+        initSharedAttributes : List Bool
+        initSharedAttributes =
+            List.repeat (Array.length rows) True
+    in
+    Array.toIndexedList rows
+        |> List.foldl
+            (\( i, row ) sharedAttrs ->
+                if Set.member i objects then
+                    List.map2 (&&) (Array.toList row) sharedAttrs
+
+                else
+                    sharedAttrs
+            )
+            initSharedAttributes
+        |> List.indexedMap
+            (\attrIdx b ->
+                if b then
+                    Just attrIdx
+
+                else
+                    Nothing
+            )
+        |> List.filterMap identity
+        |> Set.fromList
+
+
+{-| This is like '' operator corresponding to composition `objectsSharingAllAttributes >> attributesSharedByAllObjects`
+-}
+attributeSetClosure : Rel -> Set Int -> Set Int
+attributeSetClosure (Rel rows) attributes =
+    let
+        initSharedAttributes : List Bool
+        initSharedAttributes =
+            List.repeat (Array.length rows) True
+    in
+    Array.foldl
+        (\row commonAttrs ->
+            if
+                -- if this row has all the input attributes, AND it with accumulator
+                Set.foldl
+                    (\attrIdx acc ->
+                        Maybe.withDefault False (Array.get attrIdx row) && acc
+                    )
+                    True
+                    attributes
+            then
+                List.map2 (&&) (Array.toList row) commonAttrs
+
+            else
+                commonAttrs
+        )
+        initSharedAttributes
+        rows
+        |> List.indexedMap
+            (\attrIdx b ->
+                if b then
+                    Just attrIdx
+
+                else
+                    Nothing
+            )
+        |> List.filterMap identity
+        |> Set.fromList
+
+
+{-| Second derivation operator, based on:
+B′ = {g ∈ G | (g,m) ∈ I for all m ∈ B}
+
+Input: set representing attributes
+Output: set representing objects that have all input attributes
+
+-}
+objectsSharingAllAttributes : Rel -> Set Int -> Set Int
+objectsSharingAllAttributes (Rel rows) attributes =
+    Array.toIndexedList rows
+        |> List.filterMap
+            (\( i, row ) ->
+                if
+                    Set.foldl
+                        (\attrIdx acc ->
+                            Maybe.withDefault False (Array.get attrIdx row) && acc
+                        )
+                        True
+                        attributes
+                then
+                    Just i
+
+                else
+                    Nothing
+            )
+        |> Set.fromList
+
+
+{-| List all atttribute closures in lectic order.
+Algorithm described in <https://www.youtube.com/watch?v=rs3qSLEQYuM&list=PLISEtDmihMo2wvgHrsdQhV6AeUsqu-Cum&index=27>
+-}
+listAttributeClosures : Rel -> List (Set Int)
+listAttributeClosures rel =
+    let
+        nextClosure : Set Int -> Maybe ( Set Int, Set Int )
+        nextClosure attrs =
+            let
+                go : Set Int -> Int -> Maybe (Set Int)
+                go attrs1 i =
+                    if i < 0 then
+                        Nothing
+
+                    else if Set.member i attrs1 then
+                        go (Set.remove i attrs1) (i - 1)
+
+                    else
+                        let
+                            b =
+                                -- (atrrs1 u {m})'
+                                attributeSetClosure rel <| Set.insert i attrs1
+
+                            bMinusAPrime =
+                                Set.diff b attrs1
+                        in
+                        -- Does bMinusAPrime contain any attribute smaller then i?
+                        if Set.foldl (\el acc -> el < i || acc) False bMinusAPrime then
+                            go attrs1 (i - 1)
+
+                        else
+                            Just b
+            in
+            go attrs (size rel - 1) |> Maybe.map (\a -> ( a, a ))
+
+        emptySetClosure =
+            attributeSetClosure rel Set.empty
+    in
+    emptySetClosure :: List.unfoldr nextClosure emptySetClosure
+
+
+
 -- VIEW
 
 
@@ -1846,6 +2000,12 @@ headerCell i =
 showElements : Rel -> String
 showElements =
     elements >> showPairListAsSet
+
+
+showIntSet : Set Int -> String
+showIntSet =
+    Set.toList
+        >> showIntListAsSet
 
 
 showPairSet : Set Pair -> String
