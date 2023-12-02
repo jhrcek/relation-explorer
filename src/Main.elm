@@ -6,8 +6,8 @@ import Html.Attributes as A
 import Html.Events as E
 import Ports
 import Random exposing (Generator)
-import Rel exposing (DerivedInfo, Explanation, Rel)
-import Set
+import Rel exposing (DerivedInfo, Highlight(..), Rel)
+import Set exposing (Set)
 
 
 main : Program () Model Msg
@@ -24,7 +24,7 @@ type alias Model =
     { rel : Rel
     , history : List Rel
     , derivedInfo : DerivedInfo
-    , explanation : Maybe Explanation
+    , highlight : Highlight
     , highlightSccs : Bool
 
     -- Number between 0 and 1, indicating how likely it is that random generators
@@ -51,7 +51,7 @@ init _ =
     ( { rel = initRel
       , history = []
       , derivedInfo = initDerivedInfo
-      , explanation = Nothing
+      , highlight = NoHighlight
       , highlightSccs = highlightSccs
       , trueProb = 0.2
       }
@@ -99,7 +99,6 @@ type Msg
     | GenTotalOrder
     | GotRandom Rel
       -- Explanations
-    | HideExplanations
     | ExplainRelation
     | ExplainReflexive
     | ExplainIrreflexive
@@ -111,6 +110,8 @@ type Msg
     | ExplainConnected
     | ExplainFunctional
     | ExplainLeftTotal
+    | HighlightConcept (Set Int)
+    | ClearHighlight
     | UndoHistory
 
 
@@ -208,41 +209,51 @@ update msg model =
         GenTotalOrder ->
             generateRel Rel.genTotalOrder model
 
-        HideExplanations ->
-            pure { model | explanation = Nothing }
-
         ExplainRelation ->
-            pure { model | explanation = Just <| Rel.explainRelation model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainRelation model.derivedInfo }
 
         ExplainReflexive ->
-            pure { model | explanation = Just <| Rel.explainReflexive model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainReflexive model.derivedInfo }
 
         ExplainIrreflexive ->
-            pure { model | explanation = Just <| Rel.explainIrreflexive model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainIrreflexive model.derivedInfo }
 
         ExplainSymmetric ->
-            pure { model | explanation = Just <| Rel.explainSymmetric model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainSymmetric model.derivedInfo }
 
         ExplainAntisymmetric ->
-            pure { model | explanation = Just <| Rel.explainAntisymmetric model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainAntisymmetric model.derivedInfo }
 
         ExplainAsymmetric ->
-            pure { model | explanation = Just <| Rel.explainAsymmetric model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainAsymmetric model.derivedInfo }
 
         ExplainTransitive ->
-            pure { model | explanation = Just <| Rel.explainTransitive model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainTransitive model.derivedInfo }
 
         ExplainAcyclic ->
-            pure { model | explanation = Just <| Rel.explainAcyclic model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainAcyclic model.derivedInfo }
 
         ExplainFunctional ->
-            pure { model | explanation = Just <| Rel.explainFunctional model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainFunctional model.derivedInfo }
 
         ExplainConnected ->
-            pure { model | explanation = Just <| Rel.explainConnected model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainConnected model.derivedInfo }
 
         ExplainLeftTotal ->
-            pure { model | explanation = Just <| Rel.explainLeftTotal model.derivedInfo }
+            pure { model | highlight = Explanation <| Rel.explainLeftTotal model.derivedInfo }
+
+        HighlightConcept attrClosure ->
+            let
+                objects =
+                    Rel.objectsSharingAllAttributes model.rel attrClosure
+
+                prod =
+                    Rel.cartesianProduct objects attrClosure
+            in
+            pure { model | highlight = Pairs prod }
+
+        ClearHighlight ->
+            pure { model | highlight = NoHighlight }
 
         UndoHistory ->
             undoHistory model
@@ -309,7 +320,7 @@ view model =
         [ Html.div [ A.id "top-container" ]
             [ Html.div [ A.id "rel-and-controls" ]
                 [ sizeInputView model.derivedInfo.relSize
-                , Rel.view relConfig model.rel model.explanation
+                , Rel.view relConfig model.rel model.highlight
                 , elementaryPropertiesView model.derivedInfo
                 , miscControls model.trueProb model.highlightSccs
                 ]
@@ -330,23 +341,36 @@ view model =
                         ]
                     , Html.div []
                         [ Html.text "FCA"
-                        , Html.div [ A.class "indent" ]
-                            [ Html.text <|
-                                let
-                                    closures =
-                                        model.derivedInfo.attributeSetClosures
-                                in
-                                "attribute closures (total "
+                        , Html.div [ A.class "indent" ] <|
+                            let
+                                closures =
+                                    model.derivedInfo.attributeSetClosures
+                            in
+                            Html.text
+                                ("attribute closures (total "
                                     ++ String.fromInt (List.length closures)
                                     ++ "): "
-                                    ++ String.join ", " (List.map Rel.showIntSet closures)
-                            ]
+                                )
+                                :: List.intersperse (Html.text ", ")
+                                    (List.map
+                                        (\attrs ->
+                                            Html.span
+                                                [ E.onMouseEnter (HighlightConcept attrs)
+                                                , E.onMouseLeave ClearHighlight
+                                                ]
+                                                [ Html.text <| Rel.showIntSet attrs ]
+                                        )
+                                        closures
+                                    )
                         ]
-                    , case model.explanation of
-                        Just exp ->
+                    , case model.highlight of
+                        Explanation exp ->
                             Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.lines
 
-                        Nothing ->
+                        Pairs _ ->
+                            Html.text ""
+
+                        NoHighlight ->
                             Html.text ""
                     ]
                 ]
@@ -571,18 +595,18 @@ blankLink href text =
 yesNo : Maybe Msg -> Bool -> Html Msg
 yesNo maybeOnHover b =
     let
-        ( addOnHover, appendInfoSymbol ) =
+        ( onHoverAttrs, appendInfoSymbol ) =
             case maybeOnHover of
                 Nothing ->
-                    ( identity, identity )
+                    ( [], identity )
 
                 Just onHover ->
-                    ( \attrs -> E.onMouseEnter onHover :: attrs
+                    ( [ E.onMouseEnter onHover, E.onMouseLeave ClearHighlight ]
                     , \btnText -> btnText ++ " - ⓘ"
                     )
     in
     Html.span
-        (addOnHover [ E.onMouseLeave HideExplanations ])
+        onHoverAttrs
         [ Html.text <|
             appendInfoSymbol <|
                 if b then

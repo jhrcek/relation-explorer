@@ -2,9 +2,11 @@ module Rel exposing
     ( Acyclic
     , Config
     , DerivedInfo
-    , Explanation
+    , ExplanationData
+    , Highlight(..)
     , Pair
     , Rel
+    , cartesianProduct
     , complement
     , converse
     , deriveInfo
@@ -44,6 +46,7 @@ module Rel exposing
     , isSymmetric
     , isTotalOrder
     , isTransitive
+    , objectsSharingAllAttributes
     , reflexiveClosure
     , reflexiveReduction
     , resize
@@ -100,11 +103,17 @@ type alias Pair =
     ( Int, Int )
 
 
-type alias Explanation =
+type alias ExplanationData =
     { greenHighlight : Set Pair
     , redHighlight : Set Pair
     , lines : List String
     }
+
+
+type Highlight
+    = NoHighlight
+    | Explanation ExplanationData
+    | Pairs (Set Pair)
 
 
 type alias DerivedInfo =
@@ -203,6 +212,12 @@ empty n =
 fromElements : Int -> List Pair -> Rel
 fromElements n elems =
     List.foldl (\( i, j ) -> toggle i j) (empty n) elems
+
+
+cartesianProduct : Set Int -> Set Int -> Set Pair
+cartesianProduct as_ bs =
+    List.lift2 Tuple.pair (Set.toList as_) (Set.toList bs)
+        |> Set.fromList
 
 
 {-| Identity relation
@@ -365,7 +380,7 @@ toggle i j ((Rel rows) as rel) =
             rel
 
 
-explainRelation : DerivedInfo -> Explanation
+explainRelation : DerivedInfo -> ExplanationData
 explainRelation info =
     let
         definition =
@@ -404,7 +419,7 @@ missingForReflexivity (Rel rows) =
             Set.empty
 
 
-explainReflexive : DerivedInfo -> Explanation
+explainReflexive : DerivedInfo -> ExplanationData
 explainReflexive info =
     let
         definition =
@@ -479,7 +494,7 @@ superfluousForIrreflexivity (Rel rows) =
             Set.empty
 
 
-explainIrreflexive : DerivedInfo -> Explanation
+explainIrreflexive : DerivedInfo -> ExplanationData
 explainIrreflexive info =
     let
         definition =
@@ -539,7 +554,7 @@ missingForSymmetry rel =
         |> Set.fromList
 
 
-explainSymmetric : DerivedInfo -> Explanation
+explainSymmetric : DerivedInfo -> ExplanationData
 explainSymmetric info =
     let
         definition =
@@ -611,7 +626,7 @@ superfluousForAntisymmetry rel =
         |> Set.fromList
 
 
-explainAntisymmetric : DerivedInfo -> Explanation
+explainAntisymmetric : DerivedInfo -> ExplanationData
 explainAntisymmetric info =
     let
         definition =
@@ -693,7 +708,7 @@ superfluousForAsymmetry rel =
         |> Set.partition (\( i, j ) -> i == j)
 
 
-explainAsymmetric : DerivedInfo -> Explanation
+explainAsymmetric : DerivedInfo -> ExplanationData
 explainAsymmetric info =
     let
         ( superfluousDiagonal, superfluousOffDiagonal ) =
@@ -823,7 +838,7 @@ missingForTransitivity rel =
     )
 
 
-explainTransitive : DerivedInfo -> Explanation
+explainTransitive : DerivedInfo -> ExplanationData
 explainTransitive info =
     let
         definition =
@@ -896,7 +911,7 @@ isConnected info =
     Set.isEmpty info.missingForConnectedness
 
 
-explainConnected : DerivedInfo -> Explanation
+explainConnected : DerivedInfo -> ExplanationData
 explainConnected info =
     let
         definition =
@@ -1012,7 +1027,7 @@ findCycle (Rel rows) =
         |> List.findMap dfs
 
 
-explainAcyclic : DerivedInfo -> Explanation
+explainAcyclic : DerivedInfo -> ExplanationData
 explainAcyclic info =
     let
         definition =
@@ -1091,7 +1106,7 @@ superfluousForFunctional (Rel rows) =
             Set.empty
 
 
-explainFunctional : DerivedInfo -> Explanation
+explainFunctional : DerivedInfo -> ExplanationData
 explainFunctional info =
     let
         definition =
@@ -1183,7 +1198,7 @@ superfluousAndMissingForFunction (Rel rows) =
             ( Set.empty, Set.empty )
 
 
-explainLeftTotal : DerivedInfo -> Explanation
+explainLeftTotal : DerivedInfo -> ExplanationData
 explainLeftTotal info =
     let
         definition =
@@ -1785,43 +1800,6 @@ genTotalOrder n =
 -- with first element of each pair representing objects and second representing attributes.
 
 
-{-| First derivation operator, based on:
-A′ = {m ∈ M | (g,m) ∈ I for all g ∈ A}
-
-Input: set representing objects
-Output: set representing attributes shared by all input objects
-
--}
-attributesSharedByAllObjects : Rel -> Set Int -> Set Int
-attributesSharedByAllObjects (Rel rows) objects =
-    let
-        -- TODO try if elm/core Bitwise would make this more efficient
-        initSharedAttributes : List Bool
-        initSharedAttributes =
-            List.repeat (Array.length rows) True
-    in
-    Array.toIndexedList rows
-        |> List.foldl
-            (\( i, row ) sharedAttrs ->
-                if Set.member i objects then
-                    List.map2 (&&) (Array.toList row) sharedAttrs
-
-                else
-                    sharedAttrs
-            )
-            initSharedAttributes
-        |> List.indexedMap
-            (\attrIdx b ->
-                if b then
-                    Just attrIdx
-
-                else
-                    Nothing
-            )
-        |> List.filterMap identity
-        |> Set.fromList
-
-
 {-| This is like '' operator corresponding to composition `objectsSharingAllAttributes >> attributesSharedByAllObjects`
 -}
 attributeSetClosure : Rel -> Set Int -> Set Int
@@ -1934,13 +1912,13 @@ listAttributeClosures rel =
 -- VIEW
 
 
-view : Config msg -> Rel -> Maybe Explanation -> Html msg
-view config ((Rel rows) as rel) mExplanation =
+view : Config msg -> Rel -> Highlight -> Html msg
+view config ((Rel rows) as rel) highlight =
     let
         addBgColor : Int -> Int -> List (Attribute msg) -> List (Attribute msg)
         addBgColor i j =
-            case mExplanation of
-                Just explanation ->
+            case highlight of
+                Explanation explanation ->
                     (::)
                         (A.style "background-color" <|
                             if Set.member ( i, j ) explanation.redHighlight then
@@ -1953,7 +1931,17 @@ view config ((Rel rows) as rel) mExplanation =
                                 "white"
                         )
 
-                Nothing ->
+                Pairs pairSet ->
+                    (::)
+                        (A.style "background-color" <|
+                            if Set.member ( i, j ) pairSet then
+                                "lightgreen"
+
+                            else
+                                "white"
+                        )
+
+                NoHighlight ->
                     identity
     in
     -- TODO it's not clear that cells should be clicked
