@@ -85,7 +85,7 @@
     - [x] complement
     - [x] strongly connected components (of relation viewed as a graph)
     - [x] topological sort (only on acyclic graphs)
-    - [ ] calculate concept lattice (Binary relations have been described through their induced concept lattices)
+    - [x] calculate concept lattice ([induced concept lattice](https://en.wikipedia.org/wiki/Binary_relation#Induced_concept_lattice))
 
 - [ ] mention properties of various operations (E.g. The union of two transitive relations need not be transitive, but intersection always is; converse and complement preserve symmetry etc.)
 - [ ] use inclusion-exclusion principle to show exact numbers of relations within each cocnept of concept lattice or relations

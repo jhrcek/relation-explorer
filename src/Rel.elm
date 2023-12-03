@@ -8,6 +8,7 @@ module Rel exposing
     , Rel
     , cartesianProduct
     , complement
+    , conceptLatticeToDotSource
     , converse
     , deriveInfo
     , domain
@@ -49,6 +50,7 @@ module Rel exposing
     , objectsSharingAllAttributes
     , reflexiveClosure
     , reflexiveReduction
+    , relationToDotSource
     , resize
     , scc
     , showElements
@@ -56,7 +58,6 @@ module Rel exposing
     , showIntSet
     , size
     , symmetricClosure
-    , toDotSource
     , toggle
     , transitiveClosure
     , view
@@ -64,6 +65,7 @@ module Rel exposing
 
 import Array exposing (Array)
 import Array.Extra as Array
+import BitSet exposing (BitSet)
 import Dict
 import Html exposing (Attribute, Html)
 import Html.Attributes as A
@@ -215,8 +217,8 @@ fromElements n elems =
 
 
 cartesianProduct : Set Int -> Set Int -> Set Pair
-cartesianProduct as_ bs =
-    List.lift2 Tuple.pair (Set.toList as_) (Set.toList bs)
+cartesianProduct xs ys =
+    List.lift2 Tuple.pair (Set.toList xs) (Set.toList ys)
         |> Set.fromList
 
 
@@ -345,24 +347,6 @@ compose (Rel rows) rel2 =
                             |> Maybe.withDefault False
                     )
             )
-
-
-{-| Is the first relation subset of the 2nd?
--}
-isSubsetOf : Rel -> Rel -> Bool
-isSubsetOf (Rel rowsA) (Rel rowsB) =
-    arrayAnd <|
-        Array.map2
-            (\rowA rowB ->
-                arrayAnd <|
-                    Array.map2
-                        -- Implication: whenever A is true, B must be as well
-                        (\cellA cellB -> not cellA || cellB)
-                        rowA
-                        rowB
-            )
-            rowsA
-            rowsB
 
 
 toggle : Int -> Int -> Rel -> Rel
@@ -2036,8 +2020,8 @@ isAreElements count =
         ( "are", String.fromInt count ++ " elements" )
 
 
-toDotSource : Rel -> Bool -> String
-toDotSource rel highlightSccs =
+relationToDotSource : Rel -> Bool -> String
+relationToDotSource rel highlightSccs =
     let
         -- Compute SCCs even when not highlighting them.
         -- We need to keep the same node order in both highlighted/unhighlighted case
@@ -2079,9 +2063,74 @@ toDotSource rel highlightSccs =
             elements rel
                 |> List.map (\( i, j ) -> String.fromInt i ++ "->" ++ String.fromInt j)
     in
-    "digraph G {"
+    "digraph G {graph[rankdir=BT;splines=true;overlap=false];node[shape=circle;width=0.3;fixedsize=true];edge[arrowsize=0.5];"
         ++ String.join ";" (nodeLines ++ edgesLines)
         ++ "}"
+
+
+conceptLatticeToDotSource : List (Set Int) -> String
+conceptLatticeToDotSource attributeClosures =
+    let
+        attrClosures : List BitSet
+        attrClosures =
+            List.map BitSet.fromSet attributeClosures
+
+        closureCount =
+            List.length attrClosures
+    in
+    if closureCount > 64 then
+        "digraph G{node[shape=box];\"The concept lattice has too many nodes (>64) to be rendered.\"}"
+
+    else
+        let
+            nodes =
+                List.map
+                    (\set -> BitSet.showInt set ++ "[label=\"" ++ BitSet.showSet set ++ "\"]")
+                    attrClosures
+
+            relElementToBitSet : Array BitSet
+            relElementToBitSet =
+                Array.fromList attrClosures
+
+            getBitSet : Int -> BitSet
+            getBitSet i =
+                Array.get i relElementToBitSet |> Maybe.withDefault BitSet.empty
+
+            -- Represent ⊆ order relation on closure sets as Rel, so we can run transitive reduction on it
+            latticeOrderRelation =
+                -- Safe, because set containment is guaranteed to be poset and thus acyclic
+                Acyclic <|
+                    Rel <|
+                        Array.initialize closureCount
+                            (\i ->
+                                Array.initialize closureCount
+                                    (\j ->
+                                        let
+                                            a =
+                                                getBitSet i
+
+                                            b =
+                                                getBitSet j
+                                        in
+                                        BitSet.isSubset a b && a /= b
+                                    )
+                            )
+
+            latticeCoverRelationEdges =
+                transitiveReduction latticeOrderRelation
+                    |> elements
+                    |> List.map
+                        (\( i, j ) ->
+                            BitSet.showInt (getBitSet i)
+                                ++ "->"
+                                ++ BitSet.showInt (getBitSet j)
+                        )
+        in
+        String.join ";" <|
+            "digraph G{rankdir=BT"
+                :: "node[shape=box;margin=0;width=0;height=0]"
+                :: "edge[arrowhead=none]"
+                :: (nodes ++ latticeCoverRelationEdges ++ [ "}" ])
 
 
 
@@ -2100,11 +2149,6 @@ unsafeGet i j rows =
         |> Maybe.withDefault False
 
 
-arrayAnd : Array Bool -> Bool
-arrayAnd =
-    Array.foldl (&&) True
-
-
 arrayOr : Array Bool -> Bool
 arrayOr =
     Array.foldl (||) False
@@ -2112,3 +2156,25 @@ arrayOr =
 
 
 {- Unicode corner: ⇒ ∈ ∉ ⊆ ∀ ∃ ∧ ∨ ≠ -}
+{- DEAD CODE, might come in handy later
+   {-| Is the first relation subset of the 2nd?
+   -}
+   isSubsetOf : Rel -> Rel -> Bool
+   isSubsetOf (Rel rowsA) (Rel rowsB) =
+       arrayAnd <|
+           Array.map2
+               (\rowA rowB ->
+                   arrayAnd <|
+                       Array.map2
+                           -- Implication: whenever A is true, B must be as well
+                           (\cellA cellB -> not cellA || cellB)
+                           rowA
+                           rowB
+               )
+               rowsA
+               rowsB
+
+   arrayAnd : Array Bool -> Bool
+   arrayAnd =
+       Array.foldl (&&) True
+-}

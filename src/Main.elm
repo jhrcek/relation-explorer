@@ -26,11 +26,17 @@ type alias Model =
     , derivedInfo : DerivedInfo
     , highlight : Highlight
     , highlightSccs : Bool
-
-    -- Number between 0 and 1, indicating how likely it is that random generators
-    -- will produce a True value (and thus generate an element of a relation)
-    , trueProb : Float
+    , graphMode : GraphMode
+    , -- Number between 0 and 1, indicating how likely it is that random generators
+      -- will produce a True value (and thus generate an element of a relation)-}
+      trueProb : Float
     }
+
+
+type GraphMode
+    = RelationGraph
+      -- TODO add BipartiteGraph
+    | ConceptLattice
 
 
 init : () -> ( Model, Cmd Msg )
@@ -45,37 +51,49 @@ init _ =
         initDerivedInfo =
             Rel.deriveInfo initRel
 
-        highlightSccs =
+        initHighlightSccs =
             True
+
+        initGraphMode =
+            RelationGraph
     in
     ( { rel = initRel
       , history = []
       , derivedInfo = initDerivedInfo
       , highlight = NoHighlight
-      , highlightSccs = highlightSccs
       , trueProb = 0.2
+      , graphMode = initGraphMode
+      , highlightSccs = initHighlightSccs
       }
-    , renderGraph initRel (Rel.isAcyclic initDerivedInfo) highlightSccs
+    , renderGraph initRel initDerivedInfo initGraphMode initHighlightSccs
     )
 
 
-renderGraph : Rel -> Bool -> Bool -> Cmd msg
-renderGraph rel isAcyclic highlightSccs =
-    Ports.renderDot
-        { engine =
-            if isAcyclic then
-                "dot"
+renderGraph : Rel -> DerivedInfo -> GraphMode -> Bool -> Cmd msg
+renderGraph rel info graphMode highlightSccs =
+    Ports.renderDot <|
+        case graphMode of
+            RelationGraph ->
+                { engine =
+                    if Rel.isAcyclic info then
+                        "dot"
 
-            else
-                "neato"
-        , dotSource = Rel.toDotSource rel highlightSccs
-        }
+                    else
+                        "neato"
+                , dotSource = Rel.relationToDotSource rel highlightSccs
+                }
+
+            ConceptLattice ->
+                { engine = "dot"
+                , dotSource = Rel.conceptLatticeToDotSource info.attributeSetClosures
+                }
 
 
 type Msg
     = SetRelSize Int
     | SetTrueProb Float
     | ToggleRel Int Int
+    | ToggleGraphMode GraphMode
     | ToggleHighlightSccs
     | DoReflexiveClosure
     | DoReflexiveReduction
@@ -135,13 +153,18 @@ update msg model =
         ToggleRel i j ->
             updateRel (Rel.toggle i j) model
 
+        ToggleGraphMode newGraphMode ->
+            ( { model | graphMode = newGraphMode }
+            , renderGraph model.rel model.derivedInfo newGraphMode model.highlightSccs
+            )
+
         ToggleHighlightSccs ->
             let
                 newHighlightSccs =
                     not model.highlightSccs
             in
             ( { model | highlightSccs = newHighlightSccs }
-            , renderGraph model.rel (Rel.isAcyclic model.derivedInfo) newHighlightSccs
+            , renderGraph model.rel model.derivedInfo model.graphMode newHighlightSccs
             )
 
         DoReflexiveClosure ->
@@ -273,7 +296,7 @@ updateRel f model =
         , derivedInfo = newDerivedInfo
         , history = model.rel :: model.history
       }
-    , renderGraph newRel (Rel.isAcyclic newDerivedInfo) model.highlightSccs
+    , renderGraph newRel newDerivedInfo model.graphMode model.highlightSccs
     )
 
 
@@ -293,7 +316,7 @@ undoHistory model =
                 , derivedInfo = prevDerivedInfo
                 , history = rest
               }
-            , renderGraph prevRel (Rel.isAcyclic prevDerivedInfo) model.highlightSccs
+            , renderGraph prevRel prevDerivedInfo model.graphMode model.highlightSccs
             )
 
 
@@ -322,7 +345,7 @@ view model =
                 [ sizeInputView model.derivedInfo.relSize
                 , Rel.view relConfig model.rel model.highlight
                 , elementaryPropertiesView model.derivedInfo
-                , miscControls model.trueProb model.highlightSccs
+                , miscControls model.trueProb model.graphMode model.highlightSccs
                 ]
             , Html.div [ A.id "explanation" ]
                 [ Html.div []
@@ -654,8 +677,8 @@ setTrueProbView trueProb =
         ]
 
 
-miscControls : Float -> Bool -> Html Msg
-miscControls trueProb highlightSccs =
+miscControls : Float -> GraphMode -> Bool -> Html Msg
+miscControls trueProb graphMode highlightSccs =
     Html.div []
         [ Html.h4 [] [ Html.text "Operations" ]
         , Html.button [ E.onClick UndoHistory, A.title "Undo previous edits" ] [ Html.text "Undo" ]
@@ -664,14 +687,36 @@ miscControls trueProb highlightSccs =
         , Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ]
         , Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ]
         , setTrueProbView trueProb
-        , Html.label []
-            [ Html.input
-                [ A.type_ "checkbox"
-                , A.checked highlightSccs
-                , E.onClick ToggleHighlightSccs
+        , Html.h4 [] [ Html.text "Graph Options" ]
+        , Html.div []
+            [ radio "Relation graph" graphMode RelationGraph
+            , Html.div [ A.class "indent" ]
+                [ Html.label []
+                    [ Html.input
+                        [ A.type_ "checkbox"
+                        , A.checked highlightSccs
+                        , E.onClick ToggleHighlightSccs
+                        , A.disabled (graphMode /= RelationGraph)
+                        ]
+                        []
+                    , Html.text "Highlight SCCs "
+                    , Html.span [ A.title "Strongly Connected Components" ] [ Html.text "ⓘ" ]
+                    ]
                 ]
-                []
-            , Html.text "Highlight SCCs "
-            , Html.span [ A.title "Strongly Connected Components" ] [ Html.text "ⓘ" ]
             ]
+        , Html.div [] [ radio "Concept lattice" graphMode ConceptLattice ]
+        ]
+
+
+radio : String -> GraphMode -> GraphMode -> Html Msg
+radio label currentGraphMode graphMode =
+    Html.label []
+        [ Html.input
+            [ A.type_ "radio"
+            , A.name "graph-mode"
+            , E.onClick (ToggleGraphMode graphMode)
+            , A.checked (currentGraphMode == graphMode)
+            ]
+            []
+        , Html.text label
         ]
