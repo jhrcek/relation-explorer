@@ -32,8 +32,7 @@ a:visited {
 
 #size-label {
     display: inline-block;
-    width: 60px;
-    text-align: right;
+    width: 120px;
 }
 
 #top-container {

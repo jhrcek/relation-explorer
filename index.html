@@ -18,23 +18,9 @@
 
     const vizRenderOptions = function (engine) {
       return {
-        engine: engine,
-        graphAttributes: {
-          splines: true,
-          overlap: false,
-          rankdir: 'BT'
-        },
-        edgeAttributes: {
-          arrowsize: 0.5
-        },
-        nodeAttributes: {
-          shape: 'circle',
-          width: 0.3,
-          fixedsize: true
-        },
+        engine: engine
       }
     };
-
     app.ports.renderDot.subscribe(args => {
       Viz.instance().then(viz => {
         const graph = document.getElementById('graph');
