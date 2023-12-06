@@ -132,7 +132,7 @@ type alias DerivedInfo =
     , superfluousForFunctional : Set Pair
     , superfluousForFunction : Set Pair
     , missingForConnectedness : Set Pair
-    , attributeSetClosures : List (Set Int) -- In lectic order
+    , formalConcepts : List ( Set Int, Set Int )
     , emptyRowIndices : Set Int
     , isBijectiveFunction : Bool
     , isDerangement : Bool
@@ -176,7 +176,14 @@ deriveInfo rel =
     , isBijectiveFunction = isBijectiveFunction rel
     , isDerangement = isDerangement rel
     , isInvolution = isInvolution rel
-    , attributeSetClosures = listAttributeClosures rel
+    , formalConcepts =
+        listAttributeClosures rel
+            |> List.map
+                (\attrClosure ->
+                    ( objectsSharingAllAttributes rel attrClosure
+                    , attrClosure
+                    )
+                )
     , acyclicInfo =
         mkAcyclic rel
             |> Result.map
@@ -2068,33 +2075,58 @@ relationToDotSource rel highlightSccs =
         ++ "}"
 
 
-conceptLatticeToDotSource : List (Set Int) -> String
-conceptLatticeToDotSource attributeClosures =
+conceptLatticeToDotSource : List ( Set Int, Set Int ) -> Bool -> Bool -> String
+conceptLatticeToDotSource attributeClosures showExtents showIntents =
     let
-        attrClosures : List BitSet
-        attrClosures =
-            List.map BitSet.fromSet attributeClosures
+        formalConcepts : List ( BitSet, BitSet )
+        formalConcepts =
+            List.map (Tuple.mapBoth BitSet.fromSet BitSet.fromSet) attributeClosures
 
         closureCount =
-            List.length attrClosures
+            List.length formalConcepts
     in
     if closureCount > 64 then
         "digraph G{node[shape=box];\"The concept lattice has too many nodes (>64) to be rendered.\"}"
 
     else
         let
+            ( nodeAttributes, renderNode ) =
+                if showExtents && showIntents then
+                    ( "node[shape=record;width=0;height=0;margin=0;color=gray]"
+                    , \( objSet, attrSet ) ->
+                        BitSet.showInt attrSet ++ "[label=\"{" ++ BitSet.showSet True attrSet ++ "|" ++ BitSet.showSet True objSet ++ "}\"]"
+                    )
+
+                else if showExtents then
+                    ( "node[shape=box;margin=0;width=0;height=0;color=gray]"
+                    , \( objSet, attrSet ) ->
+                        BitSet.showInt attrSet ++ "[label=\"" ++ BitSet.showSet False objSet ++ "\"]"
+                    )
+
+                else if showIntents then
+                    ( "node[shape=box;margin=0;width=0;height=0;color=gray]"
+                    , \( _, attrSet ) ->
+                        BitSet.showInt attrSet ++ "[label=\"" ++ BitSet.showSet False attrSet ++ "\"]"
+                    )
+
+                else
+                    ( "node[shape=point;color=gray]"
+                    , \( _, attrSet ) ->
+                        BitSet.showInt attrSet ++ "[label=\"" ++ BitSet.showSet False attrSet ++ "\"]"
+                    )
+
             nodes =
                 List.map
-                    (\set -> BitSet.showInt set ++ "[label=\"" ++ BitSet.showSet set ++ "\"]")
-                    attrClosures
+                    renderNode
+                    formalConcepts
 
-            relElementToBitSet : Array BitSet
-            relElementToBitSet =
-                Array.fromList attrClosures
+            relElementToAttrBitSet : Array BitSet
+            relElementToAttrBitSet =
+                Array.fromList <| List.map Tuple.second formalConcepts
 
             getBitSet : Int -> BitSet
             getBitSet i =
-                Array.get i relElementToBitSet |> Maybe.withDefault BitSet.empty
+                Array.get i relElementToAttrBitSet |> Maybe.withDefault BitSet.empty
 
             -- Represent ⊆ order relation on closure sets as Rel, so we can run transitive reduction on it
             latticeOrderRelation =
@@ -2128,7 +2160,7 @@ conceptLatticeToDotSource attributeClosures =
         in
         String.join ";" <|
             "digraph G{rankdir=BT"
-                :: "node[shape=box;margin=0;width=0;height=0]"
+                :: nodeAttributes
                 :: "edge[arrowhead=none]"
                 :: (nodes ++ latticeCoverRelationEdges ++ [ "}" ])
 
@@ -2155,7 +2187,7 @@ arrayOr =
 
 
 
-{- Unicode corner: ⇒ ∈ ∉ ⊆ ∀ ∃ ∧ ∨ ≠ -}
+{- Unicode corner: ⇒ ∈ ∉ ⊆ ∀ ∃ ∧ ∨ ≠ ∅ -}
 {- DEAD CODE, might come in handy later
    {-| Is the first relation subset of the 2nd?
    -}

@@ -54,3 +54,7 @@ a:visited {
 .indent {
     padding-left: 20px;
 }
+
+#graph {
+    padding-top: 10px;
+}

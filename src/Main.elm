@@ -26,6 +26,8 @@ type alias Model =
     , derivedInfo : DerivedInfo
     , highlight : Highlight
     , highlightSccs : Bool
+    , showIntents : Bool
+    , showExtents : Bool
     , graphMode : GraphMode
     , -- Number between 0 and 1, indicating how likely it is that random generators
       -- will produce a True value (and thus generate an element of a relation)-}
@@ -48,34 +50,42 @@ init _ =
         initRel =
             Rel.empty initSize
 
-        initDerivedInfo =
-            Rel.deriveInfo initRel
-
-        initHighlightSccs =
-            True
-
-        initGraphMode =
-            RelationGraph
+        initModel =
+            { rel = initRel
+            , history = []
+            , derivedInfo = Rel.deriveInfo initRel
+            , highlight = NoHighlight
+            , trueProb = 0.2
+            , graphMode = RelationGraph
+            , highlightSccs = True
+            , showIntents = True
+            , showExtents = True
+            }
     in
-    ( { rel = initRel
-      , history = []
-      , derivedInfo = initDerivedInfo
-      , highlight = NoHighlight
-      , trueProb = 0.2
-      , graphMode = initGraphMode
-      , highlightSccs = initHighlightSccs
-      }
-    , renderGraph initRel initDerivedInfo initGraphMode initHighlightSccs
-    )
+    updateGraph initModel
 
 
-renderGraph : Rel -> DerivedInfo -> GraphMode -> Bool -> Cmd msg
-renderGraph rel info graphMode highlightSccs =
+updateGraph : Model -> ( Model, Cmd Msg )
+updateGraph model =
+    ( model, renderGraph model )
+
+
+renderGraph :
+    { r
+        | rel : Rel
+        , derivedInfo : DerivedInfo
+        , graphMode : GraphMode
+        , highlightSccs : Bool
+        , showExtents : Bool
+        , showIntents : Bool
+    }
+    -> Cmd msg
+renderGraph { rel, derivedInfo, graphMode, highlightSccs, showExtents, showIntents } =
     Ports.renderDot <|
         case graphMode of
             RelationGraph ->
                 { engine =
-                    if Rel.isAcyclic info then
+                    if Rel.isAcyclic derivedInfo then
                         "dot"
 
                     else
@@ -85,7 +95,7 @@ renderGraph rel info graphMode highlightSccs =
 
             ConceptLattice ->
                 { engine = "dot"
-                , dotSource = Rel.conceptLatticeToDotSource info.attributeSetClosures
+                , dotSource = Rel.conceptLatticeToDotSource derivedInfo.formalConcepts showExtents showIntents
                 }
 
 
@@ -95,6 +105,8 @@ type Msg
     | ToggleRel Int Int
     | ToggleGraphMode GraphMode
     | ToggleHighlightSccs
+    | ToggleShowExtents
+    | ToggleShowIntents
     | DoReflexiveClosure
     | DoReflexiveReduction
     | DoSymmetricClosure
@@ -154,18 +166,16 @@ update msg model =
             updateRel (Rel.toggle i j) model
 
         ToggleGraphMode newGraphMode ->
-            ( { model | graphMode = newGraphMode }
-            , renderGraph model.rel model.derivedInfo newGraphMode model.highlightSccs
-            )
+            updateGraph { model | graphMode = newGraphMode }
 
         ToggleHighlightSccs ->
-            let
-                newHighlightSccs =
-                    not model.highlightSccs
-            in
-            ( { model | highlightSccs = newHighlightSccs }
-            , renderGraph model.rel model.derivedInfo model.graphMode newHighlightSccs
-            )
+            updateGraph { model | highlightSccs = not model.highlightSccs }
+
+        ToggleShowExtents ->
+            updateGraph { model | showExtents = not model.showExtents }
+
+        ToggleShowIntents ->
+            updateGraph { model | showIntents = not model.showIntents }
 
         DoReflexiveClosure ->
             updateRel Rel.reflexiveClosure model
@@ -290,14 +300,15 @@ updateRel f model =
 
         newDerivedInfo =
             Rel.deriveInfo newRel
+
+        newModel =
+            { model
+                | rel = newRel
+                , derivedInfo = newDerivedInfo
+                , history = model.rel :: model.history
+            }
     in
-    ( { model
-        | rel = newRel
-        , derivedInfo = newDerivedInfo
-        , history = model.rel :: model.history
-      }
-    , renderGraph newRel newDerivedInfo model.graphMode model.highlightSccs
-    )
+    updateGraph newModel
 
 
 undoHistory : Model -> ( Model, Cmd Msg )
@@ -310,14 +321,15 @@ undoHistory model =
             let
                 prevDerivedInfo =
                     Rel.deriveInfo prevRel
+
+                newModel =
+                    { model
+                        | rel = prevRel
+                        , derivedInfo = prevDerivedInfo
+                        , history = rest
+                    }
             in
-            ( { model
-                | rel = prevRel
-                , derivedInfo = prevDerivedInfo
-                , history = rest
-              }
-            , renderGraph prevRel prevDerivedInfo model.graphMode model.highlightSccs
-            )
+            updateGraph newModel
 
 
 generateRel : (Int -> Generator Rel) -> Model -> ( Model, Cmd Msg )
@@ -345,7 +357,7 @@ view model =
                 [ sizeInputView model.derivedInfo.relSize
                 , Rel.view relConfig model.rel model.highlight
                 , elementaryPropertiesView model.derivedInfo
-                , miscControls model.trueProb model.graphMode model.highlightSccs
+                , miscControls model.trueProb
                 ]
             , Html.div [ A.id "explanation" ]
                 [ Html.div []
@@ -366,25 +378,24 @@ view model =
                         [ Html.text "FCA"
                         , Html.div [ A.class "indent" ] <|
                             let
-                                closures =
-                                    model.derivedInfo.attributeSetClosures
+                                concepts =
+                                    model.derivedInfo.formalConcepts
                             in
-                            Html.text
-                                ("attribute closures (total "
-                                    ++ String.fromInt (List.length closures)
+                            [ Html.text <|
+                                "formal concepts (total "
+                                    ++ String.fromInt (List.length concepts)
                                     ++ "): "
-                                )
-                                :: List.intersperse (Html.text ", ")
-                                    (List.map
-                                        (\attrs ->
-                                            Html.span
-                                                [ E.onMouseEnter (HighlightConcept attrs)
-                                                , E.onMouseLeave ClearHighlight
-                                                ]
-                                                [ Html.text <| Rel.showIntSet attrs ]
-                                        )
-                                        closures
+                            , Html.ul [] <|
+                                List.map
+                                    (\( objects, attrs ) ->
+                                        Html.li
+                                            [ E.onMouseEnter (HighlightConcept attrs)
+                                            , E.onMouseLeave ClearHighlight
+                                            ]
+                                            [ Html.text <| "(" ++ Rel.showIntSet objects ++ "," ++ Rel.showIntSet attrs ++ ")" ]
                                     )
+                                    concepts
+                            ]
                         ]
                     , case model.highlight of
                         Explanation exp ->
@@ -397,8 +408,11 @@ view model =
                             Html.text ""
                     ]
                 ]
-            , Html.div [ A.id "graph" ]
-                [{- This is where viz.js renders svg graph -}]
+            , Html.div []
+                [ graphControls model
+                , Html.div [ A.id "graph" ]
+                    [{- This is where viz.js renders svg graph -}]
+                ]
             ]
         ]
 
@@ -677,17 +691,17 @@ setTrueProbView trueProb =
         ]
 
 
-miscControls : Float -> GraphMode -> Bool -> Html Msg
-miscControls trueProb graphMode highlightSccs =
+graphControls :
+    { r
+        | graphMode : GraphMode
+        , highlightSccs : Bool
+        , showExtents : Bool
+        , showIntents : Bool
+    }
+    -> Html Msg
+graphControls { graphMode, highlightSccs, showExtents, showIntents } =
     Html.div []
-        [ Html.h4 [] [ Html.text "Operations" ]
-        , Html.button [ E.onClick UndoHistory, A.title "Undo previous edits" ] [ Html.text "Undo" ]
-        , -- TODO think about how to decompose this hodpodge of controls
-          Html.button [ E.onClick MakeEmpty, A.title "Empty relation" ] [ Html.text "∅" ]
-        , Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ]
-        , Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ]
-        , setTrueProbView trueProb
-        , Html.h4 [] [ Html.text "Graph Options" ]
+        [ Html.h4 [] [ Html.text "Graph Options" ]
         , Html.div []
             [ radio "Relation graph" graphMode RelationGraph
             , Html.div [ A.class "indent" ]
@@ -704,7 +718,44 @@ miscControls trueProb graphMode highlightSccs =
                     ]
                 ]
             ]
-        , Html.div [] [ radio "Concept lattice" graphMode ConceptLattice ]
+        , Html.div []
+            [ radio "Concept lattice" graphMode ConceptLattice
+            , Html.div [ A.class "indent" ]
+                [ Html.label []
+                    [ Html.input
+                        [ A.type_ "checkbox"
+                        , A.checked showExtents
+                        , E.onClick ToggleShowExtents
+                        , A.disabled (graphMode /= ConceptLattice)
+                        ]
+                        []
+                    , Html.text "Show extents"
+                    ]
+                , Html.label []
+                    [ Html.input
+                        [ A.type_ "checkbox"
+                        , A.checked showIntents
+                        , E.onClick ToggleShowIntents
+                        , A.disabled (graphMode /= ConceptLattice)
+                        ]
+                        []
+                    , Html.text "Show intents"
+                    ]
+                ]
+            ]
+        ]
+
+
+miscControls : Float -> Html Msg
+miscControls trueProb =
+    Html.div []
+        [ Html.h4 [] [ Html.text "Operations" ]
+        , Html.button [ E.onClick UndoHistory, A.title "Undo previous edits" ] [ Html.text "Undo" ]
+        , -- TODO think about how to decompose this hodpodge of controls
+          Html.button [ E.onClick MakeEmpty, A.title "Empty relation" ] [ Html.text "∅" ]
+        , Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ]
+        , Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ]
+        , setTrueProbView trueProb
         ]
 
 

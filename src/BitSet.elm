@@ -27,8 +27,8 @@ maxElement =
     31
 
 
-showSet : BitSet -> String
-showSet (BitSet set) =
+showSet : Bool -> BitSet -> String
+showSet escapeCurly (BitSet set) =
     let
         go : Int -> Int -> List String -> List String
         go i acc resultStack =
@@ -45,9 +45,22 @@ showSet (BitSet set) =
                         resultStack
                     )
     in
-    go set 0 []
-        |> String.join ","
-        |> (\x -> "{" ++ x ++ "}")
+    case go set 0 [] of
+        [] ->
+            "∅"
+
+        nonEmpty ->
+            let
+                elems =
+                    String.join "," nonEmpty
+            in
+            -- This is needed because I'm using graphviz shape=record, which
+            -- uses {} to render things vertically within a node.
+            if escapeCurly then
+                "\\{" ++ elems ++ "\\}"
+
+            else
+                "{" ++ elems ++ "}"
 
 
 showInt : BitSet -> String
