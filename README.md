@@ -6,6 +6,7 @@
     - [x] A rectangular matrix with checkboxes that allows specifying arbitraty relation on a set with n elements
     - [x] Basic history support - ability to undo relation edits
     - [x] Show a graph (as in graph theory) of the relation
+    - [x] Show a bipartite graph of the relation (TODO how is this called?)
 
 - [ ] Multiple ways to initialize relation
     - [x] Initialize as empty

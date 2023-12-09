@@ -37,7 +37,7 @@ type alias Model =
 
 type GraphMode
     = RelationGraph
-      -- TODO add BipartiteGraph
+    | BipartiteGraph
     | ConceptLattice
 
 
@@ -90,7 +90,12 @@ renderGraph { rel, derivedInfo, graphMode, highlightSccs, showExtents, showInten
 
                     else
                         "neato"
-                , dotSource = Rel.relationToDotSource rel highlightSccs
+                , dotSource = Rel.relationGraphToDotSource rel highlightSccs
+                }
+
+            BipartiteGraph ->
+                { engine = "neato"
+                , dotSource = Rel.relationBipartiteGraphDotSource rel
                 }
 
             ConceptLattice ->
@@ -717,6 +722,9 @@ graphControls { graphMode, highlightSccs, showExtents, showIntents } =
                     , Html.span [ A.title "Strongly Connected Components" ] [ Html.text "ⓘ" ]
                     ]
                 ]
+            ]
+        , Html.div []
+            [ radio "Bipartite graph" graphMode BipartiteGraph
             ]
         , Html.div []
             [ radio "Concept lattice" graphMode ConceptLattice

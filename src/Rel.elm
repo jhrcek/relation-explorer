@@ -50,7 +50,8 @@ module Rel exposing
     , objectsSharingAllAttributes
     , reflexiveClosure
     , reflexiveReduction
-    , relationToDotSource
+    , relationBipartiteGraphDotSource
+    , relationGraphToDotSource
     , resize
     , scc
     , showElements
@@ -2027,8 +2028,8 @@ isAreElements count =
         ( "are", String.fromInt count ++ " elements" )
 
 
-relationToDotSource : Rel -> Bool -> String
-relationToDotSource rel highlightSccs =
+relationGraphToDotSource : Rel -> Bool -> String
+relationGraphToDotSource rel highlightSccs =
     let
         -- Compute SCCs even when not highlighting them.
         -- We need to keep the same node order in both highlighted/unhighlighted case
@@ -2070,9 +2071,52 @@ relationToDotSource rel highlightSccs =
             elements rel
                 |> List.map (\( i, j ) -> String.fromInt i ++ "->" ++ String.fromInt j)
     in
-    "digraph G {graph[rankdir=BT;splines=true;overlap=false];node[shape=circle;width=0.3;fixedsize=true];edge[arrowsize=0.5];"
-        ++ String.join ";" (nodeLines ++ edgesLines)
-        ++ "}"
+    String.join ";" <|
+        "digraph G{graph[rankdir=BT;splines=true;overlap=false]"
+            :: "node[shape=circle;width=0.3;fixedsize=true]"
+            :: "edge[arrowsize=0.5]"
+            :: (nodeLines ++ edgesLines)
+            ++ [ "}" ]
+
+
+relationBipartiteGraphDotSource : Rel -> String
+relationBipartiteGraphDotSource rel =
+    let
+        domainNodes =
+            domainCodomain "d" "0"
+
+        codomainNodes =
+            domainCodomain "c" "2"
+
+        domainCodomain domCodomIdentifier xCoord =
+            List.map
+                (\i ->
+                    let
+                        yCoord =
+                            -0.75 * toFloat i
+                    in
+                    domCodomIdentifier
+                        ++ String.fromInt i
+                        ++ ("[pos=\"" ++ xCoord ++ "," ++ String.fromFloat yCoord ++ "!\";")
+                        ++ ("label=\"" ++ String.fromInt i ++ "\"]")
+                )
+                (domain rel)
+
+        edges =
+            List.map
+                (\( i, j ) ->
+                    "d"
+                        ++ String.fromInt i
+                        ++ "->c"
+                        ++ String.fromInt j
+                )
+                (elements rel)
+    in
+    -- Based on https://observablehq.com/@magjac/placing-graphviz-nodes-in-fixed-positions
+    String.join ";" <|
+        "digraph G{node[shape=circle;width=0.3;fixedsize=true]"
+            :: "edge[arrowsize=0.5]"
+            :: (domainNodes ++ codomainNodes ++ edges ++ [ "}" ])
 
 
 conceptLatticeToDotSource : List ( Set Int, Set Int ) -> Bool -> Bool -> String
