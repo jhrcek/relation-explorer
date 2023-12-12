@@ -58,3 +58,7 @@ a:visited {
 #graph {
     padding-top: 10px;
 }
+
+.pager {
+    width: 300px;
+}
