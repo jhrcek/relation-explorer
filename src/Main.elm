@@ -4,6 +4,7 @@ import Browser
 import Html exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
+import Natural
 import Ports
 import Random exposing (Generator)
 import Rel exposing (DerivedInfo, Highlight(..), Rel)
@@ -37,6 +38,7 @@ type alias Model =
 
 type GraphMode
     = RelationGraph
+      -- TODO HasseDiagram iff it's poset
     | BipartiteGraph
     | ConceptLattice
 
@@ -112,6 +114,8 @@ type Msg
     | ToggleHighlightSccs
     | ToggleShowExtents
     | ToggleShowIntents
+    | PreviousRelation
+    | NextRelation
     | DoReflexiveClosure
     | DoReflexiveReduction
     | DoSymmetricClosure
@@ -181,6 +185,12 @@ update msg model =
 
         ToggleShowIntents ->
             updateGraph { model | showIntents = not model.showIntents }
+
+        PreviousRelation ->
+            updateRel Rel.prev model
+
+        NextRelation ->
+            updateRel Rel.next model
 
         DoReflexiveClosure ->
             updateRel Rel.reflexiveClosure model
@@ -361,6 +371,7 @@ view model =
             [ Html.div [ A.id "rel-and-controls" ]
                 [ sizeInputView model.derivedInfo.relSize
                 , Rel.view relConfig model.rel model.highlight
+                , pager model.rel
                 , elementaryPropertiesView model.derivedInfo
                 , miscControls model.trueProb
                 ]
@@ -751,6 +762,31 @@ graphControls { graphMode, highlightSccs, showExtents, showIntents } =
                     ]
                 ]
             ]
+        ]
+
+
+pager : Rel -> Html Msg
+pager rel =
+    Html.div [ A.class "pager" ]
+        [ Html.button [ E.onClick PreviousRelation, A.title "Previous relation" ] [ Html.text "<" ]
+        , Html.span []
+            [ Html.text <|
+                " "
+                    ++ Natural.toString (Rel.toRelIndex rel)
+                    ++ " of "
+                    ++ Natural.toString
+                        (let
+                            n =
+                                Natural.fromSafeInt <| Rel.size rel
+
+                            nSquared =
+                                Natural.mul n n
+                         in
+                         Natural.exp Natural.two nSquared
+                        )
+                    ++ " "
+            ]
+        , Html.button [ E.onClick NextRelation, A.title "Next relation" ] [ Html.text ">" ]
         ]
 
 

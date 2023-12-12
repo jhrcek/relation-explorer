@@ -47,7 +47,9 @@ module Rel exposing
     , isSymmetric
     , isTotalOrder
     , isTransitive
+    , next
     , objectsSharingAllAttributes
+    , prev
     , reflexiveClosure
     , reflexiveReduction
     , relationBipartiteGraphDotSource
@@ -59,6 +61,7 @@ module Rel exposing
     , showIntSet
     , size
     , symmetricClosure
+    , toRelIndex
     , toggle
     , transitiveClosure
     , view
@@ -73,6 +76,7 @@ import Html.Attributes as A
 import Html.Events as E
 import List
 import List.Extra as List
+import Natural exposing (Natural)
 import Random exposing (Generator)
 import Random.Array
 import Random.Extra as Random
@@ -370,6 +374,110 @@ toggle i j ((Rel rows) as rel) =
 
         Nothing ->
             rel
+
+
+prev : Rel -> Rel
+prev (Rel rows) =
+    -- Traverse the rows from 0 to n-1, keep flipping all the Falses to True
+    -- until first True is found and flipped, then keep the rest.
+    -- It's like subtracting 1 in binary, but from left to right
+    Array.foldl
+        (\row ( acc, flipped ) ->
+            if flipped then
+                ( row :: acc, flipped )
+
+            else
+                let
+                    ( newRow, newFlipped ) =
+                        Array.foldl
+                            (\bool ( rowAcc, flipped1 ) ->
+                                if flipped1 then
+                                    ( bool :: rowAcc, flipped1 )
+
+                                else if bool then
+                                    ( False :: rowAcc, True )
+
+                                else
+                                    ( True :: rowAcc, flipped1 )
+                            )
+                            ( [], flipped )
+                            row
+                in
+                ( Array.fromList (List.reverse newRow) :: acc
+                , newFlipped
+                )
+        )
+        ( []
+        , False
+        )
+        rows
+        |> Tuple.first
+        |> List.reverse
+        |> Array.fromList
+        |> Rel
+
+
+{-| Is characteristic vector of the relation (considered as a set) converted to a natural number
+-}
+toRelIndex : Rel -> Natural
+toRelIndex (Rel rows) =
+    Array.toList rows
+        |> List.concatMap Array.toList
+        |> List.map
+            (\bool ->
+                if bool then
+                    '1'
+
+                else
+                    '0'
+            )
+        |> List.reverse
+        |> String.fromList
+        |> Natural.fromBinaryString
+        |> Maybe.withDefault Natural.zero
+        -- Empty set is "relation 1"
+        |> Natural.add Natural.one
+
+
+next : Rel -> Rel
+next (Rel rows) =
+    -- Traverse the rows from 0 to n-1, keep flipping all the Trues to False
+    -- until first False is found and flipped, then keep the rest.
+    -- It's like adding 1 in binary, but from left to right
+    Array.foldl
+        (\row ( acc, flipped ) ->
+            if flipped then
+                ( row :: acc, flipped )
+
+            else
+                let
+                    ( newRow, newFlipped ) =
+                        Array.foldl
+                            (\bool ( rowAcc, flipped1 ) ->
+                                if flipped1 then
+                                    ( bool :: rowAcc, flipped1 )
+
+                                else if bool then
+                                    ( False :: rowAcc, flipped1 )
+
+                                else
+                                    ( True :: rowAcc, True )
+                            )
+                            ( [], flipped )
+                            row
+                in
+                ( Array.fromList (List.reverse newRow) :: acc
+                , newFlipped
+                )
+        )
+        ( []
+        , False
+        )
+        rows
+        |> Tuple.first
+        |> List.reverse
+        |> Array.fromList
+        |> Rel
 
 
 explainRelation : DerivedInfo -> ExplanationData
