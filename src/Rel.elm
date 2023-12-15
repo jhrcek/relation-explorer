@@ -2262,7 +2262,7 @@ conceptLatticeToDotSource attributeClosures showExtents showIntents =
                     )
 
                 else
-                    ( "node[shape=point;color=gray]"
+                    ( "node[shape=point;width=0.1;color=black;fillcolor=none]"
                     , \( _, attrSet ) ->
                         BitSet.showInt attrSet ++ "[label=\"" ++ BitSet.showSet False attrSet ++ "\"]"
                     )
