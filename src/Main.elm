@@ -38,8 +38,8 @@ type alias Model =
 
 type GraphMode
     = RelationGraph
-      -- TODO HasseDiagram iff it's poset
     | BipartiteGraph
+    | HasseDiagram
     | ConceptLattice
 
 
@@ -92,12 +92,23 @@ renderGraph { rel, derivedInfo, graphMode, highlightSccs, showExtents, showInten
 
                     else
                         "neato"
-                , dotSource = Rel.relationGraphToDotSource rel highlightSccs
+                , dotSource = Rel.relationGraphToDotSource rel { highlightSccs = highlightSccs, showArrowheads = True }
                 }
 
             BipartiteGraph ->
                 { engine = "neato"
                 , dotSource = Rel.relationBipartiteGraphDotSource rel
+                }
+
+            HasseDiagram ->
+                { engine = "dot"
+                , dotSource =
+                    case derivedInfo.acyclicInfo of
+                        Ok acyclicInfo ->
+                            Rel.hasseDiagramToDotSource acyclicInfo
+
+                        Err _ ->
+                            Rel.errorInBoxDot "Cannot draw Hasse diagram for a relation that contains cycles."
                 }
 
             ConceptLattice ->
@@ -713,13 +724,14 @@ graphControls :
         , highlightSccs : Bool
         , showExtents : Bool
         , showIntents : Bool
+        , derivedInfo : DerivedInfo
     }
     -> Html Msg
-graphControls { graphMode, highlightSccs, showExtents, showIntents } =
+graphControls { graphMode, highlightSccs, showExtents, showIntents, derivedInfo } =
     Html.div []
         [ Html.h4 [] [ Html.text "Graph Options" ]
         , Html.div []
-            [ radio "Relation graph" graphMode RelationGraph
+            [ radio "Relation graph" graphMode RelationGraph True
             , Html.div [ A.class "indent" ]
                 [ Html.label []
                     [ Html.input
@@ -735,10 +747,14 @@ graphControls { graphMode, highlightSccs, showExtents, showIntents } =
                 ]
             ]
         , Html.div []
-            [ radio "Bipartite graph" graphMode BipartiteGraph
+            [ radio "Bipartite graph" graphMode BipartiteGraph True
             ]
         , Html.div []
-            [ radio "Concept lattice" graphMode ConceptLattice
+            [ radio "Hasse diagram " graphMode HasseDiagram (Rel.isAcyclic derivedInfo)
+            , Html.span [ A.title "Only available for acyclic relations" ] [ Html.text "ⓘ" ]
+            ]
+        , Html.div []
+            [ radio "Concept lattice" graphMode ConceptLattice True
             , Html.div [ A.class "indent" ]
                 [ Html.label []
                     [ Html.input
@@ -803,14 +819,15 @@ miscControls trueProb =
         ]
 
 
-radio : String -> GraphMode -> GraphMode -> Html Msg
-radio label currentGraphMode graphMode =
+radio : String -> GraphMode -> GraphMode -> Bool -> Html Msg
+radio label currentGraphMode graphMode enabled =
     Html.label []
         [ Html.input
             [ A.type_ "radio"
             , A.name "graph-mode"
             , E.onClick (ToggleGraphMode graphMode)
             , A.checked (currentGraphMode == graphMode)
+            , A.disabled (not enabled)
             ]
             []
         , Html.text label

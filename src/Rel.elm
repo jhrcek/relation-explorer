@@ -13,6 +13,7 @@ module Rel exposing
     , deriveInfo
     , domain
     , empty
+    , errorInBoxDot
     , explainAcyclic
     , explainAntisymmetric
     , explainAsymmetric
@@ -35,6 +36,7 @@ module Rel exposing
     , genRelation
     , genSymmetricRelation
     , genTotalOrder
+    , hasseDiagramToDotSource
     , isAcyclic
     , isAntisymmetric
     , isAsymmetric
@@ -2136,8 +2138,8 @@ isAreElements count =
         ( "are", String.fromInt count ++ " elements" )
 
 
-relationGraphToDotSource : Rel -> Bool -> String
-relationGraphToDotSource rel highlightSccs =
+relationGraphToDotSource : Rel -> { highlightSccs : Bool, showArrowheads : Bool } -> String
+relationGraphToDotSource rel { highlightSccs, showArrowheads } =
     let
         -- Compute SCCs even when not highlighting them.
         -- We need to keep the same node order in both highlighted/unhighlighted case
@@ -2178,11 +2180,18 @@ relationGraphToDotSource rel highlightSccs =
         edgesLines =
             elements rel
                 |> List.map (\( i, j ) -> String.fromInt i ++ "->" ++ String.fromInt j)
+
+        edgeAttrs =
+            if showArrowheads then
+                "edge[arrowsize=0.5]"
+
+            else
+                "edge[arrowhead=none]"
     in
     String.join ";" <|
         "digraph G{graph[rankdir=BT;splines=true;overlap=false]"
             :: "node[shape=circle;width=0.3;fixedsize=true]"
-            :: "edge[arrowsize=0.5]"
+            :: edgeAttrs
             :: (nodeLines ++ edgesLines)
             ++ [ "}" ]
 
@@ -2227,6 +2236,18 @@ relationBipartiteGraphDotSource rel =
             :: (domainNodes ++ codomainNodes ++ edges ++ [ "}" ])
 
 
+errorInBoxDot : String -> String
+errorInBoxDot msg =
+    "digraph G{node[shape=box];\"" ++ msg ++ "\"}"
+
+
+hasseDiagramToDotSource : AcyclicInfo -> String
+hasseDiagramToDotSource { transitivelyReduced } =
+    relationGraphToDotSource
+        (reflexiveReduction transitivelyReduced)
+        { highlightSccs = False, showArrowheads = False }
+
+
 conceptLatticeToDotSource : List ( Set Int, Set Int ) -> Bool -> Bool -> String
 conceptLatticeToDotSource attributeClosures showExtents showIntents =
     let
@@ -2238,7 +2259,7 @@ conceptLatticeToDotSource attributeClosures showExtents showIntents =
             List.length formalConcepts
     in
     if closureCount > 64 then
-        "digraph G{node[shape=box];\"The concept lattice has too many nodes (>64) to be rendered.\"}"
+        errorInBoxDot "The concept lattice has too many nodes (>64) to be rendered."
 
     else
         let

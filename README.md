@@ -58,7 +58,7 @@
     - [ ] Preorder
         - [ ] show poset arising from identifying equivalent elements
     - [ ] Poset
-        - [ ] show hasse diagram
+        - [x] show hasse diagram
         - [ ] show [covering relation](https://en.wikipedia.org/wiki/Covering_relation)
         - [ ] width (size of the largest antichain) - https://en.wikipedia.org/wiki/Dilworth%27s_theorem
         - [ ] height (size of the longest chain) - https://en.wikipedia.org/wiki/Mirsky%27s_theorem
