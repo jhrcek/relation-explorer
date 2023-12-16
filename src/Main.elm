@@ -142,6 +142,7 @@ type Msg
     | GenSymmetric
     | GenAntisymmetric
     | GenAsymmetric
+    | GenConnected
     | GenFunctional
     | GenLeftTotal
     | GenBijectiveFunction
@@ -252,6 +253,9 @@ update msg model =
 
         GenAsymmetric ->
             generateRel (Rel.genAsymmetricRelation model.trueProb) model
+
+        GenConnected ->
+            generateRel (Rel.genConnectedRelation model.trueProb) model
 
         GenFunctional ->
             generateRel (Rel.genFunctionalRelation model.trueProb) model
@@ -516,7 +520,7 @@ propertyConfigs =
       , wikiLink = "https://en.wikipedia.org/wiki/Connected_relation"
       , hasProperty = Rel.isConnected
       , buttons = []
-      , genRandom = Nothing
+      , genRandom = Just GenConnected
       , onHoverExplanation = Just ExplainConnected
       }
     , { propertyName = "Acyclic"

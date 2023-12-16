@@ -28,6 +28,7 @@ module Rel exposing
     , genAntisymmetricRelation
     , genAsymmetricRelation
     , genBijectiveFunction
+    , genConnectedRelation
     , genFunctionalRelation
     , genInvolution
     , genIrreflexiveRelation
@@ -1793,10 +1794,55 @@ genAsymAntisymHelp trueProb n pairs =
                                 Random.constant Nothing
                         )
             )
-        |> Random.map
-            (List.filterMap identity
-                >> List.foldl (\( i, j ) -> toggle i j) (empty n)
+        |> Random.map (List.filterMap identity >> fromElements n)
+
+
+genConnectedRelation : Float -> Int -> Generator Rel
+genConnectedRelation trueProb n =
+    -- Generate indices of all pairs within upper triangle, including diagonal
+    List.range 0 (n - 1)
+        |> List.andThen
+            (\i ->
+                List.range i (n - 1)
+                    |> List.map (\j -> ( i, j ))
             )
+        |> Random.traverse
+            (\( i, j ) ->
+                -- Elements on diagonal are not "mandatory" - generate them with trueProb
+                if i == j then
+                    genBool trueProb
+                        |> Random.map
+                            (\include ->
+                                if include then
+                                    [ ( i, j ) ]
+
+                                else
+                                    []
+                            )
+
+                else
+                    -- For off-diagnoal elements one has to be there for connectedness,
+                    -- the other can be generated with trueProb.
+                    genBool trueProb
+                        |> Random.andThen
+                            (\includeBoth ->
+                                if includeBoth then
+                                    Random.constant [ ( i, j ), ( j, i ) ]
+
+                                else
+                                    genBool 0.5
+                                        |> Random.map
+                                            (\swap ->
+                                                [ if swap then
+                                                    ( j, i )
+
+                                                  else
+                                                    ( i, j )
+                                                ]
+                                            )
+                            )
+            )
+        |> Random.map (List.concat >> fromElements n)
 
 
 genFunctionalRelation : Float -> Int -> Generator Rel
