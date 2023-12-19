@@ -459,7 +459,7 @@ view model =
                                     Html.div [] [ Html.text "This relation is a partial order." ]
                                         :: Html.div []
                                             [ Html.text <|
-                                                if Rel.isLattice posetInfo then
+                                                if Rel.isPosetLattice posetInfo then
                                                     "This relation is a lattice"
 
                                                 else
@@ -638,6 +638,17 @@ propertyConfigs =
       , genRandom = Nothing
 
       -- TODO explain why not total oder
+      , onHoverExplanation = Nothing
+      }
+    , { propertyName = "Lattice"
+      , wikiLink = "https://en.wikipedia.org/wiki/Lattice_(order)"
+      , hasProperty = Rel.isLattice
+      , buttons = []
+
+      -- TODO generate lattice
+      , genRandom = Nothing
+
+      -- TODO explain why not lattice
       , onHoverExplanation = Nothing
       }
 

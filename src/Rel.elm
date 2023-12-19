@@ -48,6 +48,7 @@ module Rel exposing
     , isLattice
     , isLeftTotal
     , isPartialOrder
+    , isPosetLattice
     , isReflexive
     , isSymmetric
     , isTotalOrder
@@ -1108,8 +1109,23 @@ mkAcyclic rel =
             Ok (Acyclic rel)
 
 
-isLattice : PosetInfo -> Bool
-isLattice { meetTable, joinTable } =
+isLattice : DerivedInfo -> Bool
+isLattice info =
+    case info.acyclicInfo of
+        Ok acInfo ->
+            case acInfo.posetInfo of
+                Just posetInfo ->
+                    isPosetLattice posetInfo
+
+                Nothing ->
+                    False
+
+        Err _ ->
+            False
+
+
+isPosetLattice : PosetInfo -> Bool
+isPosetLattice { meetTable, joinTable } =
     Result.map2 (\_ _ -> True) meetTable joinTable
         |> Result.withDefault False
 
