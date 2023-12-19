@@ -391,11 +391,20 @@ view model =
                 , miscControls model.trueProb
                 ]
             , Html.div [ A.id "explanation" ]
-                [ Html.div []
-                    [ Html.div []
-                        [ Html.text <| "X = " ++ Rel.showIntListAsSet (Rel.domain model.rel) ]
+                [ Html.h4 [] [ Html.text "Properties" ]
+                , Html.details []
+                    [ Html.summary [] [ Html.text "Set Theory" ]
                     , Html.div []
-                        [ Html.text <| "R ⊆ X ⨯ X, R = " ++ Rel.showElements model.rel ]
+                        [ Html.text <| "Underlying Set: X = " ++ Rel.showIntListAsSet (Rel.domain model.rel) ]
+                    , Html.div []
+                        [ Html.text "R ⊆ X ⨯ X" ]
+                    , Html.div []
+                        [ Html.text <| "R = " ++ Rel.showElements model.rel ]
+                    , Html.div []
+                        [ Html.text <| "|R| = " ++ String.fromInt model.derivedInfo.elementCount ]
+                    ]
+                , Html.details []
+                    [ Html.summary [] [ Html.text "Graph Theory" ]
                     , Html.div []
                         [ Html.text <|
                             -- TODO highlight SCCs with the same  color as in the graph
@@ -406,38 +415,72 @@ view model =
                                     )
                         ]
                     , Html.div []
-                        [ Html.text "FCA"
-                        , Html.div [ A.class "indent" ] <|
-                            let
-                                concepts =
-                                    model.derivedInfo.formalConcepts
-                            in
-                            [ Html.text <|
-                                "formal concepts (total "
-                                    ++ String.fromInt (List.length concepts)
-                                    ++ "): "
-                            , Html.ul [] <|
-                                List.map
-                                    (\( objects, attrs ) ->
-                                        Html.li
-                                            [ E.onMouseEnter (HighlightConcept attrs)
-                                            , E.onMouseLeave ClearHighlight
-                                            ]
-                                            [ Html.text <| "(" ++ Rel.showIntSet objects ++ "," ++ Rel.showIntSet attrs ++ ")" ]
-                                    )
-                                    concepts
-                            ]
+                        [ Html.text <|
+                            case model.derivedInfo.acyclicInfo of
+                                Ok acInfo ->
+                                    "The relation is acyclic. Acyclic relations can be sorted topologically. Example top. sort: "
+                                        ++ Rel.showIntListAsList (Rel.topologicalSort acInfo.acyclic)
+
+                                Err cycle ->
+                                    "The relation contains cycle(s). Example cycle: "
+                                        ++ Rel.showIntListAsList cycle
                         ]
-                    , case model.highlight of
-                        Explanation exp ->
-                            Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.lines
-
-                        Pairs _ ->
-                            Html.text ""
-
-                        NoHighlight ->
-                            Html.text ""
                     ]
+                , Html.details []
+                    [ Html.summary [] [ Html.text "Formal Concept Analysis (FCA)" ]
+                    , Html.div [] <|
+                        let
+                            concepts =
+                                model.derivedInfo.formalConcepts
+                        in
+                        [ Html.text <|
+                            "formal concepts (total "
+                                ++ String.fromInt (List.length concepts)
+                                ++ "): "
+                        , Html.ul [] <|
+                            List.map
+                                (\( objects, attrs ) ->
+                                    Html.li
+                                        [ E.onMouseEnter (HighlightConcept attrs)
+                                        , E.onMouseLeave ClearHighlight
+                                        ]
+                                        [ Html.text <| "(" ++ Rel.showIntSet objects ++ "," ++ Rel.showIntSet attrs ++ ")" ]
+                                )
+                                concepts
+                        ]
+                    ]
+                , Html.details []
+                    [ Html.summary [] [ Html.text "Order Theory" ]
+                    , Html.div []
+                        [ case model.derivedInfo.acyclicInfo |> Result.toMaybe |> Maybe.andThen .posetInfo of
+                            Just posetInfo ->
+                                Html.div [] <|
+                                    -- TODO explain why not partial order
+                                    Html.div [] [ Html.text "This relation is a partial order." ]
+                                        :: Html.div []
+                                            [ Html.text <|
+                                                if Rel.isLattice posetInfo then
+                                                    "This relation is a lattice"
+
+                                                else
+                                                    "This relation is not a lattice"
+                                            ]
+                                        :: Rel.viewJoinInfo posetInfo.joinTable
+                                        ++ Rel.viewMeetInfo posetInfo.meetTable
+
+                            Nothing ->
+                                Html.text "This relation is not a partial order."
+                        ]
+                    ]
+                , case model.highlight of
+                    Explanation exp ->
+                        Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.lines
+
+                    Pairs _ ->
+                        Html.text ""
+
+                    NoHighlight ->
+                        Html.text ""
                 ]
             , Html.div []
                 [ graphControls model

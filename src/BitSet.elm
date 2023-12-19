@@ -11,7 +11,7 @@ import Bitwise as B
 import Set exposing (Set)
 
 
-{-| Efficient representation of set of numbers numbers from 0 to 31 (inclusive)
+{-| Efficient representation of set of numbers from 0 to 31 (inclusive)
 -}
 type BitSet
     = BitSet Int

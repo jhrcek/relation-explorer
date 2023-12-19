@@ -4,6 +4,7 @@ module Rel exposing
     , DerivedInfo
     , ExplanationData
     , Highlight(..)
+    , JoinResult(..)
     , Pair
     , Rel
     , cartesianProduct
@@ -44,6 +45,7 @@ module Rel exposing
     , isConnected
     , isFunctional
     , isIrreflexive
+    , isLattice
     , isLeftTotal
     , isPartialOrder
     , isReflexive
@@ -60,20 +62,24 @@ module Rel exposing
     , resize
     , scc
     , showElements
+    , showIntListAsList
     , showIntListAsSet
     , showIntSet
     , size
     , symmetricClosure
     , toRelIndex
     , toggle
+    , topologicalSort
     , transitiveClosure
     , view
+    , viewJoinInfo
+    , viewMeetInfo
     )
 
 import Array exposing (Array)
 import Array.Extra as Array
 import BitSet exposing (BitSet)
-import Dict
+import Dict exposing (Dict)
 import Html exposing (Attribute, Html)
 import Html.Attributes as A
 import Html.Events as E
@@ -105,6 +111,10 @@ type Acyclic
     = Acyclic Rel
 
 
+type Poset
+    = Poset Rel
+
+
 {-| An element of a relation.
 For relation on set of size n, the are n^2 possible elements:
 {(a,b) | a in {0..n-1}, b in {0..n-1}}
@@ -128,6 +138,7 @@ type Highlight
 
 type alias DerivedInfo =
     { relSize : Int
+    , elementCount : Int
     , domain : List Int
     , offDiagonalElements : Set Pair
     , onDiagonalElements : Set Pair
@@ -155,6 +166,16 @@ type alias AcyclicInfo =
     , -- Edges that would be removed by transitive reduction
       redundantTransitiveEdges : Set Pair
     , transitivelyReduced : Rel
+    , -- This is here, becaues only acyclic relations have a chance of being a poset
+      posetInfo : Maybe PosetInfo
+    }
+
+
+type alias PosetInfo =
+    { poset : Poset
+    , joinTable : Result JoinErrors (Array (Array JoinResult))
+    , -- TODO don't mention Joins in Meet stuff
+      meetTable : Result JoinErrors (Array (Array JoinResult))
     }
 
 
@@ -166,17 +187,27 @@ deriveInfo rel =
 
         ( superfluousForFunction, emptyRowIndices ) =
             superfluousAndMissingForFunction rel
+
+        missingForReflexivityRes =
+            missingForReflexivity rel
+
+        superfuousForAntisymmetryRes =
+            superfluousForAntisymmetry rel
+
+        missingForTransitivityRes =
+            missingForTransitivity rel
     in
     { relSize = size rel
+    , elementCount = List.length <| elements rel
     , domain = domain rel
     , onDiagonalElements = onDiagonalElements
     , offDiagonalElements = offDiagonalElements
-    , missingForReflexivity = missingForReflexivity rel
+    , missingForReflexivity = missingForReflexivityRes
     , superfluousForIrreflexivity = superfluousForIrreflexivity rel
     , missingForSymmetry = missingForSymmetry rel
-    , superfuousForAntisymmetry = superfluousForAntisymmetry rel
+    , superfuousForAntisymmetry = superfuousForAntisymmetryRes
     , superfluousForAsymmetry = superfluousForAsymmetry rel
-    , missingForTransitivity = missingForTransitivity rel
+    , missingForTransitivity = missingForTransitivityRes
     , superfluousForFunctional = superfluousForFunctional rel
     , missingForConnectedness = missingForConnectedness rel
     , superfluousForFunction = superfluousForFunction
@@ -206,6 +237,24 @@ deriveInfo rel =
                         difference rel tred
                             |> elements
                             |> Set.fromList
+                    , posetInfo =
+                        if
+                            Set.isEmpty missingForReflexivityRes
+                                && Set.isEmpty superfuousForAntisymmetryRes
+                                && Set.isEmpty (Tuple.first missingForTransitivityRes)
+                        then
+                            let
+                                poset =
+                                    Poset rel
+                            in
+                            Just
+                                { poset = poset
+                                , joinTable = joinAttempt poset
+                                , meetTable = meetAttempt poset
+                                }
+
+                        else
+                            Nothing
                     }
                 )
     }
@@ -510,16 +559,16 @@ isReflexive info =
 -}
 missingForReflexivity : Rel -> Set Pair
 missingForReflexivity (Rel rows) =
-    Array.toIndexedList rows
-        |> List.foldr
-            (\( i, row ) ->
-                if Array.get i row |> Maybe.withDefault False then
-                    identity
+    indexedFoldr
+        (\i row ->
+            if Array.get i row |> Maybe.withDefault False then
+                identity
 
-                else
-                    Set.insert ( i, i )
-            )
-            Set.empty
+            else
+                Set.insert ( i, i )
+        )
+        Set.empty
+        rows
 
 
 explainReflexive : DerivedInfo -> ExplanationData
@@ -585,16 +634,16 @@ isIrreflexive info =
 -}
 superfluousForIrreflexivity : Rel -> Set Pair
 superfluousForIrreflexivity (Rel rows) =
-    Array.toIndexedList rows
-        |> List.foldr
-            (\( i, row ) ->
-                if Array.get i row |> Maybe.withDefault False then
-                    Set.insert ( i, i )
+    indexedFoldr
+        (\i row ->
+            if Array.get i row |> Maybe.withDefault False then
+                Set.insert ( i, i )
 
-                else
-                    identity
-            )
-            Set.empty
+            else
+                identity
+        )
+        Set.empty
+        rows
 
 
 explainIrreflexive : DerivedInfo -> ExplanationData
@@ -1059,6 +1108,333 @@ mkAcyclic rel =
             Ok (Acyclic rel)
 
 
+isLattice : PosetInfo -> Bool
+isLattice { meetTable, joinTable } =
+    Result.map2 (\_ _ -> True) meetTable joinTable
+        |> Result.withDefault False
+
+
+type JoinResult
+    = -- join of 2 elements is the greater of the two
+      ComparableJoin Int
+    | -- join of 2 elements is not one of the two elements being joined
+      NonTrivialJoin Int
+
+
+type JoinOrMeetError
+    = NoCommonBounds
+    | MultipleBounds (Set Int)
+
+
+type alias JoinErrors =
+    { noCommonBounds : Set Pair
+    , multipleBounds : Dict Pair (Set Int)
+    , almostMeetOrJoinTable : Array (Array (Result JoinOrMeetError JoinResult))
+    }
+
+
+{-| Calculate a Dict that maps each element of the underlying set of the relation
+to the set of all elements that are greater than or equal to it.
+
+Given Acyclic relation, we can calculate upper sets of all elements efficiently,
+by starting at the end of topological order.
+
+-}
+getUpperSetDict : Acyclic -> Dict Int (Set Int)
+getUpperSetDict ((Acyclic (Rel rows)) as acyclic) =
+    topologicalSort acyclic
+        |> List.foldr
+            (\n accDict ->
+                let
+                    upperN =
+                        Array.get n rows
+                            |> Maybe.withDefault Array.empty
+                            |> indexedFoldr
+                                (\i bool ->
+                                    if bool then
+                                        case Dict.get i accDict of
+                                            Just upperI ->
+                                                Set.union upperI
+
+                                            Nothing ->
+                                                identity
+
+                                    else
+                                        identity
+                                )
+                                (Set.singleton n)
+                in
+                Dict.insert n upperN accDict
+            )
+            Dict.empty
+
+
+joinAttempt : Poset -> Result JoinErrors (Array (Array JoinResult))
+joinAttempt (Poset ((Rel rows) as rel)) =
+    -- TODO this is very naive, inefficient implementation. Find a way to make it less so.
+    let
+        -- Safe, because every poset is acyclic
+        acyclic =
+            Acyclic rel
+
+        upperSetDict =
+            getUpperSetDict acyclic
+
+        (Rel coveringRelRows) =
+            reflexiveReduction <| transitiveReduction acyclic
+
+        tryJoin : Int -> Int -> Result JoinOrMeetError JoinResult
+        tryJoin i j =
+            if unsafeGet i j rows then
+                -- if i <= j then j is their join
+                Ok (ComparableJoin j)
+
+            else if unsafeGet j i rows then
+                -- if j <= i then i is their join
+                Ok (ComparableJoin i)
+
+            else
+                -- i and j not comparable - intersect their upper sets
+                let
+                    upperIupperJIntersection =
+                        Dict.get i upperSetDict
+                            |> Maybe.andThen
+                                (\upperI ->
+                                    Dict.get j upperSetDict
+                                        |> Maybe.map (Set.intersect upperI)
+                                )
+                            |> Maybe.withDefault Set.empty
+                in
+                if Set.isEmpty upperIupperJIntersection then
+                    Err NoCommonBounds
+
+                else
+                    -- non-empty upper set intersection
+                    let
+                        elems =
+                            Set.toList upperIupperJIntersection
+
+                        minimalElems =
+                            List.filter
+                                (\colIdx ->
+                                    -- Minimal elements have no incoming edges
+                                    -- = all values within subrectangle whose rows and column indices
+                                    -- are determined by the indices in the upper set intersection are False
+                                    List.all (\rowIdx -> unsafeGet rowIdx colIdx coveringRelRows == False) elems
+                                )
+                                elems
+                    in
+                    case minimalElems of
+                        [] ->
+                            -- Shouldn't happen
+                            Err NoCommonBounds
+
+                        [ x ] ->
+                            -- unique minimum -> it's the join
+                            Ok (NonTrivialJoin x)
+
+                        _ ->
+                            Err (MultipleBounds (Set.fromList minimalElems))
+
+        n =
+            size rel
+
+        rawResult =
+            Array.initialize n
+                (\i ->
+                    Array.initialize n
+                        (\j -> tryJoin i j)
+                )
+
+        ( noCommonUpperBounds, noUniqueUpperBounds ) =
+            indexedFoldr
+                (\i row acc ->
+                    indexedFoldr
+                        (\j cell ( noUps, noUniqs ) ->
+                            case cell of
+                                Ok _ ->
+                                    ( noUps, noUniqs )
+
+                                Err e ->
+                                    case e of
+                                        NoCommonBounds ->
+                                            ( Set.insert ( i, j ) noUps, noUniqs )
+
+                                        MultipleBounds s ->
+                                            ( noUps, Dict.insert ( i, j ) s noUniqs )
+                        )
+                        acc
+                        row
+                )
+                ( Set.empty, Dict.empty )
+                rawResult
+    in
+    if Set.isEmpty noCommonUpperBounds && Dict.isEmpty noUniqueUpperBounds then
+        Ok
+            (Array.map
+                (Array.map
+                    (\res ->
+                        case res of
+                            Ok r ->
+                                r
+
+                            -- This is safe, as we know there are no join errors based on the above check
+                            Err _ ->
+                                ComparableJoin 0
+                    )
+                )
+                rawResult
+            )
+
+    else
+        Err
+            { noCommonBounds = noCommonUpperBounds
+            , multipleBounds = noUniqueUpperBounds
+            , almostMeetOrJoinTable = rawResult
+            }
+
+
+meetAttempt : Poset -> Result JoinErrors (Array (Array JoinResult))
+meetAttempt (Poset rel) =
+    joinAttempt (Poset (converse rel))
+
+
+type alias JoinMeetConfig =
+    { opSymbol : String -- ∨ or ∧
+    , opName : String -- join or meet
+    , boundName : String -- upper or lower bound
+    , minMax : String -- minimal or maximal
+    }
+
+
+viewJoinInfo : Result JoinErrors (Array (Array JoinResult)) -> List (Html msg)
+viewJoinInfo =
+    viewJoinOrMeetInfo joinConfig
+
+
+viewMeetInfo : Result JoinErrors (Array (Array JoinResult)) -> List (Html msg)
+viewMeetInfo =
+    viewJoinOrMeetInfo meetConfig
+
+
+joinConfig : JoinMeetConfig
+joinConfig =
+    { opSymbol = "∨", opName = "join", boundName = "upper", minMax = "minimal" }
+
+
+meetConfig : JoinMeetConfig
+meetConfig =
+    { opSymbol = "∧", opName = "meet", boundName = "lower", minMax = "maximal" }
+
+
+viewJoinOrMeetInfo : JoinMeetConfig -> Result JoinErrors (Array (Array JoinResult)) -> List (Html msg)
+viewJoinOrMeetInfo ({ opSymbol, opName, boundName, minMax } as config) result =
+    case result of
+        Ok opData ->
+            [ Html.text <| "The " ++ opSymbol ++ " (" ++ opName ++ ") operation is well defined."
+            , binaryOpTable opSymbol (viewOpResultTableCell config) opData
+            ]
+
+        Err joinErrors ->
+            let
+                noBoundsExplanation =
+                    if Set.isEmpty joinErrors.noCommonBounds then
+                        []
+
+                    else
+                        [ Html.div []
+                            [ Html.text <|
+                                "The following pairs don't have a common "
+                                    ++ boundName
+                                    ++ " bound: "
+                                    ++ showPairSet joinErrors.noCommonBounds
+                            ]
+                        ]
+
+                multiBoundsExplanation =
+                    if Dict.isEmpty joinErrors.multipleBounds then
+                        []
+
+                    else
+                        [ Html.div []
+                            [ Html.text <| "The following pairs have multiple " ++ minMax ++ " " ++ boundName ++ " bounds: "
+                            , Html.ul [] <|
+                                List.map
+                                    (\( p, multiBounds ) ->
+                                        Html.li []
+                                            [ Html.text <| showPair p ++ " -> " ++ showIntSet multiBounds ]
+                                    )
+                                    (Dict.toList joinErrors.multipleBounds)
+                            ]
+                        ]
+            in
+            Html.text ("The " ++ opSymbol ++ " (" ++ opName ++ ") operation is not well defined. ")
+                :: (noBoundsExplanation
+                        ++ multiBoundsExplanation
+                        ++ [ binaryOpTable opSymbol (viewOpErrorOrResultTableCell config) joinErrors.almostMeetOrJoinTable ]
+                   )
+
+
+binaryOpTable : String -> (a -> Html msg) -> Array (Array a) -> Html msg
+binaryOpTable opSymbol viewCell opTable =
+    let
+        n =
+            Array.length opTable
+    in
+    Html.table []
+        (Html.thead []
+            (Html.th [] [ Html.text opSymbol ]
+                :: List.map (\i -> Html.th [] [ Html.text (String.fromInt i) ])
+                    (List.range 0 (n - 1))
+            )
+            :: List.indexedMap
+                (\i row ->
+                    Html.tr []
+                        (Html.th [] [ Html.text (String.fromInt i) ]
+                            :: List.map
+                                (\cell -> viewCell cell)
+                                (Array.toList row)
+                        )
+                )
+                (Array.toList opTable)
+        )
+
+
+viewOpResultTableCell : JoinMeetConfig -> JoinResult -> Html msg
+viewOpResultTableCell { opName } cell =
+    Html.td []
+        [ case cell of
+            ComparableJoin k ->
+                Html.text <| String.fromInt k
+
+            NonTrivialJoin k ->
+                Html.b [ A.title <| "Non-trivial " ++ opName ++ " result (different from both operands)" ] [ Html.text <| String.fromInt k ]
+        ]
+
+
+viewOpErrorOrResultTableCell : JoinMeetConfig -> Result JoinOrMeetError JoinResult -> Html msg
+viewOpErrorOrResultTableCell config res =
+    case res of
+        Ok r ->
+            viewOpResultTableCell config r
+
+        Err e ->
+            case e of
+                NoCommonBounds ->
+                    Html.td
+                        [ A.style "background-color" "salmon"
+                        , A.title <| "These two elements don't have any common" ++ config.boundName
+                        ]
+                        [ Html.text "?" ]
+
+                MultipleBounds bounds ->
+                    Html.td
+                        [ A.style "background-color" "orange"
+                        , A.title <| "Multiple minimal " ++ config.boundName ++ "s: " ++ showIntSet bounds
+                        ]
+                        [ Html.text "!!" ]
+
+
 isAcyclic : DerivedInfo -> Bool
 isAcyclic info =
     case info.acyclicInfo of
@@ -1138,17 +1514,13 @@ explainAcyclic info =
                 ++ " Cycle is a sequence of at least 2 elements x1, x2, ..., xn ∈ X: (x1, x2) ∈ R ∧ (x2, x3) ∈ R ∧ ... ∧ (xn, x1) ∈ R."
     in
     case info.acyclicInfo of
-        Ok acInfo ->
+        Ok _ ->
             { greenHighlight = Set.empty
             , redHighlight = Set.empty
             , lines =
                 [ "This relation is acyclic."
                 , definition
                 , "Explanation: this relation doesn't contain any cycles, so it is acyclic."
-
-                -- TODO these are further "features" of acyclic relations, so probably explain them elsewhere
-                , "Acyclic relations can be sorted topologically. Example top. sort: "
-                    ++ showIntListAsList (topologicalSort acInfo.acyclic)
                 ]
             }
 
@@ -2403,6 +2775,23 @@ unsafeGet i j rows =
 arrayOr : Array Bool -> Bool
 arrayOr =
     Array.foldl (||) False
+
+
+indexedFoldr : (Int -> a -> b -> b) -> b -> Array a -> b
+indexedFoldr f initB arr =
+    let
+        maxIndex =
+            Array.length arr - 1
+
+        ( _, finalB ) =
+            Array.foldr
+                (\a ( i, b ) ->
+                    ( i - 1, f i a b )
+                )
+                ( maxIndex, initB )
+                arr
+    in
+    finalB
 
 
 

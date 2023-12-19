@@ -55,6 +55,7 @@
 - [ ] Given the properties that it satisfies show whether it is one of well know structures:
     - [ ] Equivalence relation
         - [ ] show corresponding partition
+        - [ ] show equivalence classes
     - [ ] Preorder
         - [ ] show poset arising from identifying equivalent elements
     - [ ] Poset
@@ -65,10 +66,9 @@
         - [ ] list antichains (they correspond to lower / upper sets)
     - [ ] Total order
         - [ ] highlight incomparable elements if not
-    - [ ] Lattice
-        - [ ] Show table of meet and join operations (if not full lattice, show why it fails to be, e.g. 2 elements don't have meet / have multiple minimal elements in upper set)
+    - [x] Lattice
+        - [x] Show table of meet and join operations (if not full lattice, show why it fails to be, e.g. 2 elements don't have meet / have multiple minimal elements in upper set)
         - [ ] show infimum and supremum-irreducible elements
-        - [ ] show equivalence classes
     - [ ] Function
         - [ ] Show fixed points
 
