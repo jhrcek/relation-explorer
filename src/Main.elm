@@ -7,7 +7,7 @@ import Html.Events as E
 import Natural
 import Ports
 import Random exposing (Generator)
-import Rel exposing (DerivedInfo, Highlight(..), Rel)
+import Rel exposing (DerivedInfo, ExplainableProperty(..), Highlight(..), Rel)
 import Set exposing (Set)
 
 
@@ -150,17 +150,8 @@ type Msg
     | GenTotalOrder
     | GotRandom Rel
       -- Explanations
-    | ExplainRelation
-    | ExplainReflexive
-    | ExplainIrreflexive
-    | ExplainSymmetric
-    | ExplainAntisymmetric
-    | ExplainAsymmetric
-    | ExplainTransitive
-    | ExplainAcyclic
-    | ExplainConnected
-    | ExplainFunctional
-    | ExplainLeftTotal
+    | ShowExplanation ExplainableProperty
+    | HideExplanation
     | HighlightConcept (Set Int)
     | ClearHighlight
     | UndoHistory
@@ -272,38 +263,11 @@ update msg model =
         GenTotalOrder ->
             generateRel Rel.genTotalOrder model
 
-        ExplainRelation ->
-            pure { model | highlight = Explanation <| Rel.explainRelation model.derivedInfo }
+        ShowExplanation exProperty ->
+            pure { model | highlight = Explanation exProperty <| Rel.getExplanationData exProperty model.derivedInfo }
 
-        ExplainReflexive ->
-            pure { model | highlight = Explanation <| Rel.explainReflexive model.derivedInfo }
-
-        ExplainIrreflexive ->
-            pure { model | highlight = Explanation <| Rel.explainIrreflexive model.derivedInfo }
-
-        ExplainSymmetric ->
-            pure { model | highlight = Explanation <| Rel.explainSymmetric model.derivedInfo }
-
-        ExplainAntisymmetric ->
-            pure { model | highlight = Explanation <| Rel.explainAntisymmetric model.derivedInfo }
-
-        ExplainAsymmetric ->
-            pure { model | highlight = Explanation <| Rel.explainAsymmetric model.derivedInfo }
-
-        ExplainTransitive ->
-            pure { model | highlight = Explanation <| Rel.explainTransitive model.derivedInfo }
-
-        ExplainAcyclic ->
-            pure { model | highlight = Explanation <| Rel.explainAcyclic model.derivedInfo }
-
-        ExplainFunctional ->
-            pure { model | highlight = Explanation <| Rel.explainFunctional model.derivedInfo }
-
-        ExplainConnected ->
-            pure { model | highlight = Explanation <| Rel.explainConnected model.derivedInfo }
-
-        ExplainLeftTotal ->
-            pure { model | highlight = Explanation <| Rel.explainLeftTotal model.derivedInfo }
+        HideExplanation ->
+            pure { model | highlight = NoHighlight }
 
         HighlightConcept attrClosure ->
             let
@@ -336,9 +300,23 @@ updateRel f model =
                 | rel = newRel
                 , derivedInfo = newDerivedInfo
                 , history = model.rel :: model.history
+                , highlight = updateHighlight newDerivedInfo model.highlight
             }
     in
     updateGraph newModel
+
+
+updateHighlight : DerivedInfo -> Highlight -> Highlight
+updateHighlight derivedInfo highlight =
+    case highlight of
+        Explanation exProperty _ ->
+            Explanation exProperty <| Rel.getExplanationData exProperty derivedInfo
+
+        Pairs _ ->
+            highlight
+
+        NoHighlight ->
+            highlight
 
 
 undoHistory : Model -> ( Model, Cmd Msg )
@@ -357,6 +335,7 @@ undoHistory model =
                         | rel = prevRel
                         , derivedInfo = prevDerivedInfo
                         , history = rest
+                        , highlight = updateHighlight prevDerivedInfo model.highlight
                     }
             in
             updateGraph newModel
@@ -387,7 +366,7 @@ view model =
                 [ sizeInputView model.derivedInfo.relSize
                 , Rel.view relConfig model.rel model.highlight
                 , pager model.rel
-                , elementaryPropertiesView model.derivedInfo
+                , elementaryPropertiesView model.derivedInfo model.highlight
                 , miscControls model.trueProb
                 ]
             , Html.div [ A.id "explanation" ]
@@ -473,8 +452,10 @@ view model =
                         ]
                     ]
                 , case model.highlight of
-                    Explanation exp ->
-                        Html.div [] <| List.map (\line -> Html.div [] [ Html.text line ]) exp.lines
+                    Explanation _ exp ->
+                        Html.div [] <|
+                            Html.h4 [] [ Html.text "Explanation" ]
+                                :: List.map (\line -> Html.div [] [ Html.text line ]) exp.lines
 
                     Pairs _ ->
                         Html.text ""
@@ -497,7 +478,7 @@ type alias PropertyConfig msg =
     , hasProperty : DerivedInfo -> Bool
     , buttons : List (ButtonConfig msg)
     , genRandom : Maybe msg
-    , onHoverExplanation : Maybe msg
+    , toggleExplanation : Maybe ExplainableProperty
     }
 
 
@@ -515,56 +496,56 @@ propertyConfigs =
       , hasProperty = always True
       , buttons = []
       , genRandom = Just GenRel
-      , onHoverExplanation = Just ExplainRelation
+      , toggleExplanation = Just ExplainRelation
       }
     , { propertyName = "Reflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation"
       , hasProperty = Rel.isReflexive
       , buttons = [ ButtonConfig "Closure" DoReflexiveClosure Rel.isReflexive ]
       , genRandom = Just GenReflexive
-      , onHoverExplanation = Just ExplainReflexive
+      , toggleExplanation = Just ExplainReflexive
       }
     , { propertyName = "Irreflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity"
       , hasProperty = Rel.isIrreflexive
       , buttons = [ ButtonConfig "Reduction" DoReflexiveReduction Rel.isIrreflexive ]
       , genRandom = Just GenIrreflexive
-      , onHoverExplanation = Just ExplainIrreflexive
+      , toggleExplanation = Just ExplainIrreflexive
       }
     , { propertyName = "Symmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
       , hasProperty = Rel.isSymmetric
       , buttons = [ ButtonConfig "Closure" DoSymmetricClosure Rel.isSymmetric ]
       , genRandom = Just GenSymmetric
-      , onHoverExplanation = Just ExplainSymmetric
+      , toggleExplanation = Just ExplainSymmetric
       }
     , { propertyName = "Antisymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Antisymmetric_relation"
       , hasProperty = Rel.isAntisymmetric
       , buttons = []
       , genRandom = Just GenAntisymmetric
-      , onHoverExplanation = Just ExplainAntisymmetric
+      , toggleExplanation = Just ExplainAntisymmetric
       }
     , { propertyName = "Asymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
       , hasProperty = Rel.isAsymmetric
       , buttons = []
       , genRandom = Just GenAsymmetric
-      , onHoverExplanation = Just ExplainAsymmetric
+      , toggleExplanation = Just ExplainAsymmetric
       }
     , { propertyName = "Transitive"
       , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
       , hasProperty = Rel.isTransitive
       , buttons = [ ButtonConfig "Closure" DoTransitiveClosure Rel.isTransitive ]
       , genRandom = Nothing
-      , onHoverExplanation = Just ExplainTransitive
+      , toggleExplanation = Just ExplainTransitive
       }
     , { propertyName = "Connected"
       , wikiLink = "https://en.wikipedia.org/wiki/Connected_relation"
       , hasProperty = Rel.isConnected
       , buttons = []
       , genRandom = Just GenConnected
-      , onHoverExplanation = Just ExplainConnected
+      , toggleExplanation = Just ExplainConnected
       }
     , { propertyName = "Acyclic"
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"
@@ -584,21 +565,21 @@ propertyConfigs =
                 )
             ]
       , genRandom = Nothing
-      , onHoverExplanation = Just ExplainAcyclic
+      , toggleExplanation = Just ExplainAcyclic
       }
     , { propertyName = "Functional"
       , wikiLink = "https://en.wikipedia.org/wiki/Binary_relation#Special_types_of_binary_relations"
       , hasProperty = Rel.isFunctional
       , buttons = []
       , genRandom = Just GenFunctional
-      , onHoverExplanation = Just ExplainFunctional
+      , toggleExplanation = Just ExplainFunctional
       }
     , { propertyName = "(Left-)Total"
       , wikiLink = "https://en.wikipedia.org/wiki/Total_relation"
       , hasProperty = Rel.isLeftTotal
       , buttons = []
       , genRandom = Just GenLeftTotal
-      , onHoverExplanation = Just ExplainLeftTotal
+      , toggleExplanation = Just ExplainLeftTotal
       }
     , { propertyName = "Bijection (Permutation)"
       , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
@@ -607,7 +588,7 @@ propertyConfigs =
       , genRandom = Just GenBijectiveFunction
 
       -- TODO explain why not bijective function
-      , onHoverExplanation = Nothing
+      , toggleExplanation = Nothing
       }
     , { propertyName = "Derangement"
       , wikiLink = "https://en.wikipedia.org/wiki/Derangement"
@@ -618,7 +599,7 @@ propertyConfigs =
       , genRandom = Nothing
 
       -- TODO explain why not Derangement
-      , onHoverExplanation = Nothing
+      , toggleExplanation = Nothing
       }
     , { propertyName = "Involution"
       , wikiLink = "https://en.wikipedia.org/wiki/Involution_(mathematics)"
@@ -627,7 +608,7 @@ propertyConfigs =
       , genRandom = Just GenInvolution
 
       -- TODO explain why not involution
-      , onHoverExplanation = Nothing
+      , toggleExplanation = Nothing
       }
     , { propertyName = "Partial Order"
       , wikiLink = "https://en.wikipedia.org/wiki/Partially_ordered_set"
@@ -638,7 +619,7 @@ propertyConfigs =
       , genRandom = Nothing
 
       -- TODO explain why not total oder
-      , onHoverExplanation = Nothing
+      , toggleExplanation = Nothing
       }
     , { propertyName = "Lattice"
       , wikiLink = "https://en.wikipedia.org/wiki/Lattice_(order)"
@@ -649,7 +630,7 @@ propertyConfigs =
       , genRandom = Nothing
 
       -- TODO explain why not lattice
-      , onHoverExplanation = Nothing
+      , toggleExplanation = Nothing
       }
 
     -- TODO have separate section for "composite" concepts
@@ -660,23 +641,39 @@ propertyConfigs =
       , genRandom = Just GenTotalOrder
 
       -- TODO explain why not total oder
-      , onHoverExplanation = Nothing
+      , toggleExplanation = Nothing
       }
     ]
 
 
-elementaryPropertiesView : DerivedInfo -> Html Msg
-elementaryPropertiesView derivedInfo =
+explainedProperty : Highlight -> Maybe ExplainableProperty
+explainedProperty highlight =
+    case highlight of
+        Explanation explainableProperty _ ->
+            Just explainableProperty
+
+        Pairs _ ->
+            Nothing
+
+        NoHighlight ->
+            Nothing
+
+
+elementaryPropertiesView : DerivedInfo -> Highlight -> Html Msg
+elementaryPropertiesView derivedInfo highlight =
     let
+        activeProperty =
+            explainedProperty highlight
+
         row : PropertyConfig Msg -> Html Msg
-        row { propertyName, wikiLink, hasProperty, buttons, genRandom, onHoverExplanation } =
+        row { propertyName, wikiLink, hasProperty, buttons, genRandom, toggleExplanation } =
             let
                 hasProp =
                     hasProperty derivedInfo
             in
             Html.tr []
                 [ Html.td [] [ blankLink wikiLink propertyName ]
-                , Html.td [] [ yesNo onHoverExplanation hasProp ]
+                , Html.td [] [ yesNo hasProp ]
                 , Html.td [] <|
                     List.map
                         (\butCfg ->
@@ -694,6 +691,29 @@ elementaryPropertiesView derivedInfo =
 
                         Nothing ->
                             []
+                , Html.td [] <|
+                    case toggleExplanation of
+                        Just thisProperty ->
+                            let
+                                ( onClick, lbl ) =
+                                    case activeProperty of
+                                        Just activeProp ->
+                                            if activeProp == thisProperty then
+                                                ( HideExplanation, "Hide" )
+
+                                            else
+                                                ( ShowExplanation thisProperty, "Show" )
+
+                                        Nothing ->
+                                            ( ShowExplanation thisProperty, "Show" )
+                            in
+                            [ Html.button [ E.onClick onClick ]
+                                [ Html.text lbl
+                                ]
+                            ]
+
+                        Nothing ->
+                            []
                 ]
     in
     Html.table []
@@ -702,7 +722,8 @@ elementaryPropertiesView derivedInfo =
                 [ Html.th [] [ Html.text "Property name" ]
                 , Html.th [] [ Html.text "Does R have this property?" ]
                 , Html.th [] [ Html.text "Operations" ]
-                , Html.th [] [ Html.text "Generate" ]
+                , Html.th [] [ Html.text "Gen" ]
+                , Html.th [] [ Html.text "Expl." ]
                 ]
             ]
         , Html.tbody [] <| List.map row propertyConfigs
@@ -714,29 +735,14 @@ blankLink href text =
     Html.a [ A.href href, A.target "_blank" ] [ Html.text text ]
 
 
-yesNo : Maybe Msg -> Bool -> Html Msg
-yesNo maybeOnHover b =
-    let
-        ( onHoverAttrs, appendInfoSymbol ) =
-            case maybeOnHover of
-                Nothing ->
-                    ( [], identity )
+yesNo : Bool -> Html Msg
+yesNo b =
+    Html.text <|
+        if b then
+            "Yes"
 
-                Just onHover ->
-                    ( [ E.onMouseEnter onHover, E.onMouseLeave ClearHighlight ]
-                    , \btnText -> btnText ++ " - ⓘ"
-                    )
-    in
-    Html.span
-        onHoverAttrs
-        [ Html.text <|
-            appendInfoSymbol <|
-                if b then
-                    "Yes"
-
-                else
-                    "No"
-        ]
+        else
+            "No"
 
 
 sizeInputView : Int -> Html Msg

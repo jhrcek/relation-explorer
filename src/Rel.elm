@@ -2,9 +2,10 @@ module Rel exposing
     ( Acyclic
     , Config
     , DerivedInfo
+    , ExplainableProperty(..)
     , ExplanationData
     , Highlight(..)
-    , JoinResult(..)
+    , JoinOrMeetResult(..)
     , Pair
     , Rel
     , cartesianProduct
@@ -15,17 +16,6 @@ module Rel exposing
     , domain
     , empty
     , errorInBoxDot
-    , explainAcyclic
-    , explainAntisymmetric
-    , explainAsymmetric
-    , explainConnected
-    , explainFunctional
-    , explainIrreflexive
-    , explainLeftTotal
-    , explainReflexive
-    , explainRelation
-    , explainSymmetric
-    , explainTransitive
     , genAntisymmetricRelation
     , genAsymmetricRelation
     , genBijectiveFunction
@@ -38,6 +28,7 @@ module Rel exposing
     , genRelation
     , genSymmetricRelation
     , genTotalOrder
+    , getExplanationData
     , hasseDiagramToDotSource
     , isAcyclic
     , isAntisymmetric
@@ -133,8 +124,59 @@ type alias ExplanationData =
 
 type Highlight
     = NoHighlight
-    | Explanation ExplanationData
+    | Explanation ExplainableProperty ExplanationData
     | Pairs (Set Pair)
+
+
+type ExplainableProperty
+    = ExplainRelation
+    | ExplainReflexive
+    | ExplainIrreflexive
+    | ExplainSymmetric
+    | ExplainAntisymmetric
+    | ExplainAsymmetric
+    | ExplainTransitive
+    | ExplainAcyclic
+    | ExplainConnected
+    | ExplainFunctional
+    | ExplainLeftTotal
+
+
+getExplanationData : ExplainableProperty -> DerivedInfo -> ExplanationData
+getExplanationData property =
+    case property of
+        ExplainRelation ->
+            explainRelation
+
+        ExplainReflexive ->
+            explainReflexive
+
+        ExplainIrreflexive ->
+            explainIrreflexive
+
+        ExplainSymmetric ->
+            explainSymmetric
+
+        ExplainAntisymmetric ->
+            explainAntisymmetric
+
+        ExplainAsymmetric ->
+            explainAsymmetric
+
+        ExplainTransitive ->
+            explainTransitive
+
+        ExplainAcyclic ->
+            explainAcyclic
+
+        ExplainFunctional ->
+            explainFunctional
+
+        ExplainConnected ->
+            explainConnected
+
+        ExplainLeftTotal ->
+            explainLeftTotal
 
 
 type alias DerivedInfo =
@@ -174,9 +216,8 @@ type alias AcyclicInfo =
 
 type alias PosetInfo =
     { poset : Poset
-    , joinTable : Result JoinErrors (Array (Array JoinResult))
-    , -- TODO don't mention Joins in Meet stuff
-      meetTable : Result JoinErrors (Array (Array JoinResult))
+    , joinTable : Result JoinOrMeetErrors (Array (Array JoinOrMeetResult))
+    , meetTable : Result JoinOrMeetErrors (Array (Array JoinOrMeetResult))
     }
 
 
@@ -1130,10 +1171,10 @@ isPosetLattice { meetTable, joinTable } =
         |> Result.withDefault False
 
 
-type JoinResult
-    = -- join of 2 elements is the greater of the two
+type JoinOrMeetResult
+    = -- join (meet) of 2 elements is the greater (lesser) of the two
       ComparableJoin Int
-    | -- join of 2 elements is not one of the two elements being joined
+    | -- join (meet) of 2 elements is not one of the two being joined (met)
       NonTrivialJoin Int
 
 
@@ -1142,10 +1183,10 @@ type JoinOrMeetError
     | MultipleBounds (Set Int)
 
 
-type alias JoinErrors =
+type alias JoinOrMeetErrors =
     { noCommonBounds : Set Pair
     , multipleBounds : Dict Pair (Set Int)
-    , almostMeetOrJoinTable : Array (Array (Result JoinOrMeetError JoinResult))
+    , almostJoinOrMeetTable : Array (Array (Result JoinOrMeetError JoinOrMeetResult))
     }
 
 
@@ -1185,7 +1226,7 @@ getUpperSetDict ((Acyclic (Rel rows)) as acyclic) =
             Dict.empty
 
 
-joinAttempt : Poset -> Result JoinErrors (Array (Array JoinResult))
+joinAttempt : Poset -> Result JoinOrMeetErrors (Array (Array JoinOrMeetResult))
 joinAttempt (Poset ((Rel rows) as rel)) =
     -- TODO this is very naive, inefficient implementation. Find a way to make it less so.
     let
@@ -1199,7 +1240,7 @@ joinAttempt (Poset ((Rel rows) as rel)) =
         (Rel coveringRelRows) =
             reflexiveReduction <| transitiveReduction acyclic
 
-        tryJoin : Int -> Int -> Result JoinOrMeetError JoinResult
+        tryJoin : Int -> Int -> Result JoinOrMeetError JoinOrMeetResult
         tryJoin i j =
             if unsafeGet i j rows then
                 -- if i <= j then j is their join
@@ -1306,11 +1347,11 @@ joinAttempt (Poset ((Rel rows) as rel)) =
         Err
             { noCommonBounds = noCommonUpperBounds
             , multipleBounds = noUniqueUpperBounds
-            , almostMeetOrJoinTable = rawResult
+            , almostJoinOrMeetTable = rawResult
             }
 
 
-meetAttempt : Poset -> Result JoinErrors (Array (Array JoinResult))
+meetAttempt : Poset -> Result JoinOrMeetErrors (Array (Array JoinOrMeetResult))
 meetAttempt (Poset rel) =
     joinAttempt (Poset (converse rel))
 
@@ -1323,12 +1364,12 @@ type alias JoinMeetConfig =
     }
 
 
-viewJoinInfo : Result JoinErrors (Array (Array JoinResult)) -> List (Html msg)
+viewJoinInfo : Result JoinOrMeetErrors (Array (Array JoinOrMeetResult)) -> List (Html msg)
 viewJoinInfo =
     viewJoinOrMeetInfo joinConfig
 
 
-viewMeetInfo : Result JoinErrors (Array (Array JoinResult)) -> List (Html msg)
+viewMeetInfo : Result JoinOrMeetErrors (Array (Array JoinOrMeetResult)) -> List (Html msg)
 viewMeetInfo =
     viewJoinOrMeetInfo meetConfig
 
@@ -1343,7 +1384,7 @@ meetConfig =
     { opSymbol = "∧", opName = "meet", boundName = "lower", minMax = "maximal" }
 
 
-viewJoinOrMeetInfo : JoinMeetConfig -> Result JoinErrors (Array (Array JoinResult)) -> List (Html msg)
+viewJoinOrMeetInfo : JoinMeetConfig -> Result JoinOrMeetErrors (Array (Array JoinOrMeetResult)) -> List (Html msg)
 viewJoinOrMeetInfo ({ opSymbol, opName, boundName, minMax } as config) result =
     case result of
         Ok opData ->
@@ -1387,7 +1428,7 @@ viewJoinOrMeetInfo ({ opSymbol, opName, boundName, minMax } as config) result =
             Html.text ("The " ++ opSymbol ++ " (" ++ opName ++ ") operation is not well defined. ")
                 :: (noBoundsExplanation
                         ++ multiBoundsExplanation
-                        ++ [ binaryOpTable opSymbol (viewOpErrorOrResultTableCell config) joinErrors.almostMeetOrJoinTable ]
+                        ++ [ binaryOpTable opSymbol (viewOpErrorOrResultTableCell config) joinErrors.almostJoinOrMeetTable ]
                    )
 
 
@@ -1416,7 +1457,7 @@ binaryOpTable opSymbol viewCell opTable =
         )
 
 
-viewOpResultTableCell : JoinMeetConfig -> JoinResult -> Html msg
+viewOpResultTableCell : JoinMeetConfig -> JoinOrMeetResult -> Html msg
 viewOpResultTableCell { opName } cell =
     Html.td []
         [ case cell of
@@ -1428,7 +1469,7 @@ viewOpResultTableCell { opName } cell =
         ]
 
 
-viewOpErrorOrResultTableCell : JoinMeetConfig -> Result JoinOrMeetError JoinResult -> Html msg
+viewOpErrorOrResultTableCell : JoinMeetConfig -> Result JoinOrMeetError JoinOrMeetResult -> Html msg
 viewOpErrorOrResultTableCell config res =
     case res of
         Ok r ->
@@ -2454,7 +2495,7 @@ view config ((Rel rows) as rel) highlight =
         addBgColor : Int -> Int -> List (Attribute msg) -> List (Attribute msg)
         addBgColor i j =
             case highlight of
-                Explanation explanation ->
+                Explanation _ explanation ->
                     (::)
                         (A.style "background-color" <|
                             if Set.member ( i, j ) explanation.redHighlight then
