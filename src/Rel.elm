@@ -618,9 +618,12 @@ explainReflexive info =
     let
         definition =
             "Definition: a relation R ⊆ X ⨯ X is reflexive if ∀ x ∈ X: (x, x) ∈ R."
+
+        diagonalPairs =
+            Set.fromList <| List.map (\i -> ( i, i )) info.domain
     in
     if Set.isEmpty info.missingForReflexivity then
-        { greenHighlight = Set.fromList <| List.map (\i -> ( i, i )) info.domain
+        { greenHighlight = diagonalPairs
         , redHighlight = Set.empty
         , lines =
             [ "This relation is reflexive."
@@ -630,7 +633,7 @@ explainReflexive info =
         }
 
     else
-        { greenHighlight = Set.empty
+        { greenHighlight = Set.diff diagonalPairs info.missingForReflexivity
         , redHighlight = info.missingForReflexivity
         , lines =
             [ "This relation is not reflexive."
@@ -693,9 +696,13 @@ explainIrreflexive info =
     let
         definition =
             "Definition: a relation R ⊆ X ⨯ X is irreflexive if ∀ x ∈ X: (x, x) ∉ R."
+
+        diagonalPairs : Set Pair
+        diagonalPairs =
+            Set.fromList <| List.map (\i -> ( i, i )) info.domain
     in
     if Set.isEmpty info.superfluousForIrreflexivity then
-        { greenHighlight = Set.fromList <| List.map (\i -> ( i, i )) info.domain
+        { greenHighlight = diagonalPairs
         , redHighlight = Set.empty
         , lines =
             [ "This relation is irreflexive."
@@ -705,7 +712,7 @@ explainIrreflexive info =
         }
 
     else
-        { greenHighlight = Set.empty
+        { greenHighlight = Set.diff diagonalPairs info.superfluousForIrreflexivity
         , redHighlight = info.superfluousForIrreflexivity
         , lines =
             [ "This relation is not irreflexive."
@@ -913,13 +920,16 @@ explainAsymmetric info =
     in
     if Set.isEmpty superfluousDiagonal && Set.isEmpty superfluousOffDiagonal then
         let
-            allDiagonalSquares =
-                Set.fromList <| List.map (\i -> ( i, i )) info.domain
+            diagonalPairsList =
+                List.map (\i -> ( i, i )) info.domain
+
+            diagonalPairs =
+                Set.fromList diagonalPairsList
         in
         { greenHighlight =
             Set.union info.offDiagonalElements
                 -- Highlight that diagonal doesn't contain elements
-                allDiagonalSquares
+                diagonalPairs
         , redHighlight = Set.empty
         , lines =
             [ "This relation is asymmetric."
@@ -942,7 +952,7 @@ explainAsymmetric info =
                         showPair ( x, y )
                             ++ " is not present. ✓"
                     )
-                    (Set.toList allDiagonalSquares)
+                    diagonalPairsList
         }
 
     else
