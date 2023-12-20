@@ -148,6 +148,7 @@ type Msg
     | GenBijectiveFunction
     | GenInvolution
     | GenTotalOrder
+    | GenAcyclic
     | GotRandom Rel
       -- Explanations
     | ShowExplanation ExplainableProperty
@@ -262,6 +263,9 @@ update msg model =
 
         GenTotalOrder ->
             generateRel Rel.genTotalOrder model
+
+        GenAcyclic ->
+            generateRel (Rel.genAcyclic model.trueProb) model
 
         ShowExplanation exProperty ->
             pure { model | highlight = Explanation exProperty <| Rel.getExplanationData exProperty model.derivedInfo }
@@ -564,7 +568,7 @@ propertyConfigs =
                             True
                 )
             ]
-      , genRandom = Nothing
+      , genRandom = Just GenAcyclic
       , toggleExplanation = Just ExplainAcyclic
       }
     , { propertyName = "Functional"

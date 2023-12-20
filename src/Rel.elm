@@ -16,6 +16,7 @@ module Rel exposing
     , domain
     , empty
     , errorInBoxDot
+    , genAcyclic
     , genAntisymmetricRelation
     , genAsymmetricRelation
     , genBijectiveFunction
@@ -2379,6 +2380,55 @@ genTotalOrder n =
                     |> reflexiveClosure
                     |> transitiveClosure
             )
+
+
+{-| Based on <https://mathematica.stackexchange.com/questions/608/how-to-generate-random-directed-acyclic-graphs/2266#answer-613>
+"graph is acyclic if and only if there exists a vertex ordering which makes the adjacency matrix triangular"
+-}
+genAcyclic : Float -> Int -> Generator Rel
+genAcyclic trueProb n =
+    -- 1. Generate random upper triangular matrix (including diagonal)
+    let
+        upperTriangularGen : Generator (List Pair)
+        upperTriangularGen =
+            List.range 0 (n - 1)
+                |> List.andThen
+                    (\i ->
+                        List.range i (n - 1)
+                            |> List.map (\j -> ( i, j ))
+                    )
+                |> Random.traverse
+                    (\( i, j ) ->
+                        genBool trueProb
+                            |> Random.map
+                                (\include ->
+                                    if include then
+                                        [ ( i, j ) ]
+
+                                    else
+                                        []
+                                )
+                    )
+                |> Random.map List.concat
+
+        -- 2. Generate random permutation of indices
+        permutationGen =
+            Array.initialize n identity |> Random.Array.shuffle
+    in
+    Random.map2
+        (\upperTriangularElements permutation ->
+            -- 3. Apply the permutation to all the elements
+            List.map
+                (\( i, j ) ->
+                    ( Array.get i permutation |> Maybe.withDefault 0
+                    , Array.get j permutation |> Maybe.withDefault 0
+                    )
+                )
+                upperTriangularElements
+                |> fromElements n
+        )
+        upperTriangularGen
+        permutationGen
 
 
 
