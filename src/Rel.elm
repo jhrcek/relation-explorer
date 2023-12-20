@@ -1491,14 +1491,14 @@ viewOpErrorOrResultTableCell config res =
                 NoCommonBounds ->
                     Html.td
                         [ A.style "background-color" "salmon"
-                        , A.title <| "These two elements don't have any common" ++ config.boundName
+                        , A.title <| "These two elements don't have any common " ++ config.boundName ++ " bound"
                         ]
                         [ Html.text "?" ]
 
                 MultipleBounds bounds ->
                     Html.td
                         [ A.style "background-color" "orange"
-                        , A.title <| "Multiple minimal " ++ config.boundName ++ "s: " ++ showIntSet bounds
+                        , A.title <| "Multiple " ++ config.minMax ++ " " ++ config.boundName ++ " bounds: " ++ showIntSet bounds
                         ]
                         [ Html.text "!!" ]
 
