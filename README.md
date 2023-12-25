@@ -60,7 +60,8 @@
         - [ ] show poset arising from identifying equivalent elements
     - [ ] Poset
         - [x] show hasse diagram
-        - [ ] show [covering relation](https://en.wikipedia.org/wiki/Covering_relation)
+        - [x] show [covering relation](https://en.wikipedia.org/wiki/Covering_relation)
+        - [x] minimal / maximal elements
         - [ ] width (size of the largest antichain) - https://en.wikipedia.org/wiki/Dilworth%27s_theorem
         - [ ] height (size of the longest chain) - https://en.wikipedia.org/wiki/Mirsky%27s_theorem
         - [ ] list antichains (they correspond to lower / upper sets)

@@ -132,6 +132,7 @@ type Msg
     | DoSymmetricClosure
     | DoTransitiveClosure
     | DoTransitiveReduction
+    | DoCoveringRelation
     | DoComplement
     | DoConverse
     | MakeEmpty
@@ -212,6 +213,19 @@ update msg model =
             case model.derivedInfo.acyclicInfo of
                 Ok acyclicInfo ->
                     updateRel (\_ -> acyclicInfo.transitivelyReduced) model
+
+                Err _ ->
+                    pure model
+
+        DoCoveringRelation ->
+            case model.derivedInfo.acyclicInfo of
+                Ok acyclicInfo ->
+                    case acyclicInfo.posetInfo of
+                        Just _ ->
+                            updateRel (\_ -> acyclicInfo.coveringRelation) model
+
+                        Nothing ->
+                            pure model
 
                 Err _ ->
                     pure model
@@ -439,7 +453,13 @@ view model =
                             Just posetInfo ->
                                 Html.div [] <|
                                     -- TODO explain why not partial order
-                                    Html.div [] [ Html.text "This relation is a partial order." ]
+                                    Html.div []
+                                        [ Html.text "This relation is a partial order."
+                                        , Html.div [ A.class "indent" ]
+                                            [ Html.text <| "Minimal elements: " ++ Rel.showIntSet posetInfo.minimalElements ]
+                                        , Html.div [ A.class "indent" ]
+                                            [ Html.text <| "Maximal elements: " ++ Rel.showIntSet posetInfo.maximalElements ]
+                                        ]
                                         :: Html.div []
                                             [ Html.text <|
                                                 if Rel.isPosetLattice posetInfo then
@@ -617,7 +637,24 @@ propertyConfigs =
     , { propertyName = "Partial Order"
       , wikiLink = "https://en.wikipedia.org/wiki/Partially_ordered_set"
       , hasProperty = Rel.isPartialOrder
-      , buttons = []
+      , buttons =
+            [ ButtonConfig "Covering Relation"
+                DoCoveringRelation
+                (\info ->
+                    case info.acyclicInfo of
+                        Ok acyclicInfo ->
+                            case acyclicInfo.posetInfo of
+                                Just _ ->
+                                    Set.isEmpty acyclicInfo.redundantTransitiveEdges && Set.isEmpty info.onDiagonalElements
+
+                                Nothing ->
+                                    True
+
+                        Err _ ->
+                            -- Disable for rels with cycles, for which there's no unique TR
+                            True
+                )
+            ]
 
       -- TODO generate partial order
       , genRandom = Nothing

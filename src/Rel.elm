@@ -210,6 +210,10 @@ type alias AcyclicInfo =
     , -- Edges that would be removed by transitive reduction
       redundantTransitiveEdges : Set Pair
     , transitivelyReduced : Rel
+    , -- Forms the basis for drawing hasse diagram.
+      -- It's transitive and irreflexive reduction of the relation.
+      -- https://en.wikipedia.org/wiki/Covering_relation
+      coveringRelation : Rel
     , -- This is here, becaues only acyclic relations have a chance of being a poset
       posetInfo : Maybe PosetInfo
     }
@@ -217,6 +221,8 @@ type alias AcyclicInfo =
 
 type alias PosetInfo =
     { poset : Poset
+    , minimalElements : Set Int
+    , maximalElements : Set Int
     , joinTable : Result JoinOrMeetErrors (Array (Array JoinOrMeetResult))
     , meetTable : Result JoinOrMeetErrors (Array (Array JoinOrMeetResult))
     }
@@ -273,9 +279,13 @@ deriveInfo rel =
                     let
                         tred =
                             transitiveReduction acyclic
+
+                        covering =
+                            reflexiveReduction tred
                     in
                     { acyclic = acyclic
                     , transitivelyReduced = tred
+                    , coveringRelation = covering
                     , redundantTransitiveEdges =
                         difference rel tred
                             |> elements
@@ -289,9 +299,14 @@ deriveInfo rel =
                             let
                                 poset =
                                     Poset rel
+
+                                ( minimalElements, maximalElements ) =
+                                    minMaxElements covering
                             in
                             Just
                                 { poset = poset
+                                , minimalElements = minimalElements
+                                , maximalElements = maximalElements
                                 , joinTable = joinAttempt poset
                                 , meetTable = meetAttempt poset
                                 }
@@ -1365,6 +1380,34 @@ joinAttempt (Poset ((Rel rows) as rel)) =
 meetAttempt : Poset -> Result JoinOrMeetErrors (Array (Array JoinOrMeetResult))
 meetAttempt (Poset rel) =
     joinAttempt (Poset (converse rel))
+
+
+{-| TODO this should really accept something like Covering or Poset
+-}
+minMaxElements : Rel -> ( Set Int, Set Int )
+minMaxElements ((Rel rows) as rel) =
+    let
+        (Rel opRows) =
+            converse rel
+
+        rowsWithOutdegree0 =
+            indexedFoldr
+                (\i row acc ->
+                    if arrayOr row then
+                        acc
+
+                    else
+                        Set.insert i acc
+                )
+                Set.empty
+
+        minimal =
+            rowsWithOutdegree0 opRows
+
+        maximal =
+            rowsWithOutdegree0 rows
+    in
+    ( minimal, maximal )
 
 
 type alias JoinMeetConfig =
@@ -2777,9 +2820,9 @@ errorInBoxDot msg =
 
 
 hasseDiagramToDotSource : AcyclicInfo -> String
-hasseDiagramToDotSource { transitivelyReduced } =
+hasseDiagramToDotSource { coveringRelation } =
     relationGraphToDotSource
-        (reflexiveReduction transitivelyReduced)
+        coveringRelation
         { highlightSccs = False, showArrowheads = False }
 
 
