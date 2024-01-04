@@ -5,6 +5,7 @@ import Html exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
 import Natural
+import Permutation exposing (Permutation)
 import Ports
 import Random exposing (Generator)
 import Rel exposing (DerivedInfo, ExplainableProperty(..), Highlight(..), Rel)
@@ -33,6 +34,7 @@ type alias Model =
     , -- Number between 0 and 1, indicating how likely it is that random generators
       -- will produce a True value (and thus generate an element of a relation)-}
       trueProb : Float
+    , permutationState : Permutation.State
     }
 
 
@@ -62,6 +64,7 @@ init _ =
             , highlightSccs = True
             , showIntents = True
             , showExtents = True
+            , permutationState = Permutation.init initSize
             }
     in
     updateGraph initModel
@@ -126,6 +129,8 @@ type Msg
     | ToggleShowExtents
     | ToggleShowIntents
     | PreviousRelation
+    | PermutationEdited String
+    | ApplyPermutation Permutation
     | NextRelation
     | DoReflexiveClosure
     | DoReflexiveReduction
@@ -175,6 +180,12 @@ update msg model =
                     clamp 1 10 newSize
             in
             updateRel (Rel.resize safeSize) model
+
+        PermutationEdited str ->
+            pure { model | permutationState = Permutation.update str (Rel.size model.rel) model.permutationState }
+
+        ApplyPermutation permutation ->
+            updateRel (Rel.applyPermutation permutation) { model | permutationState = Permutation.init (Rel.size model.rel) }
 
         ToggleRel i j ->
             updateRel (Rel.toggle i j) model
@@ -319,6 +330,7 @@ updateRel f model =
                 , derivedInfo = newDerivedInfo
                 , history = model.rel :: model.history
                 , highlight = updateHighlight newDerivedInfo model.highlight
+                , permutationState = Permutation.updateSize (Rel.size newRel) model.permutationState
             }
     in
     updateGraph newModel
@@ -421,6 +433,45 @@ view model =
                                 Err cycle ->
                                     "The relation contains cycle(s). Example cycle: "
                                         ++ Rel.showIntListAsList cycle
+                        ]
+                    ]
+                , Html.details []
+                    [ Html.summary [] [ Html.text "Group Theory" ]
+                    , Html.div [] [ Html.text "Group Actions" ]
+                    , let
+                        st =
+                            model.permutationState
+
+                        permButtonAttr =
+                            case st.result of
+                                Err _ ->
+                                    A.disabled True
+
+                                Ok perm ->
+                                    E.onClick <| ApplyPermutation perm
+
+                        permError =
+                            case st.result of
+                                Err e ->
+                                    Html.div [ A.class "error" ] [ Html.text e ]
+
+                                Ok _ ->
+                                    Html.text ""
+                      in
+                      Html.div []
+                        [ Html.label []
+                            [ Html.text "Permutation "
+                            , Html.input
+                                [ E.onInput PermutationEdited
+                                , A.placeholder "Cycle notation: (1 2 3) (4 5)"
+                                , A.value st.rawInput
+                                ]
+                                []
+                            ]
+                        , Html.button [ permButtonAttr ] [ Html.text "Apply" ]
+                        , Html.span [ A.title "Apply permutation on elements of the set X" ]
+                            [ Html.text "ⓘ" ]
+                        , permError
                         ]
                     ]
                 , Html.details []

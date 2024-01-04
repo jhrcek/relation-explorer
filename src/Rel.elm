@@ -8,6 +8,7 @@ module Rel exposing
     , JoinOrMeetResult(..)
     , Pair
     , Rel
+    , applyPermutation
     , cartesianProduct
     , complement
     , conceptLatticeToDotSource
@@ -79,6 +80,7 @@ import Html.Events as E
 import List
 import List.Extra as List
 import Natural exposing (Natural)
+import Permutation exposing (Permutation)
 import Random exposing (Generator)
 import Random.Array
 import Random.Extra as Random
@@ -2586,6 +2588,18 @@ listAttributeClosures rel =
             attributeSetClosure rel Set.empty
     in
     emptySetClosure :: List.unfoldr nextClosure emptySetClosure
+
+
+applyPermutation : Permutation -> Rel -> Rel
+applyPermutation p rel =
+    elements rel
+        |> List.map
+            (\( i, j ) ->
+                ( Permutation.get i p |> Maybe.withDefault 0
+                , Permutation.get j p |> Maybe.withDefault 0
+                )
+            )
+        |> fromElements (size rel)
 
 
 

@@ -13,6 +13,10 @@ live:
 format:
 	elm-format --yes src
 
+.PHONY: test
+test:
+	elm-test
+
 .PHONY: review
 review:
 	elm-review
