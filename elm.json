@@ -14,7 +14,8 @@
             "elm/random": "1.0.0",
             "elm-community/array-extra": "2.6.0",
             "elm-community/list-extra": "8.7.0",
-            "elm-community/random-extra": "3.2.0"
+            "elm-community/random-extra": "3.2.0",
+            "lynn/elm-arithmetic": "3.0.0"
         },
         "indirect": {
             "elm/json": "1.1.3",

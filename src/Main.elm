@@ -437,7 +437,26 @@ view model =
                     ]
                 , Html.details []
                     [ Html.summary [] [ Html.text "Group Theory" ]
-                    , Html.div [] [ Html.text "Group Actions" ]
+                    , case model.derivedInfo.permutationInfo of
+                        Just permutation ->
+                            Html.div []
+                                [ Html.text "This relation is a permutation."
+                                , Html.div [] [ Html.text <| "One-line notation: " ++ Permutation.showOneLineNotation permutation ]
+                                , Html.div [] [ Html.text <| "Cycle notation: " ++ Permutation.showCycles permutation ]
+                                , Html.div [] [ Html.text <| "Fixed points: " ++ Rel.showIntListAsSet (Permutation.fixedPoints permutation) ]
+                                , Html.div []
+                                    [ Html.text <| "Order: " ++ String.fromInt (Permutation.order permutation)
+                                    , Html.span [ A.title "Order is the smallest number representing how many times the permutation would have to be composed with itself to result in identity permutation" ]
+                                        [ Html.text " ⓘ" ]
+                                    ]
+
+                                -- TODO cycle type, parity, next/previous button to enumerate all permutations
+                                ]
+
+                        Nothing ->
+                            Html.text "This relation is not a permutation."
+                    , Html.h4 [] [ Html.text "Operations" ]
+                    , Html.div [] [ Html.text "Relabel relation elements by applying permutation group action" ]
                     , let
                         st =
                             model.permutationState

@@ -204,6 +204,7 @@ type alias DerivedInfo =
     , isInvolution : Bool
     , -- Either cycle or proof that it's acyclic
       acyclicInfo : Result (List Int) AcyclicInfo
+    , permutationInfo : Maybe Permutation
     }
 
 
@@ -266,6 +267,7 @@ deriveInfo rel =
     , isBijectiveFunction = isBijectiveFunction rel
     , isDerangement = isDerangement rel
     , isInvolution = isInvolution rel
+    , permutationInfo = mkPermutation rel
     , formalConcepts =
         listAttributeClosures rel
             |> List.map
@@ -2595,11 +2597,24 @@ applyPermutation p rel =
     elements rel
         |> List.map
             (\( i, j ) ->
-                ( Permutation.get i p |> Maybe.withDefault 0
-                , Permutation.get j p |> Maybe.withDefault 0
+                ( Permutation.get i p |> Maybe.withDefault i
+                , Permutation.get j p |> Maybe.withDefault j
                 )
             )
         |> fromElements (size rel)
+
+
+mkPermutation : Rel -> Maybe Permutation
+mkPermutation rel =
+    if isBijectiveFunction rel then
+        elements rel
+            |> List.sortBy Tuple.first
+            |> List.map Tuple.second
+            |> Permutation.fromListUnsafe
+            |> Just
+
+    else
+        Nothing
 
 
 

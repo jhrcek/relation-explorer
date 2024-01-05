@@ -1,14 +1,20 @@
 module Permutation exposing
     ( Permutation
     , State
+    , fixedPoints
+    , fromListUnsafe
     , get
     , init
+    , order
     , parse
+    , showCycles
+    , showOneLineNotation
     , toArray
     , update
     , updateSize
     )
 
+import Arithmetic exposing (lcm)
 import Array exposing (Array)
 import Dict
 import List
@@ -19,6 +25,13 @@ import Set
 
 type Permutation
     = Permutation (Array Int)
+
+
+{-| Doesn't check all elements are distinct / within bounds
+-}
+fromListUnsafe : List Int -> Permutation
+fromListUnsafe =
+    Permutation << Array.fromList
 
 
 {-| For testing purposes
@@ -81,51 +94,91 @@ parse n input =
             )
 
 
-validatePermutation : Int -> List (List Int) -> Result String Permutation
-validatePermutation n cycs =
+fromCycles : Int -> List (List Int) -> Result String Permutation
+fromCycles n cycs =
     let
+        successivePairs : List a -> List ( a, a )
         successivePairs xs =
             case xs of
-                y :: _ ->
-                    spHelp y xs []
+                first :: _ ->
+                    let
+                        go ys acc =
+                            case ys of
+                                [] ->
+                                    acc
+
+                                [ last ] ->
+                                    ( last, first ) :: acc
+
+                                x :: y :: rest ->
+                                    go (y :: rest) (( x, y ) :: acc)
+                    in
+                    go xs []
 
                 [] ->
                     []
 
-        spHelp first xs acc =
-            case xs of
-                [] ->
-                    acc
-
-                [ last ] ->
-                    ( last, first ) :: acc
-
-                x :: y :: rest ->
-                    spHelp first (y :: rest) (( x, y ) :: acc)
+        concatCycles =
+            List.concat cycs
     in
-    if List.length cycs == 0 then
-        Err "empty input"
+    case findDuplicate concatCycles of
+        Just dup ->
+            Err <| "duplicate element: " ++ String.fromInt dup
 
-    else
-        let
-            concatCycles =
-                List.concat cycs
-        in
-        case findDuplicate concatCycles of
-            Just dup ->
-                Err <| "duplicate element: " ++ String.fromInt dup
+        Nothing ->
+            case List.find (\i -> i < 0 || n <= i) concatCycles of
+                Just outOfBound ->
+                    Err <| "element " ++ String.fromInt outOfBound ++ " out of bounds (0-" ++ String.fromInt (n - 1) ++ ")"
 
-            Nothing ->
-                case List.find (\i -> i < 0 || n <= i) concatCycles of
-                    Just outOfBound ->
-                        Err <| "out of bound element: " ++ String.fromInt outOfBound
+                Nothing ->
+                    let
+                        mappings =
+                            Dict.fromList <| List.concatMap successivePairs cycs
+                    in
+                    Ok <| Permutation <| Array.initialize n <| \i -> Dict.get i mappings |> Maybe.withDefault i
 
-                    Nothing ->
-                        let
-                            mappings =
-                                Dict.fromList <| List.concatMap successivePairs cycs
-                        in
-                        Ok <| Permutation <| Array.initialize n <| \i -> Dict.get i mappings |> Maybe.withDefault i
+
+toCycles : Permutation -> List (List Int)
+toCycles (Permutation p) =
+    let
+        initRemaining =
+            List.range 0 <| Array.length p - 1
+
+        go : List Int -> List (List Int) -> List (List Int)
+        go remaining cyclesAcc =
+            case remaining of
+                [] ->
+                    List.reverse cyclesAcc
+
+                start :: rest ->
+                    let
+                        newCycle =
+                            unrollCycle start p
+
+                        newRemaining =
+                            List.filter (\i -> List.notMember i newCycle) rest
+                    in
+                    go newRemaining (newCycle :: cyclesAcc)
+    in
+    go initRemaining []
+
+
+unrollCycle : Int -> Array Int -> List Int
+unrollCycle start a =
+    let
+        go : Int -> List Int -> List Int
+        go i acc =
+            let
+                next =
+                    Array.get i a |> Maybe.withDefault i
+            in
+            if next == start then
+                List.reverse acc
+
+            else
+                go next (next :: acc)
+    in
+    go start [ start ]
 
 
 findDuplicate : List Int -> Maybe Int
@@ -148,12 +201,15 @@ findDuplicate =
 
 parser : Int -> Parser Permutation
 parser n =
-    Parser.succeed identity
-        |= cycles
+    Parser.oneOf
+        [ Parser.backtrackable emptyCycle
+        , oneOrMoreNonEmptyCycles
+        ]
+        |. Parser.spaces
         |. Parser.end
         |> Parser.andThen
             (\cycs ->
-                case validatePermutation n cycs of
+                case fromCycles n cycs of
                     Ok perm ->
                         Parser.succeed perm
 
@@ -162,39 +218,42 @@ parser n =
             )
 
 
-cycles : Parser (List (List Int))
-cycles =
-    -- Hacky way to enforce parsing 1+ cycles
+oneOrMoreNonEmptyCycles : Parser (List (List Int))
+oneOrMoreNonEmptyCycles =
+    oneOrMoreSpaceSep nonEmptyCycle
+
+
+emptyCycle : Parser (List (List Int))
+emptyCycle =
+    Parser.succeed []
+        |. Parser.spaces
+        |. Parser.symbol "("
+        |. Parser.spaces
+        |. Parser.symbol ")"
+
+
+nonEmptyCycle : Parser (List Int)
+nonEmptyCycle =
+    Parser.succeed identity
+        |. Parser.symbol "("
+        |= oneOrMoreSpaceSep Parser.int
+        |. Parser.symbol ")"
+
+
+oneOrMoreSpaceSep : Parser a -> Parser (List a)
+oneOrMoreSpaceSep p =
     Parser.succeed (::)
-        |= cycle
+        |. Parser.spaces
+        |= p
+        |. Parser.spaces
         |= Parser.sequence
             { start = ""
             , separator = ""
             , end = ""
             , spaces = Parser.spaces
-            , item = cycle
+            , item = p
             , trailing = Parser.Forbidden
             }
-
-
-cycle : Parser (List Int)
-cycle =
-    Parser.succeed identity
-        |. Parser.symbol "("
-        |= cycleElements
-        |. Parser.symbol ")"
-
-
-cycleElements : Parser (List Int)
-cycleElements =
-    Parser.sequence
-        { start = ""
-        , separator = ""
-        , end = ""
-        , spaces = Parser.spaces
-        , item = Parser.int
-        , trailing = Parser.Forbidden
-        }
 
 
 showDeadEnd : Parser.DeadEnd -> String
@@ -241,3 +300,42 @@ showDeadEnd deadEnd =
 
         BadRepeat ->
             "Bad Repeat"
+
+
+showOneLineNotation : Permutation -> String
+showOneLineNotation (Permutation p) =
+    Array.toList p
+        |> List.map String.fromInt
+        |> String.join " "
+
+
+showCycles : Permutation -> String
+showCycles p =
+    case toCycles p of
+        [] ->
+            "()"
+
+        cycles ->
+            List.filter (\c -> List.length c > 1) cycles
+                |> List.map (\c -> "(" ++ String.join " " (List.map String.fromInt c) ++ ")")
+                |> String.concat
+
+
+fixedPoints : Permutation -> List Int
+fixedPoints (Permutation p) =
+    Array.toIndexedList p
+        |> List.filterMap
+            (\( i, j ) ->
+                if i == j then
+                    Just i
+
+                else
+                    Nothing
+            )
+
+
+order : Permutation -> Int
+order p =
+    toCycles p
+        |> List.map List.length
+        |> List.foldl lcm 1

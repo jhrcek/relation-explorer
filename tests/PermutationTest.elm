@@ -16,8 +16,12 @@ suite =
                 \_ -> failedParseTest 2 "asdf" "Invalid cycle notation: Expecting Symbol ("
             , test "fails with ok input followed by nonsense" <|
                 \_ -> failedParseTest 2 "(1 2)asdf" "Invalid cycle notation: Expecting End"
+            , test "fails with multiple empty cycles" <|
+                \_ -> failedParseTest 2 "() ()" "Invalid cycle notation: Expecting End"
+            , test "fails when there are other cycles on top of empty" <|
+                \_ -> failedParseTest 2 "(0 1) ()" "Invalid cycle notation: Expecting Int"
             , test "rejects out of bounds elements" <|
-                \_ -> failedParseTest 2 "(1 2)" "Invalid cycle notation: out of bound element: 2"
+                \_ -> failedParseTest 2 "(1 2)" "Invalid cycle notation: element 2 out of bounds (0-1)"
             , test "rejects duplicate elements" <|
                 \_ -> failedParseTest 2 "(1 1)" "Invalid cycle notation: duplicate element: 1"
             , test "fails with out of bounds - negative" <|
@@ -26,6 +30,10 @@ suite =
                 \_ -> okParseTest 2 "()" (Array.fromList [ 0, 1 ])
             , test "accepts single element cycle as identity" <|
                 \_ -> okParseTest 2 "(1)" (Array.fromList [ 0, 1 ])
+            , test "accepts multiple single element cycle as identity" <|
+                \_ -> okParseTest 2 " (1 ) ( 0) " (Array.fromList [ 0, 1 ])
+            , test "accepts mix of single and multi-element cycles" <|
+                \_ -> okParseTest 3 " (1) (0 2) " (Array.fromList [ 2, 1, 0 ])
             , test "accepts single transposition" <|
                 \_ -> okParseTest 2 "(0 1)" (Array.fromList [ 1, 0 ])
             , test "accepts longer single cycle" <|
