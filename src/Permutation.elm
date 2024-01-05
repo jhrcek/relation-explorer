@@ -5,8 +5,10 @@ module Permutation exposing
     , fromListUnsafe
     , get
     , init
+    , isEven
     , order
     , parse
+    , showCycleType
     , showCycles
     , showOneLineNotation
     , toArray
@@ -321,6 +323,14 @@ showCycles p =
                 |> String.concat
 
 
+showCycleType : Permutation -> String
+showCycleType p =
+    cycleType p
+        |> List.map String.fromInt
+        |> String.join ","
+        |> (\s -> "(" ++ s ++ ")")
+
+
 fixedPoints : Permutation -> List Int
 fixedPoints (Permutation p) =
     Array.toIndexedList p
@@ -339,3 +349,20 @@ order p =
     toCycles p
         |> List.map List.length
         |> List.foldl lcm 1
+
+
+cycleType : Permutation -> List Int
+cycleType p =
+    toCycles p
+        |> List.map List.length
+        |> List.sort
+        |> List.reverse
+
+
+isEven : Permutation -> Bool
+isEven p =
+    cycleType p
+        |> List.map (\cycleLength -> cycleLength + 1)
+        |> List.sum
+        |> modBy 2
+        |> (==) 0

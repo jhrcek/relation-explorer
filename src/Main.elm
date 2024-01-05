@@ -443,14 +443,26 @@ view model =
                                 [ Html.text "This relation is a permutation."
                                 , Html.div [] [ Html.text <| "One-line notation: " ++ Permutation.showOneLineNotation permutation ]
                                 , Html.div [] [ Html.text <| "Cycle notation: " ++ Permutation.showCycles permutation ]
+                                , Html.div [] [ Html.text <| "Cycle type: " ++ Permutation.showCycleType permutation ]
                                 , Html.div [] [ Html.text <| "Fixed points: " ++ Rel.showIntListAsSet (Permutation.fixedPoints permutation) ]
+                                , Html.div []
+                                    [ Html.text <|
+                                        "Parity: "
+                                            ++ (if Permutation.isEven permutation then
+                                                    "even"
+
+                                                else
+                                                    "odd"
+                                               )
+                                    ]
                                 , Html.div []
                                     [ Html.text <| "Order: " ++ String.fromInt (Permutation.order permutation)
                                     , Html.span [ A.title "Order is the smallest number representing how many times the permutation would have to be composed with itself to result in identity permutation" ]
                                         [ Html.text " ⓘ" ]
                                     ]
 
-                                -- TODO cycle type, parity, next/previous button to enumerate all permutations
+                                -- TODO next/previous button to enumerate all permutations
+                                -- TODO number of permutation within given cycle type (conjugacy class)
                                 ]
 
                         Nothing ->
