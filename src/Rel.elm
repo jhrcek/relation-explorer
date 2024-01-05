@@ -2467,8 +2467,8 @@ genAcyclic trueProb n =
             -- 3. Apply the permutation to all the elements
             List.map
                 (\( i, j ) ->
-                    ( Array.get i permutation |> Maybe.withDefault 0
-                    , Array.get j permutation |> Maybe.withDefault 0
+                    ( Array.get i permutation |> Maybe.withDefault i
+                    , Array.get j permutation |> Maybe.withDefault j
                     )
                 )
                 upperTriangularElements

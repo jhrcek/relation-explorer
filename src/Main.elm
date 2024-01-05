@@ -441,28 +441,28 @@ view model =
                         Just permutation ->
                             Html.div []
                                 [ Html.text "This relation is a permutation."
-                                , Html.div [] [ Html.text <| "One-line notation: " ++ Permutation.showOneLineNotation permutation ]
-                                , Html.div [] [ Html.text <| "Cycle notation: " ++ Permutation.showCycles permutation ]
-                                , Html.div [] [ Html.text <| "Cycle type: " ++ Permutation.showCycleType permutation ]
-                                , Html.div [] [ Html.text <| "Fixed points: " ++ Rel.showIntListAsSet (Permutation.fixedPoints permutation) ]
-                                , Html.div []
-                                    [ Html.text <|
-                                        "Parity: "
-                                            ++ (if Permutation.isEven permutation then
-                                                    "even"
+                                , Html.div [ A.class "indent" ]
+                                    [ Html.div [] [ Html.text <| "One-line notation: " ++ Permutation.showOneLineNotation permutation ]
+                                    , Html.div [] [ Html.text <| "Cycle notation: " ++ Permutation.showCycles permutation ]
+                                    , Html.div [] [ Html.text <| "Cycle type: " ++ Permutation.showCycleType permutation ]
+                                    , Html.div [] [ Html.text <| "Number of permutations of the same cycle type: " ++ String.fromInt (Permutation.conjugacyClassSize permutation) ]
+                                    , Html.div [] [ Html.text <| "Fixed points: " ++ Rel.showIntListAsSet (Permutation.fixedPoints permutation) ]
+                                    , Html.div []
+                                        [ Html.text <|
+                                            "Parity: "
+                                                ++ (if Permutation.isEven permutation then
+                                                        "even"
 
-                                                else
-                                                    "odd"
-                                               )
+                                                    else
+                                                        "odd"
+                                                   )
+                                        ]
+                                    , Html.div []
+                                        [ Html.text <| "Order: " ++ String.fromInt (Permutation.order permutation)
+                                        , Html.span [ A.title "Order is the smallest number representing how many times the permutation would have to be composed with itself to result in identity permutation" ]
+                                            [ Html.text " ⓘ" ]
+                                        ]
                                     ]
-                                , Html.div []
-                                    [ Html.text <| "Order: " ++ String.fromInt (Permutation.order permutation)
-                                    , Html.span [ A.title "Order is the smallest number representing how many times the permutation would have to be composed with itself to result in identity permutation" ]
-                                        [ Html.text " ⓘ" ]
-                                    ]
-
-                                -- TODO next/previous button to enumerate all permutations
-                                -- TODO number of permutation within given cycle type (conjugacy class)
                                 ]
 
                         Nothing ->
@@ -500,8 +500,10 @@ view model =
                                 []
                             ]
                         , Html.button [ permButtonAttr ] [ Html.text "Apply" ]
-                        , Html.span [ A.title "Apply permutation on elements of the set X" ]
+                        , Html.span [ A.title "Apply permutation p on elements of the set X (calculating new relation R' = p∘R∘p⁻¹)" ]
                             [ Html.text "ⓘ" ]
+
+                        -- TODO next/previous button to enumerate all permutations
                         , permError
                         ]
                     ]

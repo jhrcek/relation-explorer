@@ -1,6 +1,7 @@
 module Permutation exposing
     ( Permutation
     , State
+    , conjugacyClassSize
     , fixedPoints
     , fromListUnsafe
     , get
@@ -366,3 +367,46 @@ isEven p =
         |> List.sum
         |> modBy 2
         |> (==) 0
+
+
+conjugacyClassSize : Permutation -> Int
+conjugacyClassSize ((Permutation arr) as p) =
+    let
+        ctype =
+            cycleType p
+
+        n =
+            Array.length arr
+
+        cycleTypeCounts =
+            List.foldl
+                (\cycleLength counts ->
+                    Dict.update cycleLength
+                        (\maybeCount ->
+                            case maybeCount of
+                                Nothing ->
+                                    Just 1
+
+                                Just count ->
+                                    Just (1 + count)
+                        )
+                        counts
+                )
+                Dict.empty
+                ctype
+
+        factorial i =
+            List.product (List.range 1 i)
+    in
+    -- TODO this would overflow if n > ~10 is allowed
+    factorial n
+        // Dict.foldl
+            (\cycleLength cycleCount acc ->
+                acc
+                    * -- Cycles of the same lenght can be permuted among themselves
+                      factorial cycleCount
+                    * -- Within each cycle, the elements can be rotated in cycleLength ways without changing the cycle itself
+                      (cycleLength ^ cycleCount)
+            )
+            1
+            cycleTypeCounts
