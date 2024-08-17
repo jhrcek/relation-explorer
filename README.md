@@ -62,6 +62,7 @@
         - [x] show hasse diagram
         - [x] show [covering relation](https://en.wikipedia.org/wiki/Covering_relation)
         - [x] minimal / maximal elements
+        - [ ] show [Upper set](https://en.wikipedia.org/wiki/Upper_set) lattice
         - [ ] width (size of the largest antichain) - https://en.wikipedia.org/wiki/Dilworth%27s_theorem
         - [ ] height (size of the longest chain) - https://en.wikipedia.org/wiki/Mirsky%27s_theorem
         - [ ] list antichains (they correspond to lower / upper sets)
@@ -73,7 +74,8 @@
     - [ ] Function
         - [ ] Show fixed points
 
-- [ ] For each of the above shows the total number of structures of this kind (with links to OEIS, see [counting transitive relations](https://en.wikipedia.org/wiki/Transitive_relation#Counting_transitive_relations))
+- [x] For each of the above shows the total number of structures of this kind
+    - [] add links to OEIS, see [counting transitive relations](https://en.wikipedia.org/wiki/Transitive_relation#Counting_transitive_relations)
 
 - [ ] Provides operations like
     - [x] reflexive closure

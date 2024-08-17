@@ -1,10 +1,11 @@
 module Main exposing (main)
 
 import Browser
+import Count
 import Html exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
-import Natural
+import Natural exposing (Natural)
 import Permutation exposing (Permutation)
 import Ports
 import Random exposing (Generator)
@@ -587,6 +588,11 @@ type alias PropertyConfig msg =
     , buttons : List (ButtonConfig msg)
     , genRandom : Maybe msg
     , toggleExplanation : Maybe ExplainableProperty
+
+    -- TODO maybe cache the result in model?
+    , countFormula : Maybe (Int -> Natural)
+
+    -- TODO add link to OEIS
     }
 
 
@@ -605,6 +611,7 @@ propertyConfigs =
       , buttons = []
       , genRandom = Just GenRel
       , toggleExplanation = Just ExplainRelation
+      , countFormula = Just Count.rel
       }
     , { propertyName = "Reflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation"
@@ -612,6 +619,7 @@ propertyConfigs =
       , buttons = [ ButtonConfig "Closure" DoReflexiveClosure Rel.isReflexive ]
       , genRandom = Just GenReflexive
       , toggleExplanation = Just ExplainReflexive
+      , countFormula = Just Count.reflexiveOrIrreflexive
       }
     , { propertyName = "Irreflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity"
@@ -619,6 +627,7 @@ propertyConfigs =
       , buttons = [ ButtonConfig "Reduction" DoReflexiveReduction Rel.isIrreflexive ]
       , genRandom = Just GenIrreflexive
       , toggleExplanation = Just ExplainIrreflexive
+      , countFormula = Just Count.reflexiveOrIrreflexive
       }
     , { propertyName = "Symmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
@@ -626,6 +635,7 @@ propertyConfigs =
       , buttons = [ ButtonConfig "Closure" DoSymmetricClosure Rel.isSymmetric ]
       , genRandom = Just GenSymmetric
       , toggleExplanation = Just ExplainSymmetric
+      , countFormula = Just Count.symmetric
       }
     , { propertyName = "Antisymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Antisymmetric_relation"
@@ -633,6 +643,7 @@ propertyConfigs =
       , buttons = []
       , genRandom = Just GenAntisymmetric
       , toggleExplanation = Just ExplainAntisymmetric
+      , countFormula = Just Count.antisymmetric
       }
     , { propertyName = "Asymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
@@ -640,6 +651,7 @@ propertyConfigs =
       , buttons = []
       , genRandom = Just GenAsymmetric
       , toggleExplanation = Just ExplainAsymmetric
+      , countFormula = Just Count.asymmetric
       }
     , { propertyName = "Transitive"
       , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
@@ -647,6 +659,7 @@ propertyConfigs =
       , buttons = [ ButtonConfig "Closure" DoTransitiveClosure Rel.isTransitive ]
       , genRandom = Nothing
       , toggleExplanation = Just ExplainTransitive
+      , countFormula = Just Count.transitive
       }
     , { propertyName = "Connected"
       , wikiLink = "https://en.wikipedia.org/wiki/Connected_relation"
@@ -654,6 +667,7 @@ propertyConfigs =
       , buttons = []
       , genRandom = Just GenConnected
       , toggleExplanation = Just ExplainConnected
+      , countFormula = Just Count.connected
       }
     , { propertyName = "Acyclic"
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"
@@ -674,6 +688,9 @@ propertyConfigs =
             ]
       , genRandom = Just GenAcyclic
       , toggleExplanation = Just ExplainAcyclic
+
+      -- TODO count acyclic
+      , countFormula = Nothing
       }
     , { propertyName = "Functional"
       , wikiLink = "https://en.wikipedia.org/wiki/Binary_relation#Special_types_of_binary_relations"
@@ -681,6 +698,7 @@ propertyConfigs =
       , buttons = []
       , genRandom = Just GenFunctional
       , toggleExplanation = Just ExplainFunctional
+      , countFormula = Just Count.partialFunctions
       }
     , { propertyName = "(Left-)Total"
       , wikiLink = "https://en.wikipedia.org/wiki/Total_relation"
@@ -688,6 +706,7 @@ propertyConfigs =
       , buttons = []
       , genRandom = Just GenLeftTotal
       , toggleExplanation = Just ExplainLeftTotal
+      , countFormula = Just Count.leftTotal
       }
     , { propertyName = "Bijection (Permutation)"
       , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
@@ -697,17 +716,19 @@ propertyConfigs =
 
       -- TODO explain why not bijective function
       , toggleExplanation = Nothing
+      , countFormula = Just Count.totalOrderOrPermutation
       }
     , { propertyName = "Derangement"
       , wikiLink = "https://en.wikipedia.org/wiki/Derangement"
       , hasProperty = .isDerangement
       , buttons = []
 
-      -- Get some inspiration from this paper https://epubs.siam.org/doi/pdf/10.1137/1.9781611972986.7
+      -- TODO generate derangements. Find some inspiration from this paper https://epubs.siam.org/doi/pdf/10.1137/1.9781611972986.7
       , genRandom = Nothing
 
       -- TODO explain why not Derangement
       , toggleExplanation = Nothing
+      , countFormula = Just Count.derangement
       }
     , { propertyName = "Involution"
       , wikiLink = "https://en.wikipedia.org/wiki/Involution_(mathematics)"
@@ -717,6 +738,7 @@ propertyConfigs =
 
       -- TODO explain why not involution
       , toggleExplanation = Nothing
+      , countFormula = Just Count.involution
       }
     , { propertyName = "Partial Order"
       , wikiLink = "https://en.wikipedia.org/wiki/Partially_ordered_set"
@@ -745,6 +767,7 @@ propertyConfigs =
 
       -- TODO explain why not total oder
       , toggleExplanation = Nothing
+      , countFormula = Just Count.poset
       }
     , { propertyName = "Lattice"
       , wikiLink = "https://en.wikipedia.org/wiki/Lattice_(order)"
@@ -756,6 +779,7 @@ propertyConfigs =
 
       -- TODO explain why not lattice
       , toggleExplanation = Nothing
+      , countFormula = Just Count.lattice
       }
 
     -- TODO have separate section for "composite" concepts
@@ -767,6 +791,7 @@ propertyConfigs =
 
       -- TODO explain why not total oder
       , toggleExplanation = Nothing
+      , countFormula = Just Count.totalOrderOrPermutation
       }
     ]
 
@@ -791,7 +816,7 @@ elementaryPropertiesView derivedInfo highlight =
             explainedProperty highlight
 
         row : PropertyConfig Msg -> Html Msg
-        row { propertyName, wikiLink, hasProperty, buttons, genRandom, toggleExplanation } =
+        row { propertyName, wikiLink, hasProperty, buttons, genRandom, toggleExplanation, countFormula } =
             let
                 hasProp =
                     hasProperty derivedInfo
@@ -816,6 +841,14 @@ elementaryPropertiesView derivedInfo highlight =
 
                         Nothing ->
                             []
+                , Html.td []
+                    [ case countFormula of
+                        Just cnt ->
+                            Html.text <| Natural.toString <| cnt derivedInfo.relSize
+
+                        Nothing ->
+                            Html.text "??"
+                    ]
                 , Html.td [] <|
                     case toggleExplanation of
                         Just thisProperty ->
@@ -848,6 +881,7 @@ elementaryPropertiesView derivedInfo highlight =
                 , Html.th [] [ Html.text "Does R have this property?" ]
                 , Html.th [] [ Html.text "Operations" ]
                 , Html.th [] [ Html.text "Gen" ]
+                , Html.th [] [ Html.text "Count" ]
                 , Html.th [] [ Html.text "Expl." ]
                 ]
             ]
@@ -979,16 +1013,7 @@ pager rel =
                 " "
                     ++ Natural.toString (Rel.toRelIndex rel)
                     ++ " of "
-                    ++ Natural.toString
-                        (let
-                            n =
-                                Natural.fromSafeInt <| Rel.size rel
-
-                            nSquared =
-                                Natural.mul n n
-                         in
-                         Natural.exp Natural.two nSquared
-                        )
+                    ++ Natural.toString (Count.rel <| Rel.size rel)
                     ++ " "
             ]
         , Html.button [ E.onClick NextRelation, A.title "Next relation" ] [ Html.text ">" ]
