@@ -896,12 +896,17 @@ blankLink href text =
 
 yesNo : Bool -> Html Msg
 yesNo b =
-    Html.text <|
-        if b then
-            "Yes"
+    let
+        ( color, label ) =
+            if b then
+                ( "green", "✔" )
 
-        else
-            "No"
+            else
+                ( "red", "✘" )
+    in
+    Html.span
+        [ A.style "color" color ]
+        [ Html.text label ]
 
 
 sizeInputView : Int -> Html Msg
