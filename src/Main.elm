@@ -562,8 +562,14 @@ view model =
                     ]
                 , case model.highlight of
                     Explanation _ exp ->
-                        Html.div [] <|
-                            Html.h4 [] [ Html.text "Explanation" ]
+                        Html.div [ A.class "explanation" ] <|
+                            Html.h4 [ A.class "explanation-title" ] [ Html.text "Explanation" ]
+                                :: Html.button
+                                    [ A.class "exlanation-close"
+                                    , A.title "Close Explanation"
+                                    , E.onClick HideExplanation
+                                    ]
+                                    [ Html.text "✕" ]
                                 :: List.map (\line -> Html.div [] [ Html.text line ]) exp.lines
 
                     Pairs _ ->
@@ -825,15 +831,27 @@ elementaryPropertiesView derivedInfo highlight =
                 [ Html.td [] [ blankLink wikiLink propertyName ]
                 , Html.td [] [ yesNo hasProp ]
                 , Html.td [] <|
-                    List.map
-                        (\butCfg ->
-                            Html.button
-                                [ E.onClick butCfg.message
-                                , A.disabled <| butCfg.disabled derivedInfo
-                                ]
-                                [ Html.text butCfg.label ]
-                        )
-                        buttons
+                    case toggleExplanation of
+                        Just thisProperty ->
+                            let
+                                ( onClick, label, title ) =
+                                    case activeProperty of
+                                        Just activeProp ->
+                                            if activeProp == thisProperty then
+                                                ( HideExplanation, "✕", "Hide explanation" )
+
+                                            else
+                                                ( ShowExplanation thisProperty, "ⓘ", "Show explanation" )
+
+                                        Nothing ->
+                                            ( ShowExplanation thisProperty, "ⓘ", "Show explanation" )
+                            in
+                            [ Html.button [ E.onClick onClick, A.title title ]
+                                [ Html.text label ]
+                            ]
+
+                        Nothing ->
+                            []
                 , Html.td [] <|
                     case genRandom of
                         Just genMsg ->
@@ -841,6 +859,17 @@ elementaryPropertiesView derivedInfo highlight =
 
                         Nothing ->
                             []
+                , Html.td [] <|
+                    List.map
+                        (\butCfg ->
+                            Html.button
+                                [ E.onClick butCfg.message
+                                , A.disabled <| butCfg.disabled derivedInfo
+                                , A.class "fill-cell-button"
+                                ]
+                                [ Html.text butCfg.label ]
+                        )
+                        buttons
                 , Html.td []
                     [ case countFormula of
                         Just cnt ->
@@ -849,29 +878,6 @@ elementaryPropertiesView derivedInfo highlight =
                         Nothing ->
                             Html.text "??"
                     ]
-                , Html.td [] <|
-                    case toggleExplanation of
-                        Just thisProperty ->
-                            let
-                                ( onClick, lbl ) =
-                                    case activeProperty of
-                                        Just activeProp ->
-                                            if activeProp == thisProperty then
-                                                ( HideExplanation, "Hide" )
-
-                                            else
-                                                ( ShowExplanation thisProperty, "Show" )
-
-                                        Nothing ->
-                                            ( ShowExplanation thisProperty, "Show" )
-                            in
-                            [ Html.button [ E.onClick onClick ]
-                                [ Html.text lbl
-                                ]
-                            ]
-
-                        Nothing ->
-                            []
                 ]
     in
     Html.table []
@@ -879,10 +885,10 @@ elementaryPropertiesView derivedInfo highlight =
             [ Html.tr []
                 [ Html.th [] [ Html.text "Property name" ]
                 , Html.th [] [ Html.text "Does R have this property?" ]
-                , Html.th [] [ Html.text "Operations" ]
-                , Html.th [] [ Html.text "Gen" ]
-                , Html.th [] [ Html.text "Count" ]
                 , Html.th [] [ Html.text "Expl." ]
+                , Html.th [] [ Html.text "Gen" ]
+                , Html.th [] [ Html.text "Operations" ]
+                , Html.th [] [ Html.text "Count" ]
                 ]
             ]
         , Html.tbody [] <| List.map row propertyConfigs
