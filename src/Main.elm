@@ -597,8 +597,7 @@ type alias PropertyConfig msg =
 
     -- TODO maybe cache the result in model?
     , countFormula : Maybe (Int -> Natural)
-
-    -- TODO add link to OEIS
+    , oeisId : Maybe String
     }
 
 
@@ -618,6 +617,7 @@ propertyConfigs =
       , genRandom = Just GenRel
       , toggleExplanation = Just ExplainRelation
       , countFormula = Just Count.rel
+      , oeisId = Just "A002416"
       }
     , { propertyName = "Reflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation"
@@ -626,6 +626,7 @@ propertyConfigs =
       , genRandom = Just GenReflexive
       , toggleExplanation = Just ExplainReflexive
       , countFormula = Just Count.reflexiveOrIrreflexive
+      , oeisId = Just "A053763"
       }
     , { propertyName = "Irreflexive"
       , wikiLink = "https://en.wikipedia.org/wiki/Reflexive_relation#Irreflexivity"
@@ -634,6 +635,7 @@ propertyConfigs =
       , genRandom = Just GenIrreflexive
       , toggleExplanation = Just ExplainIrreflexive
       , countFormula = Just Count.reflexiveOrIrreflexive
+      , oeisId = Just "A053763"
       }
     , { propertyName = "Symmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Symmetric_relation"
@@ -642,6 +644,7 @@ propertyConfigs =
       , genRandom = Just GenSymmetric
       , toggleExplanation = Just ExplainSymmetric
       , countFormula = Just Count.symmetric
+      , oeisId = Nothing
       }
     , { propertyName = "Antisymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Antisymmetric_relation"
@@ -650,6 +653,7 @@ propertyConfigs =
       , genRandom = Just GenAntisymmetric
       , toggleExplanation = Just ExplainAntisymmetric
       , countFormula = Just Count.antisymmetric
+      , oeisId = Just "A083667"
       }
     , { propertyName = "Asymmetric"
       , wikiLink = "https://en.wikipedia.org/wiki/Asymmetric_relation"
@@ -658,6 +662,7 @@ propertyConfigs =
       , genRandom = Just GenAsymmetric
       , toggleExplanation = Just ExplainAsymmetric
       , countFormula = Just Count.asymmetric
+      , oeisId = Just "A047656"
       }
     , { propertyName = "Transitive"
       , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
@@ -666,6 +671,7 @@ propertyConfigs =
       , genRandom = Nothing
       , toggleExplanation = Just ExplainTransitive
       , countFormula = Just Count.transitive
+      , oeisId = Just "A006905"
       }
     , { propertyName = "Connected"
       , wikiLink = "https://en.wikipedia.org/wiki/Connected_relation"
@@ -674,6 +680,9 @@ propertyConfigs =
       , genRandom = Just GenConnected
       , toggleExplanation = Just ExplainConnected
       , countFormula = Just Count.connected
+
+      -- TODO connected OEIS?
+      , oeisId = Nothing
       }
     , { propertyName = "Acyclic"
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"
@@ -697,6 +706,9 @@ propertyConfigs =
 
       -- TODO count acyclic
       , countFormula = Nothing
+
+      -- TODO acyclic OEIS?
+      , oeisId = Nothing
       }
     , { propertyName = "Functional"
       , wikiLink = "https://en.wikipedia.org/wiki/Binary_relation#Special_types_of_binary_relations"
@@ -705,6 +717,7 @@ propertyConfigs =
       , genRandom = Just GenFunctional
       , toggleExplanation = Just ExplainFunctional
       , countFormula = Just Count.partialFunctions
+      , oeisId = Just "A000169"
       }
     , { propertyName = "(Left-)Total"
       , wikiLink = "https://en.wikipedia.org/wiki/Total_relation"
@@ -713,6 +726,7 @@ propertyConfigs =
       , genRandom = Just GenLeftTotal
       , toggleExplanation = Just ExplainLeftTotal
       , countFormula = Just Count.leftTotal
+      , oeisId = Just "A055601"
       }
     , { propertyName = "Bijection (Permutation)"
       , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
@@ -723,6 +737,7 @@ propertyConfigs =
       -- TODO explain why not bijective function
       , toggleExplanation = Nothing
       , countFormula = Just Count.totalOrderOrPermutation
+      , oeisId = Just "A000142"
       }
     , { propertyName = "Derangement"
       , wikiLink = "https://en.wikipedia.org/wiki/Derangement"
@@ -735,6 +750,7 @@ propertyConfigs =
       -- TODO explain why not Derangement
       , toggleExplanation = Nothing
       , countFormula = Just Count.derangement
+      , oeisId = Just "A000166"
       }
     , { propertyName = "Involution"
       , wikiLink = "https://en.wikipedia.org/wiki/Involution_(mathematics)"
@@ -745,6 +761,7 @@ propertyConfigs =
       -- TODO explain why not involution
       , toggleExplanation = Nothing
       , countFormula = Just Count.involution
+      , oeisId = Just "A000085"
       }
     , { propertyName = "Partial Order"
       , wikiLink = "https://en.wikipedia.org/wiki/Partially_ordered_set"
@@ -774,6 +791,7 @@ propertyConfigs =
       -- TODO explain why not total oder
       , toggleExplanation = Nothing
       , countFormula = Just Count.poset
+      , oeisId = Just "A001035"
       }
     , { propertyName = "Lattice"
       , wikiLink = "https://en.wikipedia.org/wiki/Lattice_(order)"
@@ -786,6 +804,7 @@ propertyConfigs =
       -- TODO explain why not lattice
       , toggleExplanation = Nothing
       , countFormula = Just Count.lattice
+      , oeisId = Just "A006966"
       }
 
     -- TODO have separate section for "composite" concepts
@@ -798,6 +817,7 @@ propertyConfigs =
       -- TODO explain why not total oder
       , toggleExplanation = Nothing
       , countFormula = Just Count.totalOrderOrPermutation
+      , oeisId = Just "A000142"
       }
     ]
 
@@ -822,7 +842,7 @@ elementaryPropertiesView derivedInfo highlight =
             explainedProperty highlight
 
         row : PropertyConfig Msg -> Html Msg
-        row { propertyName, wikiLink, hasProperty, buttons, genRandom, toggleExplanation, countFormula } =
+        row { propertyName, wikiLink, hasProperty, buttons, genRandom, toggleExplanation, countFormula, oeisId } =
             let
                 hasProp =
                     hasProperty derivedInfo
@@ -878,6 +898,16 @@ elementaryPropertiesView derivedInfo highlight =
                         Nothing ->
                             Html.text "??"
                     ]
+                , Html.td []
+                    (case oeisId of
+                        Just oid ->
+                            [ Html.a [ A.href ("https://oeis.org/" ++ oid), A.target "_blank" ]
+                                [ Html.text oid ]
+                            ]
+
+                        Nothing ->
+                            []
+                    )
                 ]
     in
     Html.table []
@@ -889,6 +919,7 @@ elementaryPropertiesView derivedInfo highlight =
                 , Html.th [] [ Html.text "Gen" ]
                 , Html.th [] [ Html.text "Operations" ]
                 , Html.th [] [ Html.text "Count" ]
+                , Html.th [] [ Html.text "OEIS" ]
                 ]
             ]
         , Html.tbody [] <| List.map row propertyConfigs
