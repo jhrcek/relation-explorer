@@ -36,6 +36,7 @@
         - [x] bijective
             - [x] derangement
             - [x] involution
+        - [ ] idempotent
 
 - [ ] Add an explanation for each property, showing why given relation satisfied given property (or not). Highlight relevant elements in explanation
     - [x] reflexive
