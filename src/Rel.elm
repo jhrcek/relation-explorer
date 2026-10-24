@@ -826,7 +826,7 @@ explainSymmetric info =
 
 
 {-| ∀ x, y ∈ X: (x, y) ∈ R ∧ (y, x) ∈ R ⇒ x = y
-Or equivalently: ∀ x, y ∈ X: x ≠ y ∧ (x, y) ∈ R ⇒ (x, y) ∉ R
+Or equivalently: ∀ x, y ∈ X: x ≠ y ∧ (x, y) ∈ R ⇒ (y, x) ∉ R
 -}
 isAntisymmetric : DerivedInfo -> Bool
 isAntisymmetric info =
@@ -881,7 +881,7 @@ explainAntisymmetric info =
         , lines =
             [ "This relation is not antisymmetric."
             , definition
-            , explanationPrefix "antisymmetric: ∃ x, y ∈ X: x ≠ y ∧ (x, y) ∈ R ∧ (y, x) ∈ R."
+            , explanationPrefix "antisymmetric: ∃ x, y ∈ X: x ≠ y ∧ (x, y) ∈ R ∧ (y, x) ∈ R. "
                 ++ (let
                         problematicPairCount =
                             Set.size belowDiagonalProblematic
@@ -954,7 +954,7 @@ explainAsymmetric info =
             [ "This relation is asymmetric."
             , definition
             , "Explanation: whenever there is an element (x, y), the element (y, x) must not be present."
-                ++ " Notice the subtle difference from asymmetry, which permits elements of the form (x, x),"
+                ++ " Notice the subtle difference from antisymmetry, which permits elements of the form (x, x),"
                 ++ " while asymmetry does not allow them."
             ]
                 ++ List.map
@@ -1801,7 +1801,7 @@ explainLeftTotal info =
         , lines =
             [ "This relation is left-total."
             , definition
-            , "Intuitively, this means that every x ∈ X needs to be in relation with at least y ∈ X, which is the case."
+            , "Intuitively, this means that every x ∈ X needs to be in relation with at least one y ∈ X, which is the case."
             ]
         }
 
@@ -1826,7 +1826,7 @@ explainLeftTotal info =
                         ++ elements_
                         ++ " which "
                         ++ isAre
-                        ++ " not in relation with any elements y ∈ X:"
+                        ++ " not in relation with any elements y ∈ X: "
                         ++ showIntListAsSet (Set.toList info.emptyRowIndices)
                     ]
                    )
@@ -1910,7 +1910,7 @@ transitiveClosure ((Rel rows) as rel) =
                             (\j ->
                                 -- j was already reachable from i
                                 unsafeGet i j reachable
-                                    || -- or there is a path from i to j and from k to j
+                                    || -- or there is a path from i to k and from k to j
                                        (unsafeGet i k reachable && unsafeGet k j reachable)
                             )
                     )
