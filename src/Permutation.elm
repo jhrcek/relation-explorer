@@ -6,7 +6,9 @@ module Permutation exposing
     , fromListUnsafe
     , get
     , init
+    , isDerangement
     , isEven
+    , isInvolution
     , order
     , parse
     , showCycleType
@@ -341,6 +343,20 @@ fixedPoints (Permutation p) =
                 else
                     Nothing
             )
+
+
+{-| Permutation with no fixed points
+-}
+isDerangement : Permutation -> Bool
+isDerangement =
+    List.isEmpty << fixedPoints
+
+
+{-| Permutation that is its own inverse
+-}
+isInvolution : Permutation -> Bool
+isInvolution p =
+    order p <= 2
 
 
 order : Permutation -> Int

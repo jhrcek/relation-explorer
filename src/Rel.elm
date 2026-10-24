@@ -35,8 +35,11 @@ module Rel exposing
     , isAcyclic
     , isAntisymmetric
     , isAsymmetric
+    , isBijectiveFunction
     , isConnected
+    , isDerangement
     , isFunctional
+    , isInvolution
     , isIrreflexive
     , isLattice
     , isLeftTotal
@@ -198,9 +201,6 @@ type alias DerivedInfo =
     , missingForConnectedness : Set Pair
     , formalConcepts : List ( Set Int, Set Int )
     , emptyRowIndices : Set Int
-    , isBijectiveFunction : Bool
-    , isDerangement : Bool
-    , isInvolution : Bool
     , -- Either cycle or proof that it's acyclic
       acyclicInfo : Result (List Int) AcyclicInfo
     , permutationInfo : Maybe Permutation
@@ -263,9 +263,6 @@ deriveInfo rel =
     , missingForConnectedness = missingForConnectedness rel
     , superfluousForFunction = superfluousForFunction
     , emptyRowIndices = emptyRowIndices
-    , isBijectiveFunction = isBijectiveFunction rel
-    , isDerangement = isDerangement rel
-    , isInvolution = isInvolution rel
     , permutationInfo = mkPermutation rel
     , formalConcepts =
         listAttributeClosures rel
@@ -1831,28 +1828,21 @@ explainLeftTotal info =
         }
 
 
-isFunctionRel : Rel -> Bool
-isFunctionRel r =
-    let
-        ( sup, mis ) =
-            superfluousAndMissingForFunction r
-    in
-    Set.isEmpty sup && Set.isEmpty mis
+isBijectiveFunction : DerivedInfo -> Bool
+isBijectiveFunction info =
+    info.permutationInfo /= Nothing
 
 
-isBijectiveFunction : Rel -> Bool
-isBijectiveFunction rel =
-    isFunctionRel rel && isFunctionRel (converse rel)
+isDerangement : DerivedInfo -> Bool
+isDerangement info =
+    Maybe.map Permutation.isDerangement info.permutationInfo
+        |> Maybe.withDefault False
 
 
-isDerangement : Rel -> Bool
-isDerangement rel =
-    isBijectiveFunction rel && Set.isEmpty (superfluousForIrreflexivity rel)
-
-
-isInvolution : Rel -> Bool
-isInvolution rel =
-    isFunctionRel rel && rel == converse rel
+isInvolution : DerivedInfo -> Bool
+isInvolution info =
+    Maybe.map Permutation.isInvolution info.permutationInfo
+        |> Maybe.withDefault False
 
 
 isPartialOrder : DerivedInfo -> Bool
@@ -2616,14 +2606,27 @@ applyPermutation p rel =
         |> fromElements (size rel)
 
 
+{-| Succeeds iff the relation is a bijective function,
+i.e. it has exactly n elements, with each x and each y occurring exactly once.
+-}
 mkPermutation : Rel -> Maybe Permutation
 mkPermutation rel =
-    if isBijectiveFunction rel then
-        elements rel
-            |> List.sortBy Tuple.first
-            |> List.map Tuple.second
-            |> Permutation.fromListUnsafe
-            |> Just
+    let
+        n =
+            size rel
+
+        -- Sorted by the first component
+        pairs =
+            elements rel
+
+        images =
+            List.map Tuple.second pairs
+
+        allDistinct xs =
+            Set.size (Set.fromList xs) == n
+    in
+    if List.length pairs == n && allDistinct (List.map Tuple.first pairs) && allDistinct images then
+        Just (Permutation.fromListUnsafe images)
 
     else
         Nothing

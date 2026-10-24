@@ -733,7 +733,7 @@ propertyConfigs =
       }
     , { propertyName = "Bijection (Permutation)"
       , wikiLink = "https://en.wikipedia.org/wiki/Bijection"
-      , hasProperty = .isBijectiveFunction
+      , hasProperty = Rel.isBijectiveFunction
       , buttons = []
       , genRandom = Just GenBijectiveFunction
 
@@ -744,7 +744,7 @@ propertyConfigs =
       }
     , { propertyName = "Derangement"
       , wikiLink = "https://en.wikipedia.org/wiki/Derangement"
-      , hasProperty = .isDerangement
+      , hasProperty = Rel.isDerangement
       , buttons = []
 
       -- TODO generate derangements. Find some inspiration from this paper https://epubs.siam.org/doi/pdf/10.1137/1.9781611972986.7
@@ -757,7 +757,7 @@ propertyConfigs =
       }
     , { propertyName = "Involution"
       , wikiLink = "https://en.wikipedia.org/wiki/Involution_(mathematics)"
-      , hasProperty = .isInvolution
+      , hasProperty = Rel.isInvolution
       , buttons = []
       , genRandom = Just GenInvolution
 
