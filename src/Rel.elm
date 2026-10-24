@@ -1498,22 +1498,20 @@ binaryOpTable opSymbol viewCell opTable =
             Array.length opTable
     in
     Html.table []
-        (Html.thead []
-            (Html.th [] [ Html.text opSymbol ]
-                :: List.map (\i -> Html.th [] [ Html.text (String.fromInt i) ])
-                    (List.range 0 (n - 1))
-            )
-            :: List.indexedMap
+        [ Html.thead []
+            [ Html.tr [] <|
+                Html.th [] [ Html.text opSymbol ]
+                    :: List.map headerCell (List.range 0 (n - 1))
+            ]
+        , Html.tbody [] <|
+            List.indexedMap
                 (\i row ->
-                    Html.tr []
-                        (Html.th [] [ Html.text (String.fromInt i) ]
-                            :: List.map
-                                (\cell -> viewCell cell)
-                                (Array.toList row)
-                        )
+                    Html.tr [] <|
+                        headerCell i
+                            :: List.map viewCell (Array.toList row)
                 )
                 (Array.toList opTable)
-        )
+        ]
 
 
 viewOpResultTableCell : JoinMeetConfig -> JoinOrMeetResult -> Html msg
