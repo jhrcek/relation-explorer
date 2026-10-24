@@ -193,7 +193,7 @@ type alias DerivedInfo =
     , missingForReflexivity : Set Pair
     , superfluousForIrreflexivity : Set Pair
     , missingForSymmetry : Set Pair
-    , superfuousForAntisymmetry : Set Pair
+    , superfluousForAntisymmetry : Set Pair
     , superfluousForAsymmetry : ( Set Pair, Set Pair )
     , missingForTransitivity : ( Set Pair, List TransitiveClosureStep )
     , superfluousForFunctional : Set Pair
@@ -242,7 +242,7 @@ deriveInfo rel =
         missingForReflexivityRes =
             missingForReflexivity rel
 
-        superfuousForAntisymmetryRes =
+        superfluousForAntisymmetryRes =
             superfluousForAntisymmetry rel
 
         missingForTransitivityRes =
@@ -256,7 +256,7 @@ deriveInfo rel =
     , missingForReflexivity = missingForReflexivityRes
     , superfluousForIrreflexivity = superfluousForIrreflexivity rel
     , missingForSymmetry = missingForSymmetry rel
-    , superfuousForAntisymmetry = superfuousForAntisymmetryRes
+    , superfluousForAntisymmetry = superfluousForAntisymmetryRes
     , superfluousForAsymmetry = superfluousForAsymmetry rel
     , missingForTransitivity = missingForTransitivityRes
     , superfluousForFunctional = superfluousForFunctional rel
@@ -293,7 +293,7 @@ deriveInfo rel =
                     , posetInfo =
                         if
                             Set.isEmpty missingForReflexivityRes
-                                && Set.isEmpty superfuousForAntisymmetryRes
+                                && Set.isEmpty superfluousForAntisymmetryRes
                                 && Set.isEmpty (Tuple.first missingForTransitivityRes)
                         then
                             let
@@ -827,7 +827,7 @@ Or equivalently: ∀ x, y ∈ X: x ≠ y ∧ (x, y) ∈ R ⇒ (y, x) ∉ R
 -}
 isAntisymmetric : DerivedInfo -> Bool
 isAntisymmetric info =
-    Set.isEmpty info.superfuousForAntisymmetry
+    Set.isEmpty info.superfluousForAntisymmetry
 
 
 {-| Set of pairs that are problematic for antisymmetry.
@@ -849,7 +849,7 @@ explainAntisymmetric info =
         definition =
             "Definition: a relation R ⊆ X ⨯ X is antisymmetric if ∀ x, y ∈ X: (x, y) ∈ R ∧ (y, x) ∈ R ⇒ x = y."
     in
-    if Set.isEmpty info.superfuousForAntisymmetry then
+    if Set.isEmpty info.superfluousForAntisymmetry then
         { greenHighlight = Set.empty
         , redHighlight = Set.empty
         , lines =
@@ -871,10 +871,10 @@ explainAntisymmetric info =
     else
         let
             belowDiagonalProblematic =
-                Set.filter (\( x, y ) -> x > y) info.superfuousForAntisymmetry
+                Set.filter (\( x, y ) -> x > y) info.superfluousForAntisymmetry
         in
         { greenHighlight = Set.empty
-        , redHighlight = info.superfuousForAntisymmetry
+        , redHighlight = info.superfluousForAntisymmetry
         , lines =
             [ "This relation is not antisymmetric."
             , definition
@@ -1880,7 +1880,7 @@ symmetricClosure rel =
 
 {-| <https://en.wikipedia.org/wiki/Transitive_closure>
 
-This uses modified version of Floyd-Warshell algorithm
+This uses modified version of Floyd-Warshall algorithm
 
 -}
 transitiveClosure : Rel -> Rel

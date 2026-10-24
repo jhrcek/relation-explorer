@@ -568,7 +568,7 @@ view model =
                         Html.div [ A.class "explanation" ] <|
                             Html.h4 [ A.class "explanation-title" ] [ Html.text "Explanation" ]
                                 :: Html.button
-                                    [ A.class "exlanation-close"
+                                    [ A.class "explanation-close"
                                     , A.title "Close Explanation"
                                     , E.onClick HideExplanation
                                     ]
@@ -1070,7 +1070,7 @@ miscControls trueProb =
     Html.div []
         [ Html.h4 [] [ Html.text "Operations" ]
         , Html.button [ E.onClick UndoHistory, A.title "Undo previous edits" ] [ Html.text "Undo" ]
-        , -- TODO think about how to decompose this hodpodge of controls
+        , -- TODO think about how to decompose this hodgepodge of controls
           Html.button [ E.onClick MakeEmpty, A.title "Empty relation" ] [ Html.text "∅" ]
         , Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ]
         , Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ]
