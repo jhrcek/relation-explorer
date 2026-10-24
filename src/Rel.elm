@@ -26,11 +26,13 @@ module Rel exposing
     , genConnectedRelation
     , genEquivalence
     , genFunctionalRelation
+    , genInjectiveRelation
     , genInvolution
     , genIrreflexiveRelation
     , genLeftTotal
     , genReflexiveRelation
     , genRelation
+    , genSurjectiveRelation
     , genSymmetricRelation
     , genTotalOrder
     , getExplanationData
@@ -43,6 +45,7 @@ module Rel exposing
     , isDerangement
     , isEquivalence
     , isFunctional
+    , isInjective
     , isInvolution
     , isIrreflexive
     , isLattice
@@ -50,6 +53,7 @@ module Rel exposing
     , isPartialOrder
     , isPosetLattice
     , isReflexive
+    , isSurjective
     , isSymmetric
     , isTotalOrder
     , isTransitive
@@ -150,6 +154,8 @@ type ExplainableProperty
     | ExplainConnected
     | ExplainFunctional
     | ExplainLeftTotal
+    | ExplainInjective
+    | ExplainSurjective
     | ExplainEquivalence
 
 
@@ -189,6 +195,12 @@ getExplanationData property =
         ExplainLeftTotal ->
             explainLeftTotal
 
+        ExplainInjective ->
+            explainInjective
+
+        ExplainSurjective ->
+            explainSurjective
+
         ExplainEquivalence ->
             explainEquivalence
 
@@ -206,10 +218,11 @@ type alias DerivedInfo =
     , superfluousForAsymmetry : ( Set Pair, Set Pair )
     , missingForTransitivity : ( Set Pair, List TransitiveClosureStep )
     , superfluousForFunctional : Set Pair
-    , superfluousForFunction : Set Pair
+    , superfluousForInjective : Set Pair
     , missingForConnectedness : Set Pair
     , formalConcepts : List ( Set Int, Set Int )
     , emptyRowIndices : Set Int
+    , emptyColumnIndices : Set Int
     , -- Either cycle or proof that it's acyclic
       acyclicInfo : Result (List Int) AcyclicInfo
     , permutationInfo : Maybe Permutation
@@ -245,8 +258,12 @@ deriveInfo rel =
         ( onDiagonalElements, offDiagonalElements ) =
             onAndOffDiagonalElements rel
 
-        ( superfluousForFunction, emptyRowIndices ) =
+        ( superfluousForFunctionalRes, emptyRowIndices ) =
             superfluousAndMissingForFunction rel
+
+        -- Injectivity and surjectivity are functionality and left-totality of the converse relation
+        ( superfluousForInjectiveConverse, emptyColumnIndices ) =
+            superfluousAndMissingForFunction (converse rel)
 
         missingForReflexivityRes =
             missingForReflexivity rel
@@ -268,10 +285,11 @@ deriveInfo rel =
     , superfluousForAntisymmetry = superfluousForAntisymmetryRes
     , superfluousForAsymmetry = superfluousForAsymmetry rel
     , missingForTransitivity = missingForTransitivityRes
-    , superfluousForFunctional = superfluousForFunctional rel
+    , superfluousForFunctional = superfluousForFunctionalRes
+    , superfluousForInjective = Set.map flipPair superfluousForInjectiveConverse
     , missingForConnectedness = missingForConnectedness rel
-    , superfluousForFunction = superfluousForFunction
     , emptyRowIndices = emptyRowIndices
+    , emptyColumnIndices = emptyColumnIndices
     , permutationInfo = mkPermutation rel
     , formalConcepts =
         listAttributeClosures rel
@@ -1681,85 +1699,154 @@ isFunctional info =
     Set.isEmpty info.superfluousForFunctional
 
 
-{-| Return all pairs that live within rows with more than one True element
+{-| ∀ x, y, z ∈ X: (x, z) ∈ R ∧ (y, z) ∈ R ⇒ x = y
+Equivalently, the converse relation is functional.
 -}
-superfluousForFunctional : Rel -> Set Pair
-superfluousForFunctional (Rel rows) =
-    Array.toIndexedList rows
-        |> List.foldl
-            (\( i, row ) acc ->
-                case Array.toIndexedList row |> List.filter Tuple.second |> List.map Tuple.first of
-                    [] ->
-                        acc
+isInjective : DerivedInfo -> Bool
+isInjective info =
+    Set.isEmpty info.superfluousForInjective
 
-                    [ _ ] ->
-                        acc
 
-                    more ->
-                        List.map (\j -> ( i, j )) more |> Set.fromList |> Set.union acc
-            )
-            Set.empty
+{-| Determines how explanations of functionality / left-totality are phrased.
+The same explanations work for injectivity / surjectivity, which are
+functionality / left-totality of the converse relation.
+-}
+type alias UniqueOrTotalConfig =
+    { name : String
+    , definition : String
+    , intuition : String
+    , negatedDefinition : String
+    , -- Turns (x, y) pair into (key, value) pair, where key is the element
+      -- that must be in relation with at most one / at least one value
+      toKeyValue : Pair -> Pair
+    , describeKeys : String -> String -> String
+    , describeKeyValues : Int -> List Int -> String
+    }
+
+
+functionalConfig : UniqueOrTotalConfig
+functionalConfig =
+    { name = "functional"
+    , definition =
+        "Definition: a relation R ⊆ X ⨯ X is functional (also called right-unique or univalent) if "
+            ++ "∀ x, y, z ∈ X: (x, y) ∈ R ∧ (x, z) ∈ R ⇒ y = z"
+    , intuition = "Intuitively, this means that each x ∈ X is in relation with at most one y ∈ X."
+    , negatedDefinition = "functional: ∃ x, y, z ∈ X: (x, y) ∈ R ∧ (x, z) ∈ R ∧ y ≠ z."
+    , toKeyValue = identity
+    , describeKeys = \isAre elements_ -> "There " ++ isAre ++ " " ++ elements_ ++ " which " ++ isAre ++ " in relation with more than one y ∈ X:"
+    , describeKeyValues =
+        \x ys ->
+            String.fromInt x
+                ++ " is in relation with "
+                ++ String.fromInt (List.length ys)
+                ++ " elements: "
+                ++ showIntListAsSet ys
+    }
+
+
+injectiveConfig : UniqueOrTotalConfig
+injectiveConfig =
+    { name = "injective"
+    , definition =
+        "Definition: a relation R ⊆ X ⨯ X is injective (also called left-unique) if "
+            ++ "∀ x, y, z ∈ X: (x, z) ∈ R ∧ (y, z) ∈ R ⇒ x = y"
+    , intuition = "Intuitively, this means that for each y ∈ X there is at most one x ∈ X which is in relation with y."
+    , negatedDefinition = "injective: ∃ x, y, z ∈ X: (x, z) ∈ R ∧ (y, z) ∈ R ∧ x ≠ y."
+    , toKeyValue = flipPair
+    , describeKeys = \isAre elements_ -> "There " ++ isAre ++ " " ++ elements_ ++ " y ∈ X with which more than one x ∈ X is in relation:"
+    , describeKeyValues =
+        \y xs ->
+            String.fromInt (List.length xs)
+                ++ " elements are in relation with "
+                ++ String.fromInt y
+                ++ ": "
+                ++ showIntListAsSet xs
+    }
+
+
+leftTotalConfig : UniqueOrTotalConfig
+leftTotalConfig =
+    { name = "left-total"
+    , definition = "Definition: a relation R ⊆ X ⨯ X is left-total if ∀ x ∈ X: ∃ y ∈ X: (x, y) ∈ R."
+    , intuition = "Intuitively, this means that every x ∈ X needs to be in relation with at least one y ∈ X, which is the case."
+    , negatedDefinition = "left-total: ∃ x ∈ X: ∀ y ∈ X: (x, y) ∉ R."
+    , toKeyValue = identity
+    , describeKeys = \isAre elements_ -> "There " ++ isAre ++ " " ++ elements_ ++ " which " ++ isAre ++ " not in relation with any elements y ∈ X: "
+    , describeKeyValues = \_ _ -> ""
+    }
+
+
+surjectiveConfig : UniqueOrTotalConfig
+surjectiveConfig =
+    { name = "surjective"
+    , definition = "Definition: a relation R ⊆ X ⨯ X is surjective (also called right-total or onto) if ∀ y ∈ X: ∃ x ∈ X: (x, y) ∈ R."
+    , intuition = "Intuitively, this means that every y ∈ X needs to have at least one x ∈ X which is in relation with it, which is the case."
+    , negatedDefinition = "surjective: ∃ y ∈ X: ∀ x ∈ X: (x, y) ∉ R."
+    , toKeyValue = flipPair
+    , describeKeys = \isAre elements_ -> "There " ++ isAre ++ " " ++ elements_ ++ " y ∈ X with which no x ∈ X is in relation: "
+    , describeKeyValues = \_ _ -> ""
+    }
 
 
 explainFunctional : DerivedInfo -> ExplanationData
 explainFunctional info =
-    let
-        definition =
-            "Definition: a relation R ⊆ X ⨯ X is functional (also called right-unique or univalent) if "
-                ++ "∀ x, y, z ∈ X: (x, y) ∈ R ∧ (x, z) ∈ R ⇒ y = z"
-    in
-    if Set.isEmpty info.superfluousForFunctional then
+    explainUnique functionalConfig info.superfluousForFunctional
+
+
+explainInjective : DerivedInfo -> ExplanationData
+explainInjective info =
+    explainUnique injectiveConfig info.superfluousForInjective
+
+
+explainUnique : UniqueOrTotalConfig -> Set Pair -> ExplanationData
+explainUnique config superfluous =
+    if Set.isEmpty superfluous then
         { redHighlight = Set.empty
         , greenHighlight = Set.empty
         , lines =
-            [ "This relation is functional."
-            , definition
-            , "Intuitively, this means that each x ∈ X is in relation with at most one y ∈ X."
+            [ "This relation is " ++ config.name ++ "."
+            , config.definition
+            , config.intuition
             ]
         }
 
     else
         let
-            xsWithMoreThanOneY =
-                Set.map Tuple.first info.superfluousForFunctional
+            keyValuePairs =
+                Set.map config.toKeyValue superfluous
+
+            keysWithMoreThanOneValue =
+                Set.map Tuple.first keyValuePairs
 
             ( isAre, elements_ ) =
-                isAreElements <| Set.size xsWithMoreThanOneY
+                isAreElements <| Set.size keysWithMoreThanOneValue
 
-            xsToYs =
+            keysToValues =
                 Dict.toList <|
                     Set.foldl
-                        (\( x, y ) ->
-                            Dict.update x
-                                (\maybeYs ->
-                                    case maybeYs of
-                                        Just ys ->
-                                            Just (ys ++ [ y ])
+                        (\( key, value ) ->
+                            Dict.update key
+                                (\maybeValues ->
+                                    case maybeValues of
+                                        Just values ->
+                                            Just (values ++ [ value ])
 
                                         Nothing ->
-                                            Just [ y ]
+                                            Just [ value ]
                                 )
                         )
                         Dict.empty
-                        info.superfluousForFunctional
+                        keyValuePairs
         in
-        { redHighlight = info.superfluousForFunctional
+        { redHighlight = superfluous
         , greenHighlight = Set.empty
         , lines =
-            [ "This relation is not functional."
-            , definition
-            , explanationPrefix "functional: ∃ x, y, z ∈ X: (x, y) ∈ R ∧ (x, z) ∈ R ∧ y ≠ z."
-            , "There " ++ isAre ++ " " ++ elements_ ++ " which " ++ isAre ++ " in relation with more than one y ∈ X:"
+            [ "This relation is not " ++ config.name ++ "."
+            , config.definition
+            , explanationPrefix config.negatedDefinition
+            , config.describeKeys isAre elements_
             ]
-                ++ List.map
-                    (\( x, ys ) ->
-                        String.fromInt x
-                            ++ " is in relation with "
-                            ++ String.fromInt (List.length ys)
-                            ++ " elements: "
-                            ++ showIntListAsSet ys
-                    )
-                    xsToYs
+                ++ List.map (\( key, values ) -> config.describeKeyValues key values) keysToValues
         }
 
 
@@ -1768,6 +1855,17 @@ isLeftTotal info =
     Set.isEmpty info.emptyRowIndices
 
 
+{-| ∀ y ∈ X: ∃ x ∈ X: (x, y) ∈ R
+Equivalently, the converse relation is left-total.
+-}
+isSurjective : DerivedInfo -> Bool
+isSurjective info =
+    Set.isEmpty info.emptyColumnIndices
+
+
+{-| Returns pairs that live within rows with more than one True element
+and indices of rows that don't contain any True element.
+-}
 superfluousAndMissingForFunction : Rel -> ( Set Pair, Set Int )
 superfluousAndMissingForFunction (Rel rows) =
     Array.toIndexedList rows
@@ -1795,45 +1893,44 @@ superfluousAndMissingForFunction (Rel rows) =
 
 explainLeftTotal : DerivedInfo -> ExplanationData
 explainLeftTotal info =
-    let
-        definition =
-            "Definition: a relation R ⊆ X ⨯ X is left-total if ∀ x ∈ X: ∃ y ∈ X: (x, y) ∈ R."
-    in
-    if Set.isEmpty info.emptyRowIndices then
+    explainTotal leftTotalConfig info.domain info.emptyRowIndices
+
+
+explainSurjective : DerivedInfo -> ExplanationData
+explainSurjective info =
+    explainTotal surjectiveConfig info.domain info.emptyColumnIndices
+
+
+explainTotal : UniqueOrTotalConfig -> List Int -> Set Int -> ExplanationData
+explainTotal config domain_ keysWithoutValue =
+    if Set.isEmpty keysWithoutValue then
         { greenHighlight = Set.empty
         , redHighlight = Set.empty
         , lines =
-            [ "This relation is left-total."
-            , definition
-            , "Intuitively, this means that every x ∈ X needs to be in relation with at least one y ∈ X, which is the case."
+            [ "This relation is " ++ config.name ++ "."
+            , config.definition
+            , config.intuition
             ]
         }
 
     else
+        let
+            ( isAre, elements_ ) =
+                isAreElements <| Set.size keysWithoutValue
+        in
         { greenHighlight = Set.empty
         , redHighlight =
-            Set.toList info.emptyRowIndices
-                |> List.andThen (\i -> List.map (Tuple.pair i) info.domain)
+            -- Highlight whole rows (columns) that contain no elements
+            Set.toList keysWithoutValue
+                |> List.andThen (\key -> List.map (\value -> config.toKeyValue ( key, value )) domain_)
                 |> Set.fromList
         , lines =
-            [ "This relation is not left-total."
-            , definition
-            , explanationPrefix "left-total: ∃ x ∈ X: ∀ y ∈ X: (x, y) ∉ R."
+            [ "This relation is not " ++ config.name ++ "."
+            , config.definition
+            , explanationPrefix config.negatedDefinition
+            , config.describeKeys isAre elements_
+                ++ showIntListAsSet (Set.toList keysWithoutValue)
             ]
-                ++ (let
-                        ( isAre, elements_ ) =
-                            isAreElements <| Set.size info.emptyRowIndices
-                    in
-                    [ "There "
-                        ++ isAre
-                        ++ " "
-                        ++ elements_
-                        ++ " which "
-                        ++ isAre
-                        ++ " not in relation with any elements y ∈ X: "
-                        ++ showIntListAsSet (Set.toList info.emptyRowIndices)
-                    ]
-                   )
         }
 
 
@@ -2452,6 +2549,20 @@ genLeftTotal trueProb n =
         |> Random.andThen Random.Array.shuffle
         |> Random.list n
         |> Random.map (Array.fromList >> Rel)
+
+
+genInjectiveRelation : Float -> Int -> Generator Rel
+genInjectiveRelation trueProb n =
+    -- Converse of functional relation is injective
+    genFunctionalRelation trueProb n
+        |> Random.map converse
+
+
+genSurjectiveRelation : Float -> Int -> Generator Rel
+genSurjectiveRelation trueProb n =
+    -- Converse of left-total relation is surjective
+    genLeftTotal trueProb n
+        |> Random.map converse
 
 
 genBijectiveFunction : Int -> Generator Rel
@@ -3094,6 +3205,11 @@ conceptLatticeToDotSource attributeClosures showExtents showIntents =
 
 
 -- Internal helpers
+
+
+flipPair : ( a, b ) -> ( b, a )
+flipPair ( a, b ) =
+    ( b, a )
 
 
 pointwise : (Bool -> Bool -> Bool) -> Rel -> Rel -> Rel

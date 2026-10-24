@@ -5,10 +5,10 @@ module Count exposing
     , connected
     , derangement
     , equivalence
+    , functionalOrInjective
     , involution
     , lattice
-    , leftTotal
-    , partialFunctions
+    , leftTotalOrSurjective
     , poset
     , reflexiveOrIrreflexive
     , rel
@@ -172,18 +172,22 @@ bell n =
 
 
 {-| (n+1)^n
+Each x is in relation with at most one y (n choices of y + 1 for no y).
+Injective relations are converses of functional ones, so there's the same number of them.
 <https://oeis.org/A000169>
 -}
-partialFunctions : Int -> Natural
-partialFunctions n =
+functionalOrInjective : Int -> Natural
+functionalOrInjective n =
     Nat.exp (Nat.fromSafeInt (n + 1)) (Nat.fromSafeInt n)
 
 
 {-| (2 ^ n - 1) ^ n
+Each x is in relation with any non-empty subset of X.
+Surjective relations are converses of left-total ones, so there's the same number of them.
 <https://oeis.org/A055601>
 -}
-leftTotal : Int -> Natural
-leftTotal n =
+leftTotalOrSurjective : Int -> Natural
+leftTotalOrSurjective n =
     Nat.exp (Nat.fromSafeInt (2 ^ n - 1)) (Nat.fromSafeInt n)
 
 

@@ -153,6 +153,8 @@ type Msg
     | GenConnected
     | GenFunctional
     | GenLeftTotal
+    | GenInjective
+    | GenSurjective
     | GenBijectiveFunction
     | GenInvolution
     | GenTotalOrder
@@ -285,6 +287,12 @@ update msg model =
 
         GenLeftTotal ->
             generateRel (Rel.genLeftTotal model.trueProb) model
+
+        GenInjective ->
+            generateRel (Rel.genInjectiveRelation model.trueProb) model
+
+        GenSurjective ->
+            generateRel (Rel.genSurjectiveRelation model.trueProb) model
 
         GenBijectiveFunction ->
             generateRel Rel.genBijectiveFunction model
@@ -775,12 +783,12 @@ propertyConfigs =
       , oeisId = Nothing
       }
     , { propertyName = "Functional"
-      , wikiLink = "https://en.wikipedia.org/wiki/Binary_relation#Special_types_of_binary_relations"
+      , wikiLink = "https://en.wikipedia.org/wiki/Binary_relation#Types_of_binary_relations"
       , hasProperty = Rel.isFunctional
       , buttons = []
       , genRandom = Just GenFunctional
       , toggleExplanation = Just ExplainFunctional
-      , countFormula = Just Count.partialFunctions
+      , countFormula = Just Count.functionalOrInjective
       , oeisId = Just "A000169"
       }
     , { propertyName = "(Left-)Total"
@@ -789,7 +797,25 @@ propertyConfigs =
       , buttons = []
       , genRandom = Just GenLeftTotal
       , toggleExplanation = Just ExplainLeftTotal
-      , countFormula = Just Count.leftTotal
+      , countFormula = Just Count.leftTotalOrSurjective
+      , oeisId = Just "A055601"
+      }
+    , { propertyName = "Injective"
+      , wikiLink = "https://en.wikipedia.org/wiki/Binary_relation#Types_of_binary_relations"
+      , hasProperty = Rel.isInjective
+      , buttons = []
+      , genRandom = Just GenInjective
+      , toggleExplanation = Just ExplainInjective
+      , countFormula = Just Count.functionalOrInjective
+      , oeisId = Just "A000169"
+      }
+    , { propertyName = "Surjective"
+      , wikiLink = "https://en.wikipedia.org/wiki/Binary_relation#Types_of_binary_relations"
+      , hasProperty = Rel.isSurjective
+      , buttons = []
+      , genRandom = Just GenSurjective
+      , toggleExplanation = Just ExplainSurjective
+      , countFormula = Just Count.leftTotalOrSurjective
       , oeisId = Just "A055601"
       }
     , { propertyName = "Bijection (Permutation)"

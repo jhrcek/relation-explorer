@@ -14,7 +14,9 @@
     - [ ] Generate random relation
         - [x] any
         - [x] (left-)total
+        - [x] surjective (also called right-total)
         - [x] functional (also called right-unique or univalent)
+        - [x] injective (also called left-unique)
             - [x] bijective
                 - [x] involution
                 - [ ] derangement
@@ -32,8 +34,8 @@
     - [x] acyclic
     - [x] functional
     - [x] (left-)total
-        - [ ] surjective
-        - [ ] injective
+        - [x] surjective
+        - [x] injective
         - [x] bijective
             - [x] derangement
             - [x] involution
@@ -50,6 +52,8 @@
     - [x] acyclic
     - [x] functional (also called right-unique or univalent)
     - [x] (left-)total
+    - [x] injective (also called left-unique)
+    - [x] surjective (also called right-total)
     - [ ] bijection
     - [ ] derangement
     - [ ] involution

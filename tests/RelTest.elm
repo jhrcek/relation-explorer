@@ -1,7 +1,9 @@
 module RelTest exposing (..)
 
+import Count
 import Dict
 import Expect exposing (Expectation)
+import Natural
 import Random
 import Rel exposing (DerivedInfo, Pair, Rel)
 import Set exposing (Set)
@@ -24,9 +26,61 @@ suite =
                         ]
             ]
         , describe "permutation properties agree with their definitions on all relations of size <= 3"
-            [ permutationPropertyTest "bijective function" Rel.isBijectiveFunction isBijectiveRef
-            , permutationPropertyTest "derangement" Rel.isDerangement isDerangementRef
-            , permutationPropertyTest "involution" Rel.isInvolution isInvolutionRef
+            [ propertyTest "bijective function" Rel.isBijectiveFunction isBijectiveRef
+            , propertyTest "derangement" Rel.isDerangement isDerangementRef
+            , propertyTest "involution" Rel.isInvolution isInvolutionRef
+            ]
+        , describe "injective and surjective"
+            [ describe "agree with their definitions on all relations of size <= 3"
+                [ propertyTest "injective" Rel.isInjective isInjectiveRef
+                , propertyTest "surjective" Rel.isSurjective isSurjectiveRef
+                ]
+            , test "number of injective relations on sets of size <= 3 matches count formula" <|
+                \_ -> countTest Rel.isInjective Count.functionalOrInjective
+            , test "number of surjective relations on sets of size <= 3 matches count formula" <|
+                \_ -> countTest Rel.isSurjective Count.leftTotalOrSurjective
+            , test "injective generator only produces injective relations" <|
+                \_ -> generatorTest Rel.isInjective (Rel.genInjectiveRelation 0.7)
+            , test "surjective generator only produces surjective relations" <|
+                \_ -> generatorTest Rel.isSurjective (Rel.genSurjectiveRelation 0.3)
+            , test "explanation of non-injective relation highlights columns with more than one element" <|
+                \_ ->
+                    explanationTest Rel.ExplainInjective
+                        (fromElements 3 [ ( 0, 2 ), ( 1, 2 ), ( 2, 0 ) ])
+                        ( [ ( 0, 2 ), ( 1, 2 ) ]
+                        , [ "This relation is not injective."
+                          , "Definition: a relation R ⊆ X ⨯ X is injective (also called left-unique) if ∀ x, y, z ∈ X: (x, z) ∈ R ∧ (y, z) ∈ R ⇒ x = y"
+                          , "Explanation: Negating the condition from the definition above, we get the following condition satisfied by relations which are not injective: ∃ x, y, z ∈ X: (x, z) ∈ R ∧ (y, z) ∈ R ∧ x ≠ y."
+                          , "There is one element y ∈ X with which more than one x ∈ X is in relation:"
+                          , "2 elements are in relation with 2: {0, 1}"
+                          ]
+                        )
+            , test "explanation of non-surjective relation highlights empty columns" <|
+                \_ ->
+                    explanationTest Rel.ExplainSurjective
+                        (fromElements 3 [ ( 0, 2 ), ( 1, 2 ) ])
+                        ( [ ( 0, 0 ), ( 0, 1 ), ( 1, 0 ), ( 1, 1 ), ( 2, 0 ), ( 2, 1 ) ]
+                        , [ "This relation is not surjective."
+                          , "Definition: a relation R ⊆ X ⨯ X is surjective (also called right-total or onto) if ∀ y ∈ X: ∃ x ∈ X: (x, y) ∈ R."
+                          , "Explanation: Negating the condition from the definition above, we get the following condition satisfied by relations which are not surjective: ∃ y ∈ X: ∀ x ∈ X: (x, y) ∉ R."
+                          , "There are 2 elements y ∈ X with which no x ∈ X is in relation: {0, 1}"
+                          ]
+                        )
+            , test "functional and left-total explanations are unchanged by the refactoring" <|
+                \_ ->
+                    let
+                        info =
+                            Rel.deriveInfo (fromElements 3 [ ( 0, 1 ), ( 0, 2 ) ])
+                    in
+                    ( List.drop 3 (Rel.getExplanationData Rel.ExplainFunctional info).lines
+                    , List.drop 3 (Rel.getExplanationData Rel.ExplainLeftTotal info).lines
+                    )
+                        |> Expect.equal
+                            ( [ "There is one element which is in relation with more than one y ∈ X:"
+                              , "0 is in relation with 2 elements: {1, 2}"
+                              ]
+                            , [ "There are 2 elements which are not in relation with any elements y ∈ X: {1, 2}" ]
+                            )
             ]
         , describe "equivalence"
             [ test "number of equivalences on sets of size <= 3 are Bell numbers" <|
@@ -111,6 +165,31 @@ suite =
         ]
 
 
+countTest : (DerivedInfo -> Bool) -> (Int -> Natural.Natural) -> Expectation
+countTest hasProperty countFormula =
+    List.map (\n -> String.fromInt (List.length (List.filter (hasProperty << Rel.deriveInfo) (allRels n)))) [ 1, 2, 3 ]
+        |> Expect.equal (List.map (Natural.toString << countFormula) [ 1, 2, 3 ])
+
+
+generatorTest : (DerivedInfo -> Bool) -> (Int -> Random.Generator Rel) -> Expectation
+generatorTest hasProperty gen =
+    Random.step (Random.list 200 (Random.int 1 10 |> Random.andThen gen)) (Random.initialSeed 42)
+        |> Tuple.first
+        |> List.filter (not << hasProperty << Rel.deriveInfo)
+        |> List.map Rel.showElements
+        |> Expect.equal []
+
+
+explanationTest : Rel.ExplainableProperty -> Rel -> ( List Pair, List String ) -> Expectation
+explanationTest property rel expected =
+    let
+        explanation =
+            Rel.getExplanationData property (Rel.deriveInfo rel)
+    in
+    ( Set.toList explanation.redHighlight, explanation.lines )
+        |> Expect.equal expected
+
+
 allEquivalences : Int -> List Rel
 allEquivalences n =
     List.filter (Rel.isEquivalence << Rel.deriveInfo) (allRels n)
@@ -130,8 +209,8 @@ toPairSet rel =
     Set.union info.onDiagonalElements info.offDiagonalElements
 
 
-permutationPropertyTest : String -> (DerivedInfo -> Bool) -> (Int -> Set Pair -> Bool) -> Test
-permutationPropertyTest name actual reference =
+propertyTest : String -> (DerivedInfo -> Bool) -> (Int -> Set Pair -> Bool) -> Test
+propertyTest name actual reference =
     test name <|
         \_ ->
             List.concatMap allRels [ 1, 2, 3 ]
@@ -163,6 +242,21 @@ isBijectiveRef n elems =
             List.all (\k -> Set.size (Set.filter (\p -> f p == k) elems) == 1) (List.range 0 (n - 1))
     in
     exactlyOnce Tuple.first && exactlyOnce Tuple.second
+
+
+{-| No y is related to by two different xs
+-}
+isInjectiveRef : Int -> Set Pair -> Bool
+isInjectiveRef _ elems =
+    Set.toList elems
+        |> List.all (\( x1, y1 ) -> Set.toList elems |> List.all (\( x2, y2 ) -> y1 /= y2 || x1 == x2))
+
+
+{-| Every y is related to by some x
+-}
+isSurjectiveRef : Int -> Set Pair -> Bool
+isSurjectiveRef n elems =
+    List.all (\y -> Set.toList elems |> List.any (\( _, y2 ) -> y2 == y)) (List.range 0 (n - 1))
 
 
 isDerangementRef : Int -> Set Pair -> Bool
