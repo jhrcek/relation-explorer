@@ -401,7 +401,7 @@ conjugacyClassSize ((Permutation arr) as p) =
         // Dict.foldl
             (\cycleLength cycleCount acc ->
                 acc
-                    * -- Cycles of the same lenght can be permuted among themselves
+                    * -- Cycles of the same length can be permuted among themselves
                       factorial cycleCount
                     * -- Within each cycle, the elements can be rotated in cycleLength ways without changing the cycle itself
                       (cycleLength ^ cycleCount)

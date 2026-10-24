@@ -777,7 +777,7 @@ propertyConfigs =
       -- TODO generate partial order
       , genRandom = Nothing
 
-      -- TODO explain why not total oder
+      -- TODO explain why not total order
       , toggleExplanation = Nothing
       , countFormula = Just Count.poset
       , oeisId = Just "A001035"
@@ -803,7 +803,7 @@ propertyConfigs =
       , buttons = []
       , genRandom = Just GenTotalOrder
 
-      -- TODO explain why not total oder
+      -- TODO explain why not total order
       , toggleExplanation = Nothing
       , countFormula = Just Count.totalOrderOrPermutation
       , oeisId = Just "A000142"

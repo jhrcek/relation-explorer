@@ -3,7 +3,7 @@
 ## (Ideas for) features
 - [x] Show a relation editor that allows user to select
     - [x] A number n from 1 to 10
-    - [x] A rectangular matrix with checkboxes that allows specifying arbitraty relation on a set with n elements
+    - [x] A rectangular matrix with checkboxes that allows specifying arbitrary relation on a set with n elements
     - [x] Basic history support - ability to undo relation edits
     - [x] Show a graph (as in graph theory) of the relation
     - [x] Show a bipartite graph of the relation (TODO how is this called?)

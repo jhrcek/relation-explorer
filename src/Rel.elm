@@ -87,7 +87,7 @@ import Random.List
 import Set exposing (Set)
 
 
-{-| A homogenous relation
+{-| A homogeneous relation
 -}
 type Rel
     = Rel (Array (Array Bool))
@@ -216,7 +216,7 @@ type alias AcyclicInfo =
       -- It's transitive and irreflexive reduction of the relation.
       -- https://en.wikipedia.org/wiki/Covering_relation
       coveringRelation : Rel
-    , -- This is here, becaues only acyclic relations have a chance of being a poset
+    , -- This is here, because only acyclic relations have a chance of being a poset
       posetInfo : Maybe PosetInfo
     }
 
@@ -2565,7 +2565,7 @@ objectsSharingAllAttributes (Rel rows) attributes =
         |> Set.fromList
 
 
-{-| List all atttribute closures in lectic order.
+{-| List all attribute closures in lectic order.
 Algorithm described in <https://www.youtube.com/watch?v=rs3qSLEQYuM&list=PLISEtDmihMo2wvgHrsdQhV6AeUsqu-Cum&index=27>
 -}
 listAttributeClosures : Rel -> List (Set Int)
