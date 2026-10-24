@@ -41,7 +41,20 @@ suite =
             , test "accepts two cycles" <|
                 \_ -> okParseTest 4 "(0 1)(2 3)" (Array.fromList [ 1, 0, 3, 2 ])
             ]
+        , describe "showCycles"
+            [ test "shows identity as empty cycle" <|
+                \_ -> showCyclesTest [ 0, 1, 2 ] "()"
+            , test "omits fixed points" <|
+                \_ -> showCyclesTest [ 1, 0, 2, 4, 3 ] "(0 1)(3 4)"
+            ]
         ]
+
+
+showCyclesTest : List Int -> String -> Expectation
+showCyclesTest oneLine expected =
+    Permutation.fromListUnsafe oneLine
+        |> Permutation.showCycles
+        |> Expect.equal expected
 
 
 failedParseTest : Int -> String -> String -> Expectation

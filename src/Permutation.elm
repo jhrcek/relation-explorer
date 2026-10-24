@@ -313,13 +313,12 @@ showOneLineNotation (Permutation p) =
 
 showCycles : Permutation -> String
 showCycles p =
-    case toCycles p of
+    case List.filter (\c -> List.length c > 1) (toCycles p) of
         [] ->
             "()"
 
         cycles ->
-            List.filter (\c -> List.length c > 1) cycles
-                |> List.map (\c -> "(" ++ String.join " " (List.map String.fromInt c) ++ ")")
+            List.map (\c -> "(" ++ String.join " " (List.map String.fromInt c) ++ ")") cycles
                 |> String.concat
 
 
