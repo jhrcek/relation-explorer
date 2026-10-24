@@ -33,7 +33,7 @@ type alias Model =
     , showExtents : Bool
     , graphMode : GraphMode
     , -- Number between 0 and 1, indicating how likely it is that random generators
-      -- will produce a True value (and thus generate an element of a relation)-}
+      -- will produce a True value (and thus generate an element of a relation)
       trueProb : Float
     , permutationState : Permutation.State
     }
@@ -934,7 +934,7 @@ blankLink href text =
     Html.a [ A.href href, A.target "_blank" ] [ Html.text text ]
 
 
-yesNo : Bool -> Html Msg
+yesNo : Bool -> Html msg
 yesNo b =
     let
         ( color, label ) =
