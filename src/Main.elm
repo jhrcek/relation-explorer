@@ -403,211 +403,32 @@ relConfig =
 view : Model -> Html Msg
 view model =
     Html.div []
-        [ Html.div [ A.id "top-container" ]
-            [ Html.div [ A.id "rel-and-controls" ]
-                [ sizeInputView model.derivedInfo.relSize
-                , Rel.view relConfig model.rel model.highlight
-                , pager model.rel
-                , elementaryPropertiesView model.derivedInfo model.highlight
-                , miscControls model.trueProb
+        [ Html.header [ A.class "app-header" ]
+            [ Html.h1 [] [ Html.text "Relation Explorer" ]
+            , blankLink "https://github.com/jhrcek/relation-explorer" "GitHub"
+            ]
+        , Html.div [ A.class "layout" ]
+            [ Html.div [ A.class "column" ]
+                [ Html.section [ A.class "panel" ]
+                    [ Html.h2 [] [ Html.text "Relation" ]
+                    , sizeInputView model.derivedInfo.relSize
+                    , Rel.view relConfig model.rel model.highlight
+                    , pager model.rel
+                    , miscControls
+                    ]
+                , Html.section [ A.class "panel" ]
+                    [ Html.h2 [] [ Html.text "Properties" ]
+                    , setTrueProbView model.trueProb
+                    , elementaryPropertiesView model.derivedInfo model.highlight
+                    ]
                 ]
-            , Html.div [ A.id "explanation" ]
-                [ Html.h4 [] [ Html.text "Properties" ]
-                , Html.details []
-                    [ Html.summary [] [ Html.text "Set Theory" ]
-                    , Html.div []
-                        [ Html.text <| "Underlying Set: X = " ++ Rel.showIntListAsSet (Rel.domain model.rel) ]
-                    , Html.div []
-                        [ Html.text "R ⊆ X ⨯ X" ]
-                    , Html.div []
-                        [ Html.text <| "R = " ++ Rel.showElements model.rel ]
-                    , Html.div []
-                        [ Html.text <| "|R| = " ++ String.fromInt model.derivedInfo.elementCount ]
-                    , if Rel.isEquivalence model.derivedInfo then
-                        let
-                            classes =
-                                Rel.equivalenceClasses model.rel
-                        in
-                        Html.div []
-                            [ Html.text "This relation is an equivalence relation."
-                            , Html.div [ A.class "indent" ]
-                                [ Html.text "Equivalence classes:"
-                                , Html.ul [] <|
-                                    List.map
-                                        (\cls ->
-                                            Html.li []
-                                                [ Html.text <|
-                                                    String.join " = " (List.map (\x -> "[" ++ String.fromInt x ++ "]") cls)
-                                                        ++ " = "
-                                                        ++ Rel.showIntListAsSet cls
-                                                ]
-                                        )
-                                        classes
-                                ]
-                            , Html.div [ A.class "indent" ]
-                                [ Html.text <|
-                                    "Corresponding partition: X/R = {"
-                                        ++ String.join ", " (List.map Rel.showIntListAsSet classes)
-                                        ++ "}"
-                                ]
-                            ]
-
-                      else
-                        Html.text "This relation is not an equivalence relation."
-                    ]
-                , Html.details []
-                    [ Html.summary [] [ Html.text "Graph Theory" ]
-                    , Html.div []
-                        [ Html.text <|
-                            -- TODO highlight SCCs with the same  color as in the graph
-                            "Strongly connected components: "
-                                ++ String.join ", "
-                                    (List.map Rel.showIntListAsSet <|
-                                        Rel.scc model.rel
-                                    )
-                        ]
-                    , Html.div []
-                        [ Html.text <|
-                            case model.derivedInfo.acyclicInfo of
-                                Ok acInfo ->
-                                    "The relation is acyclic. Acyclic relations can be sorted topologically. Example top. sort: "
-                                        ++ Rel.showIntListAsList (Rel.topologicalSort acInfo.acyclic)
-
-                                Err cycle ->
-                                    "The relation contains cycle(s). Example cycle: "
-                                        ++ Rel.showIntListAsList cycle
-                        ]
-                    ]
-                , Html.details []
-                    [ Html.summary [] [ Html.text "Group Theory" ]
-                    , case model.derivedInfo.permutationInfo of
-                        Just permutation ->
-                            Html.div []
-                                [ Html.text "This relation is a permutation."
-                                , Html.div [ A.class "indent" ]
-                                    [ Html.div [] [ Html.text <| "One-line notation: " ++ Permutation.showOneLineNotation permutation ]
-                                    , Html.div [] [ Html.text <| "Cycle notation: " ++ Permutation.showCycles permutation ]
-                                    , Html.div [] [ Html.text <| "Cycle type: " ++ Permutation.showCycleType permutation ]
-                                    , Html.div [] [ Html.text <| "Number of permutations of the same cycle type: " ++ String.fromInt (Permutation.conjugacyClassSize permutation) ]
-                                    , Html.div [] [ Html.text <| "Fixed points: " ++ Rel.showIntListAsSet (Permutation.fixedPoints permutation) ]
-                                    , Html.div []
-                                        [ Html.text <|
-                                            "Parity: "
-                                                ++ (if Permutation.isEven permutation then
-                                                        "even"
-
-                                                    else
-                                                        "odd"
-                                                   )
-                                        ]
-                                    , Html.div []
-                                        [ Html.text <| "Order: " ++ String.fromInt (Permutation.order permutation)
-                                        , Html.span [ A.title "Order is the smallest number representing how many times the permutation would have to be composed with itself to result in identity permutation" ]
-                                            [ Html.text " ⓘ" ]
-                                        ]
-                                    ]
-                                ]
-
-                        Nothing ->
-                            Html.text "This relation is not a permutation."
-                    , Html.h4 [] [ Html.text "Operations" ]
-                    , Html.div [] [ Html.text "Relabel relation elements by applying permutation group action" ]
-                    , let
-                        st =
-                            model.permutationState
-
-                        permButtonAttr =
-                            case st.result of
-                                Err _ ->
-                                    A.disabled True
-
-                                Ok perm ->
-                                    E.onClick <| ApplyPermutation perm
-
-                        permError =
-                            case st.result of
-                                Err e ->
-                                    Html.div [ A.class "error" ] [ Html.text e ]
-
-                                Ok _ ->
-                                    Html.text ""
-                      in
-                      Html.div []
-                        [ Html.label []
-                            [ Html.text "Permutation "
-                            , Html.input
-                                [ E.onInput PermutationEdited
-                                , A.placeholder "Cycle notation: (1 2 3) (4 5)"
-                                , A.value st.rawInput
-                                ]
-                                []
-                            ]
-                        , Html.button [ permButtonAttr ] [ Html.text "Apply" ]
-                        , Html.span [ A.title "Apply permutation p on elements of the set X (calculating new relation R' = p∘R∘p⁻¹)" ]
-                            [ Html.text "ⓘ" ]
-
-                        -- TODO next/previous button to enumerate all permutations
-                        , permError
-                        ]
-                    ]
-                , Html.details []
-                    [ Html.summary [] [ Html.text "Formal Concept Analysis (FCA)" ]
-                    , Html.div [] <|
-                        let
-                            concepts =
-                                model.derivedInfo.formalConcepts
-                        in
-                        [ Html.text <|
-                            "formal concepts (total "
-                                ++ String.fromInt (List.length concepts)
-                                ++ "): "
-                        , Html.ul [] <|
-                            List.map
-                                (\( objects, attrs ) ->
-                                    Html.li
-                                        [ E.onMouseEnter (HighlightConcept attrs)
-                                        , E.onMouseLeave ClearHighlight
-                                        ]
-                                        [ Html.text <| "(" ++ Rel.showIntSet objects ++ "," ++ Rel.showIntSet attrs ++ ")" ]
-                                )
-                                concepts
-                        ]
-                    ]
-                , Html.details []
-                    [ Html.summary [] [ Html.text "Order Theory" ]
-                    , Html.div []
-                        [ case model.derivedInfo.acyclicInfo |> Result.toMaybe |> Maybe.andThen .posetInfo of
-                            Just posetInfo ->
-                                Html.div [] <|
-                                    -- TODO explain why not partial order
-                                    Html.div []
-                                        [ Html.text "This relation is a partial order."
-                                        , Html.div [ A.class "indent" ]
-                                            [ Html.text <| "Minimal elements: " ++ Rel.showIntSet posetInfo.minimalElements ]
-                                        , Html.div [ A.class "indent" ]
-                                            [ Html.text <| "Maximal elements: " ++ Rel.showIntSet posetInfo.maximalElements ]
-                                        ]
-                                        :: Html.div []
-                                            [ Html.text <|
-                                                if Rel.isPosetLattice posetInfo then
-                                                    "This relation is a lattice"
-
-                                                else
-                                                    "This relation is not a lattice"
-                                            ]
-                                        :: Rel.viewJoinInfo posetInfo.joinTable
-                                        ++ Rel.viewMeetInfo posetInfo.meetTable
-
-                            Nothing ->
-                                Html.text "This relation is not a partial order."
-                        ]
-                    ]
-                , case model.highlight of
+            , Html.div [ A.class "column" ]
+                [ case model.highlight of
                     Explanation _ exp ->
                         Html.div [ A.class "explanation" ] <|
-                            Html.h4 [ A.class "explanation-title" ] [ Html.text "Explanation" ]
+                            Html.h3 [ A.class "explanation-title" ] [ Html.text "Explanation" ]
                                 :: Html.button
-                                    [ A.class "explanation-close"
+                                    [ A.class "explanation-close icon-button"
                                     , A.title "Close Explanation"
                                     , E.onClick HideExplanation
                                     ]
@@ -619,14 +440,215 @@ view model =
 
                     NoHighlight ->
                         Html.text ""
+                , Html.section [ A.class "panel" ]
+                    [ Html.h2 [] [ Html.text "Analysis" ]
+                    , details "Set Theory"
+                        [ Html.div []
+                            [ Html.text <| "Underlying Set: X = " ++ Rel.showIntListAsSet (Rel.domain model.rel) ]
+                        , Html.div []
+                            [ Html.text "R ⊆ X ⨯ X" ]
+                        , Html.div []
+                            [ Html.text <| "R = " ++ Rel.showElements model.rel ]
+                        , Html.div []
+                            [ Html.text <| "|R| = " ++ String.fromInt model.derivedInfo.elementCount ]
+                        , if Rel.isEquivalence model.derivedInfo then
+                            let
+                                classes =
+                                    Rel.equivalenceClasses model.rel
+                            in
+                            Html.div []
+                                [ Html.text "This relation is an equivalence relation."
+                                , Html.div [ A.class "indent" ]
+                                    [ Html.text "Equivalence classes:"
+                                    , Html.ul [] <|
+                                        List.map
+                                            (\cls ->
+                                                Html.li []
+                                                    [ Html.text <|
+                                                        String.join " = " (List.map (\x -> "[" ++ String.fromInt x ++ "]") cls)
+                                                            ++ " = "
+                                                            ++ Rel.showIntListAsSet cls
+                                                    ]
+                                            )
+                                            classes
+                                    ]
+                                , Html.div [ A.class "indent" ]
+                                    [ Html.text <|
+                                        "Corresponding partition: X/R = {"
+                                            ++ String.join ", " (List.map Rel.showIntListAsSet classes)
+                                            ++ "}"
+                                    ]
+                                ]
+
+                          else
+                            Html.text "This relation is not an equivalence relation."
+                        ]
+                    , details "Graph Theory"
+                        [ Html.div []
+                            [ Html.text <|
+                                -- TODO highlight SCCs with the same  color as in the graph
+                                "Strongly connected components: "
+                                    ++ String.join ", "
+                                        (List.map Rel.showIntListAsSet <|
+                                            Rel.scc model.rel
+                                        )
+                            ]
+                        , Html.div []
+                            [ Html.text <|
+                                case model.derivedInfo.acyclicInfo of
+                                    Ok acInfo ->
+                                        "The relation is acyclic. Acyclic relations can be sorted topologically. Example top. sort: "
+                                            ++ Rel.showIntListAsList (Rel.topologicalSort acInfo.acyclic)
+
+                                    Err cycle ->
+                                        "The relation contains cycle(s). Example cycle: "
+                                            ++ Rel.showIntListAsList cycle
+                            ]
+                        ]
+                    , details "Group Theory"
+                        [ case model.derivedInfo.permutationInfo of
+                            Just permutation ->
+                                Html.div []
+                                    [ Html.text "This relation is a permutation."
+                                    , Html.div [ A.class "indent" ]
+                                        [ Html.div [] [ Html.text <| "One-line notation: " ++ Permutation.showOneLineNotation permutation ]
+                                        , Html.div [] [ Html.text <| "Cycle notation: " ++ Permutation.showCycles permutation ]
+                                        , Html.div [] [ Html.text <| "Cycle type: " ++ Permutation.showCycleType permutation ]
+                                        , Html.div [] [ Html.text <| "Number of permutations of the same cycle type: " ++ String.fromInt (Permutation.conjugacyClassSize permutation) ]
+                                        , Html.div [] [ Html.text <| "Fixed points: " ++ Rel.showIntListAsSet (Permutation.fixedPoints permutation) ]
+                                        , Html.div []
+                                            [ Html.text <|
+                                                "Parity: "
+                                                    ++ (if Permutation.isEven permutation then
+                                                            "even"
+
+                                                        else
+                                                            "odd"
+                                                       )
+                                            ]
+                                        , Html.div []
+                                            [ Html.text <| "Order: " ++ String.fromInt (Permutation.order permutation)
+                                            , infoHint "Order is the smallest number representing how many times the permutation would have to be composed with itself to result in identity permutation"
+                                            ]
+                                        ]
+                                    ]
+
+                            Nothing ->
+                                Html.text "This relation is not a permutation."
+                        , Html.h3 [] [ Html.text "Relabel elements" ]
+                        , Html.div [ A.class "muted" ] [ Html.text "Relabel relation elements by applying permutation group action" ]
+                        , let
+                            st =
+                                model.permutationState
+
+                            permButtonAttr =
+                                case st.result of
+                                    Err _ ->
+                                        A.disabled True
+
+                                    Ok perm ->
+                                        E.onClick <| ApplyPermutation perm
+
+                            permError =
+                                case st.result of
+                                    Err e ->
+                                        Html.div [ A.class "error" ] [ Html.text e ]
+
+                                    Ok _ ->
+                                        Html.text ""
+                          in
+                          Html.div []
+                            [ Html.div [ A.class "control-row" ]
+                                [ Html.input
+                                    [ A.type_ "text"
+                                    , E.onInput PermutationEdited
+                                    , A.placeholder "Cycle notation: (1 2 3) (4 5)"
+                                    , A.value st.rawInput
+                                    ]
+                                    []
+                                , Html.button [ permButtonAttr ] [ Html.text "Apply" ]
+                                , infoHint "Apply permutation p on elements of the set X (calculating new relation R' = p∘R∘p⁻¹)"
+
+                                -- TODO next/previous button to enumerate all permutations
+                                ]
+                            , permError
+                            ]
+                        ]
+                    , details "Formal Concept Analysis (FCA)"
+                        [ Html.div [] <|
+                            let
+                                concepts =
+                                    model.derivedInfo.formalConcepts
+                            in
+                            [ Html.text <|
+                                "formal concepts (total "
+                                    ++ String.fromInt (List.length concepts)
+                                    ++ "): "
+                            , Html.ul [ A.class "concept-list" ] <|
+                                List.map
+                                    (\( objects, attrs ) ->
+                                        Html.li
+                                            [ E.onMouseEnter (HighlightConcept attrs)
+                                            , E.onMouseLeave ClearHighlight
+                                            ]
+                                            [ Html.text <| "(" ++ Rel.showIntSet objects ++ "," ++ Rel.showIntSet attrs ++ ")" ]
+                                    )
+                                    concepts
+                            ]
+                        ]
+                    , details "Order Theory"
+                        [ Html.div []
+                            [ case model.derivedInfo.acyclicInfo |> Result.toMaybe |> Maybe.andThen .posetInfo of
+                                Just posetInfo ->
+                                    Html.div [] <|
+                                        -- TODO explain why not partial order
+                                        Html.div []
+                                            [ Html.text "This relation is a partial order."
+                                            , Html.div [ A.class "indent" ]
+                                                [ Html.text <| "Minimal elements: " ++ Rel.showIntSet posetInfo.minimalElements ]
+                                            , Html.div [ A.class "indent" ]
+                                                [ Html.text <| "Maximal elements: " ++ Rel.showIntSet posetInfo.maximalElements ]
+                                            ]
+                                            :: Html.div []
+                                                [ Html.text <|
+                                                    if Rel.isPosetLattice posetInfo then
+                                                        "This relation is a lattice"
+
+                                                    else
+                                                        "This relation is not a lattice"
+                                                ]
+                                            :: Rel.viewJoinInfo posetInfo.joinTable
+                                            ++ Rel.viewMeetInfo posetInfo.meetTable
+
+                                Nothing ->
+                                    Html.text "This relation is not a partial order."
+                            ]
+                        ]
+                    ]
                 ]
-            , Html.div []
-                [ graphControls model
-                , Html.div [ A.id "graph" ]
-                    [{- This is where viz.js renders svg graph -}]
+            , Html.div [ A.class "column" ]
+                [ Html.section [ A.class "panel" ]
+                    [ Html.h2 [] [ Html.text "Graph" ]
+                    , graphControls model
+                    , Html.div [ A.id "graph" ]
+                        [{- This is where viz.js renders svg graph -}]
+                    ]
                 ]
             ]
         ]
+
+
+details : String -> List (Html msg) -> Html msg
+details title body =
+    Html.details []
+        [ Html.summary [] [ Html.text title ]
+        , Html.div [ A.class "details-body" ] body
+        ]
+
+
+infoHint : String -> Html msg
+infoHint title =
+    Html.span [ A.class "info", A.title title ] [ Html.text "i" ]
 
 
 type alias PropertyConfig msg =
@@ -900,33 +922,41 @@ elementaryPropertiesView derivedInfo highlight =
             in
             Html.tr []
                 [ Html.td [] [ blankLink wikiLink propertyName ]
-                , Html.td [] [ yesNo hasProp ]
-                , Html.td [] <|
+                , Html.td [ A.class "center" ] [ yesNo hasProp ]
+                , Html.td [ A.class "center" ] <|
                     case toggleExplanation of
                         Just thisProperty ->
                             let
-                                ( onClick, label, title ) =
-                                    case activeProperty of
-                                        Just activeProp ->
-                                            if activeProp == thisProperty then
-                                                ( HideExplanation, "✕", "Hide explanation" )
+                                isActive =
+                                    activeProperty == Just thisProperty
 
-                                            else
-                                                ( ShowExplanation thisProperty, "ⓘ", "Show explanation" )
+                                ( onClick, title ) =
+                                    if isActive then
+                                        ( HideExplanation, "Hide explanation" )
 
-                                        Nothing ->
-                                            ( ShowExplanation thisProperty, "ⓘ", "Show explanation" )
+                                    else
+                                        ( ShowExplanation thisProperty, "Show explanation" )
                             in
-                            [ Html.button [ E.onClick onClick, A.title title ]
-                                [ Html.text label ]
+                            [ Html.button
+                                [ E.onClick onClick
+                                , A.title title
+                                , A.classList [ ( "icon-button", True ), ( "active", isActive ) ]
+                                ]
+                                [ Html.text "?" ]
                             ]
 
                         Nothing ->
                             []
-                , Html.td [] <|
+                , Html.td [ A.class "center" ] <|
                     case genRandom of
                         Just genMsg ->
-                            [ Html.button [ E.onClick genMsg ] [ Html.text "⚄" ] ]
+                            [ Html.button
+                                [ E.onClick genMsg
+                                , A.class "icon-button dice"
+                                , A.title "Generate random relation with this property"
+                                ]
+                                [ Html.text "⚄" ]
+                            ]
 
                         Nothing ->
                             []
@@ -936,18 +966,17 @@ elementaryPropertiesView derivedInfo highlight =
                             Html.button
                                 [ E.onClick butCfg.message
                                 , A.disabled <| butCfg.disabled derivedInfo
-                                , A.class "fill-cell-button"
                                 ]
                                 [ Html.text butCfg.label ]
                         )
                         buttons
-                , Html.td []
+                , Html.td [ A.class "num" ]
                     [ case countFormula of
                         Just cnt ->
                             Html.text <| Natural.toString <| cnt derivedInfo.relSize
 
                         Nothing ->
-                            Html.text "??"
+                            Html.span [ A.class "muted", A.title "Unknown" ] [ Html.text "?" ]
                     ]
                 , Html.td []
                     (case oeisId of
@@ -961,15 +990,15 @@ elementaryPropertiesView derivedInfo highlight =
                     )
                 ]
     in
-    Html.table []
+    Html.table [ A.class "props-table" ]
         [ Html.thead []
             [ Html.tr []
-                [ Html.th [] [ Html.text "Property name" ]
-                , Html.th [] [ Html.text "Does R have this property?" ]
-                , Html.th [] [ Html.text "Expl." ]
-                , Html.th [] [ Html.text "Gen" ]
+                [ Html.th [] [ Html.text "Property" ]
+                , Html.th [ A.class "center", A.title "Does R have this property?" ] [ Html.text "Holds" ]
+                , Html.th [ A.class "center", A.title "Explain why R has (or doesn't have) this property" ] [ Html.text "Explain" ]
+                , Html.th [ A.class "center", A.title "Generate random relation with this property" ] [ Html.text "Random" ]
                 , Html.th [] [ Html.text "Operations" ]
-                , Html.th [] [ Html.text "Count" ]
+                , Html.th [ A.class "num", A.title "Number of relations with this property on a set of this size" ] [ Html.text "Count" ]
                 , Html.th [] [ Html.text "OEIS" ]
                 ]
             ]
@@ -985,23 +1014,23 @@ blankLink href text =
 yesNo : Bool -> Html msg
 yesNo b =
     let
-        ( color, label ) =
+        ( class, label ) =
             if b then
-                ( "green", "✔" )
+                ( "yes", "✓" )
 
             else
-                ( "red", "✘" )
+                ( "no", "✗" )
     in
     Html.span
-        [ A.style "color" color ]
+        [ A.class class ]
         [ Html.text label ]
 
 
 sizeInputView : Int -> Html Msg
 sizeInputView relSize =
     Html.div []
-        [ Html.label []
-            [ Html.span [ A.id "size-label" ]
+        [ Html.label [ A.class "slider-label" ]
+            [ Html.span [ A.class "slider-value" ]
                 [ Html.text <| "|X| = " ++ String.fromInt relSize ]
             , Html.input
                 [ A.type_ "range"
@@ -1017,9 +1046,9 @@ sizeInputView relSize =
 
 setTrueProbView : Float -> Html Msg
 setTrueProbView trueProb =
-    Html.div []
-        [ Html.label []
-            [ Html.span [ A.id "size-label" ]
+    Html.div [ A.class "muted" ]
+        [ Html.label [ A.class "slider-label", A.title "Probability of including each pair when generating random relations" ]
+            [ Html.span [ A.class "slider-value" ]
                 [ Html.text <| "P(True) = " ++ String.fromFloat trueProb ]
             , Html.input
                 [ A.type_ "range"
@@ -1044,9 +1073,8 @@ graphControls :
     }
     -> Html Msg
 graphControls { graphMode, highlightSccs, showExtents, showIntents, derivedInfo } =
-    Html.div []
-        [ Html.h4 [] [ Html.text "Graph Options" ]
-        , Html.div []
+    Html.div [ A.class "graph-options" ]
+        [ Html.div []
             [ radio "Relation graph" graphMode RelationGraph True
             , Html.div [ A.class "indent" ]
                 [ Html.label []
@@ -1057,8 +1085,8 @@ graphControls { graphMode, highlightSccs, showExtents, showIntents, derivedInfo 
                         , A.disabled (graphMode /= RelationGraph)
                         ]
                         []
-                    , Html.text "Highlight SCCs "
-                    , Html.span [ A.title "Strongly Connected Components" ] [ Html.text "ⓘ" ]
+                    , Html.text "Highlight SCCs"
+                    , infoHint "Strongly Connected Components"
                     ]
                 ]
             ]
@@ -1066,8 +1094,8 @@ graphControls { graphMode, highlightSccs, showExtents, showIntents, derivedInfo 
             [ radio "Bipartite graph" graphMode BipartiteGraph True
             ]
         , Html.div []
-            [ radio "Hasse diagram " graphMode HasseDiagram (Rel.isAcyclic derivedInfo)
-            , Html.span [ A.title "Only available for acyclic relations" ] [ Html.text "ⓘ" ]
+            [ radio "Hasse diagram" graphMode HasseDiagram (Rel.isAcyclic derivedInfo)
+            , infoHint "Only available for acyclic relations"
             ]
         , Html.div []
             [ radio "Concept lattice" graphMode ConceptLattice True
@@ -1100,29 +1128,26 @@ graphControls { graphMode, highlightSccs, showExtents, showIntents, derivedInfo 
 pager : Rel -> Html Msg
 pager rel =
     Html.div [ A.class "pager" ]
-        [ Html.button [ E.onClick PreviousRelation, A.title "Previous relation" ] [ Html.text "<" ]
-        , Html.span []
+        [ Html.button [ E.onClick PreviousRelation, A.title "Previous relation", A.class "icon-button" ] [ Html.text "‹" ]
+        , Html.span [ A.class "pager-label" ]
             [ Html.text <|
-                " "
+                "Relation "
                     ++ Natural.toString (Rel.toRelIndex rel)
                     ++ " of "
                     ++ Natural.toString (Count.rel <| Rel.size rel)
-                    ++ " "
             ]
-        , Html.button [ E.onClick NextRelation, A.title "Next relation" ] [ Html.text ">" ]
+        , Html.button [ E.onClick NextRelation, A.title "Next relation", A.class "icon-button" ] [ Html.text "›" ]
         ]
 
 
-miscControls : Float -> Html Msg
-miscControls trueProb =
-    Html.div []
-        [ Html.h4 [] [ Html.text "Operations" ]
-        , Html.button [ E.onClick UndoHistory, A.title "Undo previous edits" ] [ Html.text "Undo" ]
+miscControls : Html Msg
+miscControls =
+    Html.div [ A.class "control-row" ]
+        [ Html.button [ E.onClick UndoHistory, A.title "Undo previous edits" ] [ Html.text "Undo" ]
         , -- TODO think about how to decompose this hodgepodge of controls
-          Html.button [ E.onClick MakeEmpty, A.title "Empty relation" ] [ Html.text "∅" ]
+          Html.button [ E.onClick MakeEmpty, A.title "Empty relation" ] [ Html.text "Clear" ]
         , Html.button [ E.onClick DoComplement ] [ Html.text "Complement" ]
         , Html.button [ E.onClick DoConverse ] [ Html.text "Converse" ]
-        , setTrueProbView trueProb
         ]
 
 

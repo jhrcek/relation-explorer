@@ -1,117 +1,481 @@
-table {
-    border-collapse: collapse;
+:root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-muted: #f1f3f5;
+    --border: #dde1e6;
+    --border-strong: #c3c9d1;
+    --text: #1f2328;
+    --text-muted: #5f6872;
+    --accent: #2f5fb3;
+    --accent-hover: #244a8c;
+    --accent-soft: #e8eef9;
+    --yes: #1a7f37;
+    --no: #b42318;
+    --hl-green: #d3f0db;
+    --hl-red: #fbd9d5;
+    --hl-orange: #fde6c4;
+    --radius: 6px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-th,
-td {
-    border: 1px solid black;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    line-height: 20px;
-    /* This ensures the text is vertically centered */
-    text-align: center;
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
 }
 
-thead th {
-    background-color: #f2f2f2;
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.5;
 }
 
-a {
-    text-decoration: none;
-    color: sienna;
-}
+/* ---------- Layout ---------- */
 
-a:hover {
-    text-decoration: underline;
-}
-
-a:visited {
-    color: sienna;
-}
-
-#size-label {
-    display: inline-block;
-    width: 120px;
-}
-
-#top-container {
+.app-header {
     display: flex;
-    gap: 20px;
-    padding: 20px;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 14px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
 
-    #explanation {
-        width: 40%;
+.app-header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: auto minmax(320px, 1fr) minmax(320px, 1fr);
+    align-items: start;
+    gap: 16px;
+    padding: 16px 24px;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+@media (max-width: 1100px) {
+    .layout {
+        grid-template-columns: 1fr;
     }
 }
 
-#rel {
-    padding-top: 20px;
-    height: 250px;
-    width: 250px;
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+}
+
+.panel>h2 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+h3 {
+    margin: 16px 0 6px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
 }
 
 .indent {
     padding-left: 20px;
 }
 
-#graph {
-    padding-top: 10px;
-}
-
-.pager {
-    width: 300px;
-}
-
-/* Details styles taken from https://developer.mozilla.org/en-US/docs/Web/HTML/Element/details#try_it */
-details {
-    border: 1px solid #aaa;
-    border-radius: 4px;
-    padding: 0.5em 0.5em 0;
-}
-
-summary {
-    font-weight: bold;
-    margin: -0.5em -0.5em 0;
-    padding: 0.5em;
-}
-
-details[open] {
-    padding: 0.5em;
-}
-
-details[open] summary {
-    border-bottom: 1px solid #aaa;
-    margin-bottom: 0.5em;
+.muted {
+    color: var(--text-muted);
 }
 
 .error {
-    color: red;
+    color: var(--no);
+    margin-top: 4px;
 }
+
+/* ---------- Links ---------- */
+
+a,
+a:visited {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+}
+
+/* ---------- Form controls ---------- */
+
+button {
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 3px 10px;
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+button:hover:not(:disabled) {
+    background: var(--surface-muted);
+    border-color: #a9b1bb;
+}
+
+button:active:not(:disabled) {
+    background: #e6e9ed;
+}
+
+button:disabled {
+    color: #a3aab2;
+    border-color: var(--border);
+    cursor: default;
+}
+
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.icon-button {
+    width: 26px;
+    height: 24px;
+    padding: 0;
+    font-size: 13px;
+}
+
+.icon-button.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+input[type="text"] {
+    font: inherit;
+    padding: 3px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    min-width: 220px;
+}
+
+input[type="range"] {
+    accent-color: var(--accent);
+    width: 140px;
+    margin: 0;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--accent);
+    margin: 0 6px 0 0;
+    vertical-align: -1px;
+}
+
+label {
+    cursor: pointer;
+}
+
+.slider-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.slider-value {
+    display: inline-block;
+    min-width: 84px;
+    font-variant-numeric: tabular-nums;
+}
+
+.info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: 4px;
+    border: 1px solid var(--text-muted);
+    border-radius: 50%;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    font-style: normal;
+    line-height: 1;
+    cursor: help;
+    vertical-align: 1px;
+}
+
+/* ---------- Tables (generic: join/meet tables etc.) ---------- */
+
+table {
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    text-align: center;
+}
+
+thead th,
+tbody th {
+    background: var(--surface-muted);
+    font-weight: 600;
+}
+
+/* ---------- Relation matrix ---------- */
+
+#rel {
+    margin-top: 12px;
+}
+
+#rel th,
+#rel td {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+#rel thead th:first-child {
+    background: transparent;
+    border-top-color: transparent;
+    border-left-color: transparent;
+}
+
+#rel td {
+    cursor: pointer;
+    background: var(--surface);
+    border-color: var(--border-strong);
+    color: var(--accent);
+    font-weight: 600;
+    user-select: none;
+}
+
+#rel td:hover {
+    background: var(--accent-soft);
+}
+
+.hl-green,
+#rel td.hl-green {
+    background: var(--hl-green);
+}
+
+.hl-red,
+#rel td.hl-red {
+    background: var(--hl-red);
+}
+
+.hl-orange {
+    background: var(--hl-orange);
+}
+
+.pager {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.pager-label {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+}
+
+/* ---------- Properties table ---------- */
+
+.props-table {
+    width: 100%;
+    margin-top: 8px;
+    font-size: 13px;
+}
+
+.props-table button {
+    padding: 1px 8px;
+    font-size: 12px;
+}
+
+.props-table .icon-button {
+    width: 24px;
+    height: 22px;
+    padding: 0;
+}
+
+.props-table .dice {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.props-table th,
+.props-table td {
+    border: none;
+    border-bottom: 1px solid var(--border);
+    padding: 3px 8px;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.props-table thead th {
+    background: none;
+    border-bottom: 1px solid var(--border-strong);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.props-table tbody tr:hover {
+    background: #fafbfc;
+}
+
+.props-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.props-table .center {
+    text-align: center;
+}
+
+.props-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.yes {
+    color: var(--yes);
+    font-weight: 600;
+}
+
+.no {
+    color: var(--no);
+    font-weight: 600;
+}
+
+/* ---------- Details (collapsible sections) ---------- */
+
+details {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+}
+
+details+details {
+    margin-top: 8px;
+}
+
+summary {
+    padding: 8px 12px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+
+summary:hover {
+    background: var(--surface-muted);
+}
+
+details[open]>summary {
+    border-bottom: 1px solid var(--border);
+}
+
+.details-body {
+    padding: 10px 12px;
+    overflow-x: auto;
+}
+
+.details-body>div+div {
+    margin-top: 4px;
+}
+
+.details-body ul {
+    margin: 4px 0;
+    padding-left: 22px;
+}
+
+.details-body table {
+    margin: 8px 0;
+}
+
+.concept-list li:hover {
+    background: var(--hl-green);
+    cursor: default;
+}
+
+/* ---------- Explanation ---------- */
 
 .explanation {
     position: relative;
-    border-radius: 4px;
-    padding: 10px;
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 12px 40px 12px 14px;
 }
 
 .explanation-title {
-    margin-top: 5px;
-    margin-bottom: 10px;
+    margin: 0 0 8px;
 }
 
 .explanation-close {
     position: absolute;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2em;
-    top: 10px;
-    right: 10px;
+    top: 8px;
+    right: 8px;
 }
 
-.fill-cell-button {
-    width: 100%;
-    height: 100%;
+/* ---------- Graph ---------- */
+
+.graph-options>div+div {
+    margin-top: 4px;
+}
+
+.graph-options .indent label {
+    margin-right: 12px;
+}
+
+label:has(input:disabled) {
+    color: #a3aab2;
+    cursor: default;
+}
+
+#graph {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    overflow-x: auto;
+}
+
+#graph svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
 }

@@ -1542,14 +1542,14 @@ viewOpErrorOrResultTableCell config res =
             case e of
                 NoCommonBounds ->
                     Html.td
-                        [ A.style "background-color" "salmon"
+                        [ A.class "hl-red"
                         , A.title <| "These two elements don't have any common " ++ config.boundName ++ " bound"
                         ]
                         [ Html.text "?" ]
 
                 MultipleBounds bounds ->
                     Html.td
-                        [ A.style "background-color" "orange"
+                        [ A.class "hl-orange"
                         , A.title <| "Multiple " ++ config.minMax ++ " " ++ config.boundName ++ " bounds: " ++ showIntSet bounds
                         ]
                         [ Html.text "!!" ]
@@ -2788,26 +2788,14 @@ view config ((Rel rows) as rel) highlight =
             case highlight of
                 Explanation _ explanation ->
                     (::)
-                        (A.style "background-color" <|
-                            if Set.member ( i, j ) explanation.redHighlight then
-                                "salmon"
-
-                            else if Set.member ( i, j ) explanation.greenHighlight then
-                                "lightgreen"
-
-                            else
-                                "white"
+                        (A.classList
+                            [ ( "hl-red", Set.member ( i, j ) explanation.redHighlight )
+                            , ( "hl-green", Set.member ( i, j ) explanation.greenHighlight && not (Set.member ( i, j ) explanation.redHighlight) )
+                            ]
                         )
 
                 Pairs pairSet ->
-                    (::)
-                        (A.style "background-color" <|
-                            if Set.member ( i, j ) pairSet then
-                                "lightgreen"
-
-                            else
-                                "white"
-                        )
+                    (::) (A.classList [ ( "hl-green", Set.member ( i, j ) pairSet ) ])
 
                 NoHighlight ->
                     identity

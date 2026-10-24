@@ -4,6 +4,7 @@
 <head>
   <title>Relation Explorer</title>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" type="text/css" href="css/style.css">
   <script src="js/elm.js"></script>
   <script src="https://unpkg.com/@viz-js/viz@3.12.0/lib/viz-standalone.js"></script>
@@ -18,7 +19,10 @@
 
     const vizRenderOptions = function (engine) {
       return {
-        engine: engine
+        engine: engine,
+        graphAttributes: { bgcolor: 'transparent', fontname: 'Helvetica,Arial,sans-serif' },
+        nodeAttributes: { fontname: 'Helvetica,Arial,sans-serif', fontsize: 12, color: '#57606a' },
+        edgeAttributes: { color: '#57606a', arrowsize: 0.7 }
       }
     };
     app.ports.renderDot.subscribe(args => {
