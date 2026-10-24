@@ -234,7 +234,7 @@ deriveInfo : Rel -> DerivedInfo
 deriveInfo rel =
     let
         ( onDiagonalElements, offDiagonalElements ) =
-            onAndOffDiagnoalElements rel
+            onAndOffDiagonalElements rel
 
         ( superfluousForFunction, emptyRowIndices ) =
             superfluousAndMissingForFunction rel
@@ -354,8 +354,8 @@ eye n =
     Rel <| Array.initialize n (\i -> Array.initialize n (\j -> i == j))
 
 
-onAndOffDiagnoalElements : Rel -> ( Set Pair, Set Pair )
-onAndOffDiagnoalElements =
+onAndOffDiagonalElements : Rel -> ( Set Pair, Set Pair )
+onAndOffDiagonalElements =
     elements
         >> Set.fromList
         >> Set.partition (\( i, j ) -> i == j)
@@ -2320,7 +2320,7 @@ genConnectedRelation trueProb n =
                             )
 
                 else
-                    -- For off-diagnoal elements one has to be there for connectedness,
+                    -- For off-diagonal elements one has to be there for connectedness,
                     -- the other can be generated with trueProb.
                     genBool trueProb
                         |> Random.andThen

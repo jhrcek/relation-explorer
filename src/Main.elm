@@ -318,7 +318,21 @@ update msg model =
 
 updateRel : (Rel -> Rel) -> Model -> ( Model, Cmd Msg )
 updateRel f model =
-    setRel (f model.rel) { model | history = model.rel :: model.history }
+    let
+        newRel =
+            f model.rel
+    in
+    if newRel == model.rel then
+        -- Don't pollute history with edits that didn't change anything
+        pure model
+
+    else
+        setRel newRel { model | history = List.take maxHistory (model.rel :: model.history) }
+
+
+maxHistory : Int
+maxHistory =
+    1000
 
 
 {-| Replace the relation, recomputing everything that depends on it
