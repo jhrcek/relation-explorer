@@ -1,8 +1,10 @@
 module Count exposing
     ( antisymmetric
     , asymmetric
+    , bell
     , connected
     , derangement
+    , equivalence
     , involution
     , lattice
     , leftTotal
@@ -15,6 +17,7 @@ module Count exposing
     , transitive
     )
 
+import List.Extra as List
 import Natural as Nat exposing (Natural)
 
 
@@ -141,6 +144,31 @@ involution n =
     in
     -- safe, as involution 10 = 9496
     Nat.fromSafeInt <| invoHelp 1 1 2
+
+
+{-| Bell numbers, number of partitions of a set with n elements
+<https://oeis.org/A000110>
+-}
+equivalence : Int -> Natural
+equivalence n =
+    -- safe, as bell 10 = 115975
+    Nat.fromSafeInt <| bell n
+
+
+{-| Computed using the Bell triangle: each row starts with the last element of the previous row,
+and each next element is the sum of the element to its left and the element above that one.
+The first element of the n-th row is the n-th Bell number.
+-}
+bell : Int -> Int
+bell n =
+    List.foldl
+        (\_ row ->
+            List.scanl (+) (List.last row |> Maybe.withDefault 1) row
+        )
+        [ 1 ]
+        (List.range 1 n)
+        |> List.head
+        |> Maybe.withDefault 1
 
 
 {-| (n+1)^n

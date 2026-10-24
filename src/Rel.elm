@@ -16,12 +16,15 @@ module Rel exposing
     , deriveInfo
     , domain
     , empty
+    , equivalenceClasses
+    , equivalenceClosure
     , errorInBoxDot
     , genAcyclic
     , genAntisymmetricRelation
     , genAsymmetricRelation
     , genBijectiveFunction
     , genConnectedRelation
+    , genEquivalence
     , genFunctionalRelation
     , genInvolution
     , genIrreflexiveRelation
@@ -38,6 +41,7 @@ module Rel exposing
     , isBijectiveFunction
     , isConnected
     , isDerangement
+    , isEquivalence
     , isFunctional
     , isInvolution
     , isIrreflexive
@@ -76,6 +80,7 @@ module Rel exposing
 import Array exposing (Array)
 import Array.Extra as Array
 import BitSet exposing (BitSet)
+import Count
 import Dict exposing (Dict)
 import Html exposing (Attribute, Html)
 import Html.Attributes as A
@@ -145,6 +150,7 @@ type ExplainableProperty
     | ExplainConnected
     | ExplainFunctional
     | ExplainLeftTotal
+    | ExplainEquivalence
 
 
 getExplanationData : ExplainableProperty -> DerivedInfo -> ExplanationData
@@ -182,6 +188,9 @@ getExplanationData property =
 
         ExplainLeftTotal ->
             explainLeftTotal
+
+        ExplainEquivalence ->
+            explainEquivalence
 
 
 type alias DerivedInfo =
@@ -1855,6 +1864,79 @@ isTotalOrder info =
     isPartialOrder info && isConnected info
 
 
+isEquivalence : DerivedInfo -> Bool
+isEquivalence info =
+    isReflexive info && isSymmetric info && isTransitive info
+
+
+explainEquivalence : DerivedInfo -> ExplanationData
+explainEquivalence info =
+    let
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is an equivalence relation if it is reflexive, symmetric and transitive."
+
+        definingProperties : List ( String, Set Pair )
+        definingProperties =
+            [ ( "reflexive", info.missingForReflexivity )
+            , ( "symmetric", info.missingForSymmetry )
+            , ( "transitive", Tuple.first info.missingForTransitivity )
+            ]
+
+        propertyLine : ( String, Set Pair ) -> String
+        propertyLine ( propertyName, missing ) =
+            if Set.isEmpty missing then
+                "It is " ++ propertyName ++ ". ✓"
+
+            else
+                "It is not "
+                    ++ propertyName
+                    ++ ", because "
+                    ++ (if Set.size missing == 1 then
+                            "this pair is"
+
+                        else
+                            "these pairs are"
+                       )
+                    ++ " missing: "
+                    ++ showPairSet missing
+                    ++ ". ✗"
+    in
+    if isEquivalence info then
+        { greenHighlight = Set.union info.onDiagonalElements info.offDiagonalElements
+        , redHighlight = Set.empty
+        , lines =
+            "This relation is an equivalence relation."
+                :: definition
+                :: List.map propertyLine definingProperties
+        }
+
+    else
+        { greenHighlight = Set.empty
+        , redHighlight = List.foldl (Tuple.second >> Set.union) Set.empty definingProperties
+        , lines =
+            "This relation is not an equivalence relation."
+                :: definition
+                :: List.map propertyLine definingProperties
+                ++ [ "See the explanations of the individual properties for more details."
+                   , "The Equivalence Closure of this relation, which is the smallest equivalence relation on X "
+                        ++ "that is the superset of R, contains all of the missing pairs listed above. "
+                        ++ "It can contain even more pairs, "
+                        ++ "because pairs added to satisfy one property can require adding further pairs to satisfy another."
+                   ]
+        }
+
+
+{-| Equivalence classes of an equivalence relation, each sorted, ordered by their smallest element.
+For an equivalence relation, these are exactly its strongly connected components.
+Together they form a partition of the underlying set.
+-}
+equivalenceClasses : Rel -> List (List Int)
+equivalenceClasses rel =
+    scc rel
+        |> List.map List.sort
+        |> List.sort
+
+
 
 -- CLOSURES
 
@@ -1864,6 +1946,16 @@ isTotalOrder info =
 reflexiveClosure : Rel -> Rel
 reflexiveClosure rel =
     union rel (eye (size rel))
+
+
+{-| <https://en.wikipedia.org/wiki/Equivalence_relation#Generating_equivalence_relations>
+
+The smallest equivalence relation containing the input relation.
+
+-}
+equivalenceClosure : Rel -> Rel
+equivalenceClosure =
+    reflexiveClosure >> symmetricClosure >> transitiveClosure
 
 
 reflexiveReduction : Rel -> Rel
@@ -2416,6 +2508,58 @@ genInvolution n =
     in
     go (List.range 0 (n - 1)) 0 []
         |> Random.map mkRel
+
+
+{-| Generate equivalence relation corresponding to a uniformly random partition of the set.
+
+The block containing the smallest remaining element x is picked first:
+with m other remaining elements, there are C(m, k) \* Bell(m - k) partitions
+in which x's block has k other elements, so we choose k with that weight.
+
+-}
+genEquivalence : Int -> Generator Rel
+genEquivalence n =
+    let
+        binomial : Int -> Int -> Int
+        binomial m k =
+            List.foldl (\i acc -> acc * (m - i + 1) // i) 1 (List.range 1 k)
+
+        genBlocks : List Int -> List (List Int) -> Generator (List (List Int))
+        genBlocks remaining blocks =
+            -- elm-review: IGNORE TCO
+            case remaining of
+                [] ->
+                    Random.constant blocks
+
+                x :: others ->
+                    let
+                        m =
+                            List.length others
+
+                        weightOfSize k =
+                            ( toFloat (binomial m k * Count.bell (m - k)), k )
+                    in
+                    Random.weighted (weightOfSize 0) (List.map weightOfSize (List.range 1 m))
+                        |> Random.andThen
+                            (\k ->
+                                Random.List.shuffle others
+                                    |> Random.andThen
+                                        (\shuffled ->
+                                            let
+                                                ( blockMates, rest ) =
+                                                    List.splitAt k shuffled
+                                            in
+                                            genBlocks (List.sort rest) ((x :: blockMates) :: blocks)
+                                        )
+                            )
+    in
+    genBlocks (List.range 0 (n - 1)) []
+        |> Random.map
+            (\blocks ->
+                -- each block is a clique: all its elements are related to each other
+                List.concatMap (\block -> List.lift2 Tuple.pair block block) blocks
+                    |> fromElements n
+            )
 
 
 genTotalOrder : Int -> Generator Rel

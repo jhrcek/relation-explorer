@@ -18,6 +18,7 @@
             - [x] bijective
                 - [x] involution
                 - [ ] derangement
+        - [x] equivalence (uniformly random partition)
         - [ ] random relation that is any of the well defined types (equivalence, function, reflexive, lattice etc.)
 
 - [ ] Show whether the specified relation satisfies well-known properties:
@@ -54,9 +55,9 @@
     - [ ] involution
 
 - [ ] Given the properties that it satisfies show whether it is one of well know structures:
-    - [ ] Equivalence relation
-        - [ ] show corresponding partition
-        - [ ] show equivalence classes
+    - [x] Equivalence relation
+        - [x] show corresponding partition
+        - [x] show equivalence classes
     - [ ] Preorder
         - [ ] show poset arising from identifying equivalent elements
     - [ ] Poset
@@ -84,7 +85,7 @@
     - [x] symmetric closure
     - [x] transitive closure
     - [x] transitive reduction (only on acyclic graphs)
-    - [ ] equivalence closure
+    - [x] equivalence closure
     - [x] composition (with itself)
     - [x] converse
     - [x] complement

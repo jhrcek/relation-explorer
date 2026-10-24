@@ -137,6 +137,7 @@ type Msg
     | DoReflexiveReduction
     | DoSymmetricClosure
     | DoTransitiveClosure
+    | DoEquivalenceClosure
     | DoTransitiveReduction
     | DoCoveringRelation
     | DoComplement
@@ -155,6 +156,7 @@ type Msg
     | GenBijectiveFunction
     | GenInvolution
     | GenTotalOrder
+    | GenEquivalence
     | GenAcyclic
     | GotRandom Rel
       -- Explanations
@@ -220,6 +222,9 @@ update msg model =
 
         DoTransitiveClosure ->
             updateRel Rel.transitiveClosure model
+
+        DoEquivalenceClosure ->
+            updateRel Rel.equivalenceClosure model
 
         DoTransitiveReduction ->
             case model.derivedInfo.acyclicInfo of
@@ -289,6 +294,9 @@ update msg model =
 
         GenTotalOrder ->
             generateRel Rel.genTotalOrder model
+
+        GenEquivalence ->
+            generateRel Rel.genEquivalence model
 
         GenAcyclic ->
             generateRel (Rel.genAcyclic model.trueProb) model
@@ -415,6 +423,37 @@ view model =
                         [ Html.text <| "R = " ++ Rel.showElements model.rel ]
                     , Html.div []
                         [ Html.text <| "|R| = " ++ String.fromInt model.derivedInfo.elementCount ]
+                    , if Rel.isEquivalence model.derivedInfo then
+                        let
+                            classes =
+                                Rel.equivalenceClasses model.rel
+                        in
+                        Html.div []
+                            [ Html.text "This relation is an equivalence relation."
+                            , Html.div [ A.class "indent" ]
+                                [ Html.text "Equivalence classes:"
+                                , Html.ul [] <|
+                                    List.map
+                                        (\cls ->
+                                            Html.li []
+                                                [ Html.text <|
+                                                    String.join " = " (List.map (\x -> "[" ++ String.fromInt x ++ "]") cls)
+                                                        ++ " = "
+                                                        ++ Rel.showIntListAsSet cls
+                                                ]
+                                        )
+                                        classes
+                                ]
+                            , Html.div [ A.class "indent" ]
+                                [ Html.text <|
+                                    "Corresponding partition: X/R = {"
+                                        ++ String.join ", " (List.map Rel.showIntListAsSet classes)
+                                        ++ "}"
+                                ]
+                            ]
+
+                      else
+                        Html.text "This relation is not an equivalence relation."
                     ]
                 , Html.details []
                     [ Html.summary [] [ Html.text "Graph Theory" ]
@@ -765,6 +804,15 @@ propertyConfigs =
       , toggleExplanation = Nothing
       , countFormula = Just Count.involution
       , oeisId = Just "A000085"
+      }
+    , { propertyName = "Equivalence"
+      , wikiLink = "https://en.wikipedia.org/wiki/Equivalence_relation"
+      , hasProperty = Rel.isEquivalence
+      , buttons = [ ButtonConfig "Closure" DoEquivalenceClosure Rel.isEquivalence ]
+      , genRandom = Just GenEquivalence
+      , toggleExplanation = Just ExplainEquivalence
+      , countFormula = Just Count.equivalence
+      , oeisId = Just "A000110"
       }
     , { propertyName = "Partial Order"
       , wikiLink = "https://en.wikipedia.org/wiki/Partially_ordered_set"
