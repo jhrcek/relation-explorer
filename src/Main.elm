@@ -318,23 +318,24 @@ update msg model =
 
 updateRel : (Rel -> Rel) -> Model -> ( Model, Cmd Msg )
 updateRel f model =
-    let
-        newRel =
-            f model.rel
+    setRel (f model.rel) { model | history = model.rel :: model.history }
 
+
+{-| Replace the relation, recomputing everything that depends on it
+-}
+setRel : Rel -> Model -> ( Model, Cmd Msg )
+setRel newRel model =
+    let
         newDerivedInfo =
             Rel.deriveInfo newRel
-
-        newModel =
-            { model
-                | rel = newRel
-                , derivedInfo = newDerivedInfo
-                , history = model.rel :: model.history
-                , highlight = updateHighlight newDerivedInfo model.highlight
-                , permutationState = Permutation.updateSize (Rel.size newRel) model.permutationState
-            }
     in
-    updateGraph newModel
+    updateGraph
+        { model
+            | rel = newRel
+            , derivedInfo = newDerivedInfo
+            , highlight = updateHighlight newDerivedInfo model.highlight
+            , permutationState = Permutation.updateSize (Rel.size newRel) model.permutationState
+        }
 
 
 updateHighlight : DerivedInfo -> Highlight -> Highlight
@@ -357,19 +358,7 @@ undoHistory model =
             ( model, Cmd.none )
 
         prevRel :: rest ->
-            let
-                prevDerivedInfo =
-                    Rel.deriveInfo prevRel
-
-                newModel =
-                    { model
-                        | rel = prevRel
-                        , derivedInfo = prevDerivedInfo
-                        , history = rest
-                        , highlight = updateHighlight prevDerivedInfo model.highlight
-                    }
-            in
-            updateGraph newModel
+            setRel prevRel { model | history = rest }
 
 
 generateRel : (Int -> Generator Rel) -> Model -> ( Model, Cmd Msg )
