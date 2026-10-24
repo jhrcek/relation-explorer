@@ -54,7 +54,7 @@
     - [x] (left-)total
     - [x] injective (also called left-unique)
     - [x] surjective (also called right-total)
-    - [ ] bijection
+    - [x] bijection
     - [ ] derangement
     - [ ] involution
 

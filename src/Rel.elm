@@ -156,6 +156,7 @@ type ExplainableProperty
     | ExplainLeftTotal
     | ExplainInjective
     | ExplainSurjective
+    | ExplainBijective
     | ExplainEquivalence
 
 
@@ -200,6 +201,9 @@ getExplanationData property =
 
         ExplainSurjective ->
             explainSurjective
+
+        ExplainBijective ->
+            explainBijective
 
         ExplainEquivalence ->
             explainEquivalence
@@ -1931,6 +1935,95 @@ explainTotal config domain_ keysWithoutValue =
             , config.describeKeys isAre elements_
                 ++ showIntListAsSet (Set.toList keysWithoutValue)
             ]
+        }
+
+
+explainBijective : DerivedInfo -> ExplanationData
+explainBijective info =
+    let
+        definition =
+            "Definition: a relation R ⊆ X ⨯ X is a bijection if it is a function (functional and left-total) which is injective and surjective."
+
+        -- Name of the property, explanation of the property, elements violating the property, description of the violating elements
+        definingProperties : List ( String, DerivedInfo -> ExplanationData, ( Set Int, String -> String -> String ) )
+        definingProperties =
+            [ ( "functional"
+              , explainFunctional
+              , ( Set.map Tuple.first info.superfluousForFunctional
+                , \thisThese isAre -> thisThese ++ " " ++ isAre ++ " in relation with more than one y ∈ X"
+                )
+              )
+            , ( "left-total"
+              , explainLeftTotal
+              , ( info.emptyRowIndices
+                , \thisThese isAre -> thisThese ++ " " ++ isAre ++ " not in relation with any y ∈ X"
+                )
+              )
+            , ( "injective"
+              , explainInjective
+              , ( Set.map Tuple.second info.superfluousForInjective
+                , \thisThese _ -> "more than one x ∈ X is in relation with " ++ thisThese
+                )
+              )
+            , ( "surjective"
+              , explainSurjective
+              , ( info.emptyColumnIndices
+                , \thisThese _ -> "no x ∈ X is in relation with " ++ thisThese
+                )
+              )
+            ]
+
+        propertyLine : ( String, DerivedInfo -> ExplanationData, ( Set Int, String -> String -> String ) ) -> String
+        propertyLine ( propertyName, _, ( violating, describe ) ) =
+            if Set.isEmpty violating then
+                "It is " ++ propertyName ++ ". ✓"
+
+            else
+                let
+                    ( thisThese, isAre ) =
+                        if Set.size violating == 1 then
+                            ( "this element", "is" )
+
+                        else
+                            ( "these elements", "are" )
+                in
+                "It is not "
+                    ++ propertyName
+                    ++ ", because "
+                    ++ describe thisThese isAre
+                    ++ ": "
+                    ++ showIntSet violating
+                    ++ ". ✗"
+
+        finiteSetNote =
+            "Note: because X is finite, a function from X to X is injective if and only if it is surjective."
+    in
+    if isBijectiveFunction info then
+        { greenHighlight = Set.union info.onDiagonalElements info.offDiagonalElements
+        , redHighlight = Set.empty
+        , lines =
+            "This relation is a bijection."
+                :: definition
+                :: List.map propertyLine definingProperties
+                ++ [ "Intuitively, this means that each x ∈ X is in relation with exactly one y ∈ X and vice versa. "
+                        ++ "Bijections from X to X are also called permutations of X."
+                   , finiteSetNote
+                   ]
+        }
+
+    else
+        { greenHighlight = Set.empty
+        , redHighlight =
+            List.foldl (\( _, explain, _ ) -> Set.union (explain info).redHighlight)
+                Set.empty
+                definingProperties
+        , lines =
+            "This relation is not a bijection."
+                :: definition
+                :: List.map propertyLine definingProperties
+                ++ [ "See the explanations of the individual properties for more details."
+                   , finiteSetNote
+                   ]
         }
 
 

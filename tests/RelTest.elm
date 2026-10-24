@@ -66,6 +66,39 @@ suite =
                           , "There are 2 elements y ∈ X with which no x ∈ X is in relation: {0, 1}"
                           ]
                         )
+            , test "bijection explanation confirms all four properties exactly for bijections (all relations of size <= 3)" <|
+                \_ ->
+                    List.concatMap allRels [ 1, 2, 3 ]
+                        |> List.map Rel.deriveInfo
+                        |> List.filter
+                            (\info ->
+                                let
+                                    lines =
+                                        (Rel.getExplanationData Rel.ExplainBijective info).lines
+
+                                    allConfirmed =
+                                        List.length (List.filter (String.endsWith "✓") lines) == 4
+                                in
+                                Rel.isBijectiveFunction info /= allConfirmed
+                            )
+                        |> List.map (\info -> Set.toList (Set.union info.onDiagonalElements info.offDiagonalElements))
+                        |> Expect.equal []
+            , test "explanation of non-bijection lists the violated properties and highlights the problematic pairs" <|
+                \_ ->
+                    -- 0 -> {1, 2}, 1 -> {2}, 2 -> {}
+                    explanationTest Rel.ExplainBijective
+                        (fromElements 3 [ ( 0, 1 ), ( 0, 2 ), ( 1, 2 ) ])
+                        ( [ ( 0, 0 ), ( 0, 1 ), ( 0, 2 ), ( 1, 0 ), ( 1, 2 ), ( 2, 0 ), ( 2, 1 ), ( 2, 2 ) ]
+                        , [ "This relation is not a bijection."
+                          , "Definition: a relation R ⊆ X ⨯ X is a bijection if it is a function (functional and left-total) which is injective and surjective."
+                          , "It is not functional, because this element is in relation with more than one y ∈ X: {0}. ✗"
+                          , "It is not left-total, because this element is not in relation with any y ∈ X: {2}. ✗"
+                          , "It is not injective, because more than one x ∈ X is in relation with this element: {2}. ✗"
+                          , "It is not surjective, because no x ∈ X is in relation with this element: {0}. ✗"
+                          , "See the explanations of the individual properties for more details."
+                          , "Note: because X is finite, a function from X to X is injective if and only if it is surjective."
+                          ]
+                        )
             , test "functional and left-total explanations are unchanged by the refactoring" <|
                 \_ ->
                     let

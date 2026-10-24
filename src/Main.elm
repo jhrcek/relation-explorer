@@ -823,9 +823,7 @@ propertyConfigs =
       , hasProperty = Rel.isBijectiveFunction
       , buttons = []
       , genRandom = Just GenBijectiveFunction
-
-      -- TODO explain why not bijective function
-      , toggleExplanation = Nothing
+      , toggleExplanation = Just ExplainBijective
       , countFormula = Just Count.totalOrderOrPermutation
       , oeisId = Just "A000142"
       }
