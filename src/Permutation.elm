@@ -20,7 +20,6 @@ module Permutation exposing
 import Arithmetic exposing (lcm)
 import Array exposing (Array)
 import Dict
-import List
 import List.Extra as List
 import Parser exposing ((|.), (|=), Parser, Problem(..))
 import Set

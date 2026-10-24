@@ -5,7 +5,7 @@ module Rel exposing
     , ExplainableProperty(..)
     , ExplanationData
     , Highlight(..)
-    , JoinOrMeetResult(..)
+    , JoinOrMeetResult
     , Pair
     , Rel
     , applyPermutation
@@ -77,7 +77,6 @@ import Dict exposing (Dict)
 import Html exposing (Attribute, Html)
 import Html.Attributes as A
 import Html.Events as E
-import List
 import List.Extra as List
 import Natural exposing (Natural)
 import Permutation exposing (Permutation)
@@ -988,11 +987,12 @@ explainAsymmetric info =
                 ++ (let
                         offDiagCount =
                             Set.size superfluousOffDiagonal
-
-                        ( isAre, elements_ ) =
-                            isAreElements (offDiagCount // 2)
                     in
                     if offDiagCount > 0 then
+                        let
+                            ( isAre, elements_ ) =
+                                isAreElements (offDiagCount // 2)
+                        in
                         ("There "
                             ++ isAre
                             ++ " "
@@ -1021,11 +1021,12 @@ explainAsymmetric info =
                 ++ (let
                         diagonalCount =
                             Set.size superfluousDiagonal
-
-                        ( isAre, elements_ ) =
-                            isAreElements diagonalCount
                     in
                     if diagonalCount > 0 then
+                        let
+                            ( isAre, elements_ ) =
+                                isAreElements diagonalCount
+                        in
                         ("There "
                             ++ isAre
                             ++ " "
@@ -2022,8 +2023,9 @@ transitiveClosureWithSteps ((Rel rows) as rel) =
 
                                                 ( Finite x, Finite y ) ->
                                                     if y < x then
-                                                        -- going through k gives us shorter path than paths going through elements < k
-                                                        ( Finite y, Just { from = i, through = k, to = j, distance = x } )
+                                                        -- going through k gives us shorter path than paths going through elements < k.
+                                                        -- This step replaces the one previously recorded for (i, j)
+                                                        ( Finite y, Just { from = i, through = k, to = j, distance = y } )
 
                                                     else
                                                         ( Finite x, Nothing )
@@ -2037,19 +2039,31 @@ transitiveClosureWithSteps ((Rel rows) as rel) =
                                 )
 
                 newAdded2 =
-                    Array.toList newAdded
-                        |> List.andThen
-                            (\row ->
-                                Array.toList row |> List.filterMap identity
-                            )
+                    Array.foldl
+                        (\row acc ->
+                            Array.foldl
+                                (\maybeStep acc2 ->
+                                    case maybeStep of
+                                        Just step ->
+                                            -- Keep only the latest (shortest) step for each pair
+                                            Dict.insert ( step.from, step.to ) step acc2
+
+                                        Nothing ->
+                                            acc2
+                                )
+                                acc
+                                row
+                        )
+                        added
+                        newAdded
             in
-            ( newDistances, newAdded2 ++ added )
+            ( newDistances, newAdded2 )
         )
-        ( initDistances, [] )
+        ( initDistances, Dict.empty )
         (domain rel)
         |> Tuple.mapBoth
             (Array.map (Array.map isFinite) >> Rel)
-            (List.sortBy (\trStep -> ( trStep.distance, trStep.from, trStep.to )))
+            (Dict.values >> List.sortBy (\trStep -> ( trStep.distance, trStep.from, trStep.to )))
 
 
 {-| Strongly Connected Components.
@@ -2707,7 +2721,7 @@ showIntSet =
 
 showPairSet : Set Pair -> String
 showPairSet pairs =
-    Set.toList pairs |> List.sort |> showPairListAsSet
+    Set.toList pairs |> showPairListAsSet
 
 
 showPairListAsSet : List Pair -> String
