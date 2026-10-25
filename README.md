@@ -21,6 +21,8 @@
                 - [x] involution
                 - [x] derangement
         - [x] equivalence (uniformly random partition)
+        - [x] transitive (not uniform)
+            - [x] partial order (not uniform)
         - [ ] random relation that is any of the well defined types (equivalence, function, reflexive, lattice etc.)
 
 - [ ] Show whether the specified relation satisfies well-known properties:

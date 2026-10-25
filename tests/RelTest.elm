@@ -30,6 +30,20 @@ suite =
             , propertyTest "derangement" Rel.isDerangement isDerangementRef
             , propertyTest "involution" Rel.isInvolution isInvolutionRef
             ]
+        , describe "transitive and partial order generators"
+            [ test "transitive generator only produces transitive relations" <|
+                \_ -> generatorTest Rel.isTransitive (Rel.genTransitive 0.3)
+            , test "partial order generator only produces partial orders" <|
+                \_ -> generatorTest Rel.isPartialOrder (Rel.genPartialOrder 0.3)
+            , test "transitive generator can produce all 13 transitive relations on a 2-element set" <|
+                \_ ->
+                    Random.step (Random.list 2000 (Rel.genTransitive 0.5 2)) (Random.initialSeed 42)
+                        |> Tuple.first
+                        |> List.map Rel.showElements
+                        |> Set.fromList
+                        |> Set.size
+                        |> Expect.equal 13
+            ]
         , describe "derangement generator"
             [ test "only produces derangements" <|
                 \_ ->

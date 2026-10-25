@@ -31,11 +31,13 @@ module Rel exposing
     , genInvolution
     , genIrreflexiveRelation
     , genLeftTotal
+    , genPartialOrder
     , genReflexiveRelation
     , genRelation
     , genSurjectiveRelation
     , genSymmetricRelation
     , genTotalOrder
+    , genTransitive
     , getExplanationData
     , hasseDiagramToDotSource
     , isAcyclic
@@ -2784,14 +2786,27 @@ genInvolution n =
 
 
 {-| Generate equivalence relation corresponding to a uniformly random partition of the set.
+-}
+genEquivalence : Int -> Generator Rel
+genEquivalence n =
+    genPartition n
+        |> Random.map
+            (\blocks ->
+                -- each block is a clique: all its elements are related to each other
+                List.concatMap (\block -> List.lift2 Tuple.pair block block) blocks
+                    |> fromElements n
+            )
+
+
+{-| Generate uniformly random partition of the set {0, ..., n - 1}.
 
 The block containing the smallest remaining element x is picked first:
 with m other remaining elements, there are C(m, k) \* Bell(m - k) partitions
 in which x's block has k other elements, so we choose k with that weight.
 
 -}
-genEquivalence : Int -> Generator Rel
-genEquivalence n =
+genPartition : Int -> Generator (List (List Int))
+genPartition n =
     let
         binomial : Int -> Int -> Int
         binomial m k =
@@ -2827,12 +2842,6 @@ genEquivalence n =
                             )
     in
     genBlocks (List.range 0 (n - 1)) []
-        |> Random.map
-            (\blocks ->
-                -- each block is a clique: all its elements are related to each other
-                List.concatMap (\block -> List.lift2 Tuple.pair block block) blocks
-                    |> fromElements n
-            )
 
 
 genTotalOrder : Int -> Generator Rel
@@ -2846,6 +2855,87 @@ genTotalOrder n =
                     |> reflexiveClosure
                     |> transitiveClosure
             )
+
+
+{-| Generate random transitive relation.
+
+Why not simply take the transitive closure of a random relation?
+Because the result is heavily skewed towards the full relation:
+as soon as the random relation has a large strongly connected component (which happens even for fairly small trueProb),
+its closure relates all elements of that component to each other and to everything reachable from it.
+
+Instead we build the relation from its structure. Every transitive relation is uniquely determined by
+
+1.  partition of the set into strongly connected components (SCCs)
+2.  for each single-element SCC: whether that element is related to itself
+    (SCCs with more than one element are complete: all their elements are related to each other, including themselves)
+3.  strict partial order on the SCCs (if SCC A precedes SCC B, every element of A is related to every element of B)
+
+so we generate each of these parts randomly:
+
+1.  uniformly random partition into blocks
+2.  random acyclic relation on the blocks, whose diagonal decides the loops on single-element blocks
+3.  the transitive closure of that acyclic relation then gives the order of the blocks
+
+Every transitive relation can be generated this way, but the distribution is NOT uniform.
+Generating transitive relations uniformly at random is hard, because it would require
+uniformly generating labeled posets (step 3), for which no efficient algorithm is known.
+
+-}
+genTransitive : Float -> Int -> Generator Rel
+genTransitive trueProb n =
+    genPartition n
+        |> Random.andThen
+            (\blockList ->
+                let
+                    blocks =
+                        Array.fromList blockList
+
+                    blockCount =
+                        Array.length blocks
+
+                    -- Blocks with more than one element are SCCs, so they must be related to themselves
+                    multiElementBlockLoops =
+                        List.indexedMap Tuple.pair blockList
+                            |> List.filterMap
+                                (\( i, block ) ->
+                                    if List.length block > 1 then
+                                        Just ( i, i )
+
+                                    else
+                                        Nothing
+                                )
+
+                    blockElements : Int -> List Int
+                    blockElements i =
+                        Array.get i blocks |> Maybe.withDefault []
+                in
+                genAcyclic trueProb blockCount
+                    |> Random.map
+                        (\blockRel ->
+                            -- Set to dedupe, as fromElements toggles the elements
+                            Set.fromList (multiElementBlockLoops ++ elements blockRel)
+                                |> Set.toList
+                                |> fromElements blockCount
+                                -- Doesn't introduce new loops, as the block relation is acyclic
+                                |> transitiveClosure
+                                |> elements
+                                |> List.concatMap (\( a, b ) -> List.lift2 Tuple.pair (blockElements a) (blockElements b))
+                                |> fromElements n
+                        )
+            )
+
+
+{-| Generate random partial order.
+
+This is the special case of genTransitive where all SCCs are single-element and every element is related to itself.
+As with genTransitive, the distribution is NOT uniform (see the comment there).
+
+-}
+genPartialOrder : Float -> Int -> Generator Rel
+genPartialOrder trueProb n =
+    genAcyclic trueProb n
+        |> Random.map (reflexiveClosure >> transitiveClosure)
 
 
 {-| Based on <https://mathematica.stackexchange.com/questions/608/how-to-generate-random-directed-acyclic-graphs/2266#answer-613>

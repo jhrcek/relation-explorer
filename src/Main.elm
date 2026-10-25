@@ -158,6 +158,8 @@ type Msg
     | GenBijectiveFunction
     | GenDerangement
     | GenInvolution
+    | GenTransitive
+    | GenPartialOrder
     | GenTotalOrder
     | GenEquivalence
     | GenAcyclic
@@ -303,6 +305,12 @@ update msg model =
 
         GenInvolution ->
             generateRel Rel.genInvolution model
+
+        GenTransitive ->
+            generateRel (Rel.genTransitive model.trueProb) model
+
+        GenPartialOrder ->
+            generateRel (Rel.genPartialOrder model.trueProb) model
 
         GenTotalOrder ->
             generateRel Rel.genTotalOrder model
@@ -744,7 +752,7 @@ propertyConfigs =
       , wikiLink = "https://en.wikipedia.org/wiki/Transitive_relation"
       , hasProperty = Rel.isTransitive
       , buttons = [ ButtonConfig "Closure" DoTransitiveClosure Rel.isTransitive ]
-      , genRandom = Nothing
+      , genRandom = Just GenTransitive
       , toggleExplanation = Just ExplainTransitive
       , countFormula = Just Count.transitive
       , oeisId = Just "A006905"
@@ -781,7 +789,9 @@ propertyConfigs =
       -- TODO count acyclic
       , countFormula = Nothing
 
-      -- TODO acyclic OEIS?
+      -- TODO acyclic OEIS? Don't just use A003024 (labeled DAGs): that counts DAGs without self-loops,
+      -- but our isAcyclic ignores self-loops (findCycle skips the diagonal) and genAcyclic generates them,
+      -- so the count should be 2^n * A003024(n). Either find OEIS sequence for that, or decide to disallow self-loops.
       , oeisId = Nothing
       }
     , { propertyName = "Functional"
@@ -881,9 +891,7 @@ propertyConfigs =
                             True
                 )
             ]
-
-      -- TODO generate partial order
-      , genRandom = Nothing
+      , genRandom = Just GenPartialOrder
 
       -- TODO explain why not total order
       , toggleExplanation = Nothing
