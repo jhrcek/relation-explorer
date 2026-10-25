@@ -752,9 +752,7 @@ propertyConfigs =
       , genRandom = Just GenConnected
       , toggleExplanation = Just ExplainConnected
       , countFormula = Just Count.connected
-
-      -- TODO connected OEIS?
-      , oeisId = Nothing
+      , oeisId = Just "A083667"
       }
     , { propertyName = "Acyclic"
       , wikiLink = "https://en.wikipedia.org/wiki/Glossary_of_order_theory#A"

@@ -74,6 +74,10 @@ asymmetric n =
     Nat.exp Nat.three diagOpposingCount
 
 
+{-| 2 ^ n \* 3 ^ (n \* (n - 1) // 2)
+Same count as antisymmetric relations (R is antisymmetric iff its complement is connected).
+<https://oeis.org/A083667>
+-}
 connected : Int -> Natural
 connected n =
     let
