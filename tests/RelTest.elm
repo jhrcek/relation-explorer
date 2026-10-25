@@ -30,6 +30,35 @@ suite =
             , propertyTest "derangement" Rel.isDerangement isDerangementRef
             , propertyTest "involution" Rel.isInvolution isInvolutionRef
             ]
+        , describe "derangement generator"
+            [ test "only produces derangements" <|
+                \_ ->
+                    -- There's no derangement of 1 element set, so start from 2
+                    Random.step (Random.list 200 (Random.int 2 10 |> Random.andThen Rel.genDerangement)) (Random.initialSeed 42)
+                        |> Tuple.first
+                        |> List.filter (not << Rel.isDerangement << Rel.deriveInfo)
+                        |> List.map Rel.showElements
+                        |> Expect.equal []
+            , test "all derangements of a 4-element set are about equally likely" <|
+                \_ ->
+                    let
+                        sampleCount =
+                            9000
+
+                        samples =
+                            Random.step (Random.list sampleCount (Rel.genDerangement 4)) (Random.initialSeed 42)
+                                |> Tuple.first
+
+                        counts =
+                            List.foldl (\rel -> Dict.update (Rel.showElements rel) (Just << (+) 1 << Maybe.withDefault 0)) Dict.empty samples
+                    in
+                    Expect.all
+                        [ \_ -> Expect.equal True (List.all (Rel.isDerangement << Rel.deriveInfo) samples)
+                        , \_ -> Expect.equal 9 (Dict.size counts)
+                        , \_ -> Expect.equal [] (List.filter (\c -> abs (c - sampleCount // 9) > 120) (Dict.values counts))
+                        ]
+                        ()
+            ]
         , describe "injective and surjective"
             [ describe "agree with their definitions on all relations of size <= 3"
                 [ propertyTest "injective" Rel.isInjective isInjectiveRef

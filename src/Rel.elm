@@ -24,6 +24,7 @@ module Rel exposing
     , genAsymmetricRelation
     , genBijectiveFunction
     , genConnectedRelation
+    , genDerangement
     , genEquivalence
     , genFunctionalRelation
     , genInjectiveRelation
@@ -2667,6 +2668,74 @@ genBijectiveFunction n =
                 Array.map (\indexOfTrue -> Array.initialize n (\i -> i == indexOfTrue)) shuffledArr
                     |> Rel
             )
+
+
+{-| Generate uniformly random derangement (permutation without fixed points).
+
+Based on the recurrence D(m) = (m - 1) \* (D(m - 1) + D(m - 2)):
+first element x maps to one of the m - 1 other elements k (chosen uniformly). Then either
+
+  - k maps back to x (2-cycle), and the remaining m - 2 elements form a derangement (D(m - 2) ways), or
+  - x is spliced into a cycle of a derangement τ of the remaining m - 1 elements, just before k (D(m - 1) ways)
+
+so we choose between these two cases with weights D(m - 2) and D(m - 1).
+
+There is no derangement of a 1 element set, so for n = 1 this generates the identity.
+
+-}
+genDerangement : Int -> Generator Rel
+genDerangement n =
+    let
+        derangementCount : Int -> Float
+        derangementCount m =
+            -- safe, as derangement 10 = 1334961
+            toFloat (Natural.toInt (Count.derangement m))
+
+        go : List Int -> Generator (Dict Int Int)
+        go elems =
+            -- elm-review: IGNORE TCO
+            case elems of
+                [] ->
+                    Random.constant Dict.empty
+
+                [ x ] ->
+                    -- No derangement exists, only reachable when n == 1
+                    Random.constant (Dict.singleton x x)
+
+                x :: k0 :: ks ->
+                    let
+                        others =
+                            k0 :: ks
+
+                        m =
+                            List.length elems
+                    in
+                    Random.map2 Tuple.pair
+                        (Random.uniform k0 ks)
+                        (Random.weighted ( derangementCount (m - 2), True ) [ ( derangementCount (m - 1), False ) ])
+                        |> Random.andThen
+                            (\( k, isTwoCycle ) ->
+                                if isTwoCycle then
+                                    go (List.remove k others)
+                                        |> Random.map (Dict.insert x k >> Dict.insert k x)
+
+                                else
+                                    go others
+                                        |> Random.map
+                                            (\tau ->
+                                                case List.find (\( _, image ) -> image == k) (Dict.toList tau) of
+                                                    Just ( j, _ ) ->
+                                                        -- j -> k becomes j -> x -> k
+                                                        tau |> Dict.insert j x |> Dict.insert x k
+
+                                                    Nothing ->
+                                                        -- unreachable: tau is a bijection on others, which contains k
+                                                        tau
+                                            )
+                            )
+    in
+    go (List.range 0 (n - 1))
+        |> Random.map (fromElements n << Dict.toList)
 
 
 genInvolution : Int -> Generator Rel

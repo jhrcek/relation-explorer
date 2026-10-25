@@ -130,7 +130,7 @@ derangement n =
                 deraHelp (cnt + 1) nMinus1 ((cnt + 1) * (nMinus1 + nMinus2))
     in
     -- safe, as derangement 10 = 1334961
-    Nat.fromSafeInt <| deraHelp 1 0 1
+    Nat.fromSafeInt <| deraHelp 0 1 0
 
 
 {-| Recursive formula: a(n) = a(n-1) + (n-1)\*a(n-2)

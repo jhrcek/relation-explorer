@@ -19,7 +19,7 @@
         - [x] injective (also called left-unique)
             - [x] bijective
                 - [x] involution
-                - [ ] derangement
+                - [x] derangement
         - [x] equivalence (uniformly random partition)
         - [ ] random relation that is any of the well defined types (equivalence, function, reflexive, lattice etc.)
 

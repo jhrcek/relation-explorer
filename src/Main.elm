@@ -156,6 +156,7 @@ type Msg
     | GenInjective
     | GenSurjective
     | GenBijectiveFunction
+    | GenDerangement
     | GenInvolution
     | GenTotalOrder
     | GenEquivalence
@@ -296,6 +297,9 @@ update msg model =
 
         GenBijectiveFunction ->
             generateRel Rel.genBijectiveFunction model
+
+        GenDerangement ->
+            generateRel Rel.genDerangement model
 
         GenInvolution ->
             generateRel Rel.genInvolution model
@@ -829,9 +833,7 @@ propertyConfigs =
       , wikiLink = "https://en.wikipedia.org/wiki/Derangement"
       , hasProperty = Rel.isDerangement
       , buttons = []
-
-      -- TODO generate derangements. Find some inspiration from this paper https://epubs.siam.org/doi/pdf/10.1137/1.9781611972986.7
-      , genRandom = Nothing
+      , genRandom = Just GenDerangement
 
       -- TODO explain why not Derangement
       , toggleExplanation = Nothing
@@ -972,10 +974,22 @@ elementaryPropertiesView derivedInfo highlight =
                 , Html.td [ A.class "center" ] <|
                     case genRandom of
                         Just genMsg ->
+                            let
+                                -- e.g. there are no derangements of 1 element set
+                                noneExist =
+                                    Maybe.map (\cnt -> Natural.isZero (cnt derivedInfo.relSize)) countFormula
+                                        |> Maybe.withDefault False
+                            in
                             [ Html.button
                                 [ E.onClick genMsg
                                 , A.class "icon-button dice"
-                                , A.title "Generate random relation with this property"
+                                , A.title <|
+                                    if noneExist then
+                                        "There are no relations with this property"
+
+                                    else
+                                        "Generate random relation with this property"
+                                , A.disabled noneExist
                                 ]
                                 [ Html.text "⚄" ]
                             ]
